@@ -1,0 +1,25 @@
+{
+  "name": "epub-js",
+  "version": "1.0.0",
+  "description": "Build epub with javascript.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node ./test/index.js",
+    "pretty": "prettier . --write --config .prettierrc.js",
+    "build": "node .esbuild.js"
+  },
+  "keywords": [
+    "javascript"
+  ],
+  "author": "shinich39 <shinich39@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "prettier": "^3.3.2"
+  },
+  "dependencies": {
+    "js-beautify": "^1.15.1",
+    "mime-types": "^2.1.35"
+  }
+}
