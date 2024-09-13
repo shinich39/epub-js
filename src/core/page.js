@@ -7,18 +7,21 @@ class ePubPage {
   constructor(document) {
     this.document = document;
     this.parent = document;
+    this.manifest = true;
     this.spine = true;
     this.index = true;
     this._id = generateId();
-    this.filename = `${this._id}.xhtml`;
-    this.title = "No Title";
+    this.name = this._id;
+    this.extension = ".xhtml";
     this.properties = {};
     this.nodes = [];
     this.styles = [];
     this.scripts = [];
   }
   // application/xhtml+xml
-  get type() { return getMimetype(this.filename); }
+  get filename() { return `${this._id}${this.extension}`; }
+  set filename(v) {}
+  get type() { return getMimetype(this.extension); }
   set type(v) {}
   get path() { return this.absolutePath; }
   set path(v) {}
@@ -57,7 +60,9 @@ ePubPage.prototype.removeScript = function(file) {
 
 ePubPage.prototype.remove = function() {
   // remove all nodes
-  
+  for (const node of this.nodes) {
+    node.remove();
+  }
   this.document.pages.splice(this.document.pages.findIndex(e => e == this), 1);
   return this;
 }
@@ -75,10 +80,10 @@ ePubPage.prototype.toString = function() {
   result += `<?xml version="1.0" encoding="UTF-8"?>`;
   result += `<html${htmlProps}>`;
   result += `<head>`;
-  result += `<title>${this.title}</title>`;
-  result += `<meta charset="utf-8"></meta>`;
+  result += `<title>${this.name}</title>`;
+  result += `<meta charset="UTF-8" />`;
   for (const style of this.styles) {
-    result += `<link rel="stylesheet" type="text/css" href="${style.path}">`;
+    result += `<link rel="stylesheet" type="text/css" href="${style.relativePath}" />`;
   }
   result += `</head>`;
   result += `<body>`;
@@ -86,7 +91,7 @@ ePubPage.prototype.toString = function() {
     result += node.toString();
   }
   for (const script of this.scripts) {
-    result += `<script type="text/javascript" src="${script.path}"></script>`;
+    result += `<script type="text/javascript" src="${script.relativePath}"></script>`;
   }
   result += `</body>`;
   result += `</html>`;
@@ -94,7 +99,9 @@ ePubPage.prototype.toString = function() {
 }
 
 ePubPage.prototype.toFile = function() {
-  return new ePubFile(this.document, this.path, this.toString(), "utf8");
+  const file = new ePubFile(this.document, this.filename, this.toString(), "utf8");
+  file._id = this._id;
+  return file;
 }
 
 export { ePubPage }

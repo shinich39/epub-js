@@ -1,19 +1,26 @@
-import { getMimetype, getExtension, generateId } from "./util.js";
+import { getMimetype, getExtension, generateId, beautifyCSS, beautifyJS } from "./util.js";
 import { ePubDoc } from "./doc.js";
 import { ePubPage } from "./page.js";
 import { ePubNode } from "./node.js";
 
 class ePubFile {
   constructor(document, filename, data, encoding = "utf8") {
+    const extension = "."+filename.split(".").pop();
+
+    // TODO: extention error
+
     this.document = document;
     this.manifest = true;
     this._id = generateId();
-    this.filename = `${this._id}${getExtension(filename)}`;
+    this.name = this._id;
+    this.extension = extension;
     this.data = data;
     this.encoding = encoding;
     this.properties = {};
   }
-  get type() { return getMimetype(this.filename); }
+  get filename() { return `${this._id}${this.extension}`; }
+  set filename(v) {}
+  get type() { return getMimetype(this.extension); }
   set type(v) {}
   get isStyle() { return this.type == "text/css"; }
   set isStyle(v) {}
@@ -54,6 +61,7 @@ ePubFile.prototype.remove = function() {
         node.styles.splice(i, 1);
       }
     }
+
     // scripts
     for (let i = node.scripts.length - 1; i >= 0; i--) {
       const f = node.scripts[i];

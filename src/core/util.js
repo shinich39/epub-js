@@ -1,8 +1,6 @@
 import beautify from "js-beautify";
-import { lookup } from "mime-types";
+import { lookup, extension } from "mime-types";
 import { id } from "../libs/util.mjs";
-import path from "node:path";
-import { ePubFile } from "./file.js";
 
 function getRelativePath(p) {
   return p.replace(/^EPUB\//, "");
@@ -16,11 +14,7 @@ function objToProps(obj = {}) {
   let result = "";
   for (const [k, v] of Object.entries(obj)) {
     if (v) {
-      if (v instanceof ePubFile) {
-        result += ` ${k}="${v.path}"`;
-      } else {
-        result += ` ${k}="${v}"`;
-      }
+      result += ` ${k}="${v}"`;
     }
   }
   return result;
@@ -36,12 +30,12 @@ function objToStyle(obj = {}) {
   return result;
 }
 
-function getMimetype(str) {
-  return lookup(str);
+function getMimetype(ext) {
+  return lookup(ext);
 }
 
-function getExtension(str) {
-  return path.extname(str);
+function getExtension(mime) {
+  return extension(mime);
 }
 
 function generateId() {

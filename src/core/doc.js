@@ -1,4 +1,4 @@
-import { dateToISOString, objToProps, generateId, beautifyHTML, beautifyCSS, beautifyJS } from "./util.js";
+import { dateToISOString, objToProps, generateId, beautifyHTML } from "./util.js";
 import { ePubPage } from "./page.js";
 import { ePubFile } from "./file.js";
 import { ePubNode } from "./node.js";
@@ -31,16 +31,21 @@ class ePubDoc {
     // this.useNCX = false; // ePub2 compatibility
 
     this.documentType = "application/epub+zip";
-    this.mimetypePath = "mimetype";
-    this.containerPath = "META-INF/container.xml";
-    this.packagePath = "EPUB/package.opf";
+    this.mimetypeAbsolutePath = "mimetype";
+    this.mimetypeRelativePath = "../mimetype";
+    this.containerAbsolutePath = "META-INF/container.xml";
+    this.containerRelativePath = "../META-INF/container.xml";
     this.packageType = "application/oebps-package+xml";
+    this.packageAbsolutePath = "EPUB/package.opf";
+    this.packageRelativePath = "package.opf";
     this.ncxId = generateId();
     this.ncxType = "application/x-dtbncx+xml";
-    this.ncxPath = "EPUB/nav.ncx";
+    this.ncxAbsolutePath = "EPUB/nav.ncx";
+    this.ncxRelativePath = "nav.ncx";
     this.navId = generateId();
     this.navType = "application/xhtml+xml";
-    this.navPath = "EPUB/nav.xhtml";
+    this.navAbsolutePath = "EPUB/nav.xhtml";
+    this.navRelativePath = "nav.xhtml";
 
     this.pages = [];
     this.nodes = [];
@@ -53,22 +58,20 @@ ePubDoc.prototype.generateMimetype = function() {
 }
 
 ePubDoc.prototype.generateContainer = function() {
-  const data = `
-<?xml version="1.0"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-<rootfiles>
-<rootfile full-path="${this.packagePath}" media-type="${this.packageType}"/>
-</rootfiles>
-</container>
-    `;
-
-  return data.trim();
+  let data = "";
+  data += `<?xml version="1.0"?>`;
+  data += `<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">`;
+  data += `<rootfiles>`;
+  data += `<rootfile full-path="${this.packageAbsolutePath}" media-type="${this.packageType}"/>`;
+  data += `</rootfiles>`;
+  data += `</container>`;
+  // return data;
+  return beautifyHTML(data);
 }
 
 ePubDoc.prototype.generatePackage = function() {
 
   function A() {
-
     let result = "";
     result += `<dc:identifier id="uid">${this._id}</dc:identifier>`;
     result += `<dc:title id="title">${this.title}</dc:title>`;
@@ -80,7 +83,7 @@ ePubDoc.prototype.generatePackage = function() {
   
     result += `<dc:type>${this.category}</dc:type>`;
     result += `<dc:publisher>${this.publisher}</dc:publisher>`;
-    result += `<dc:language>${this.language}</dc:publisher>`;
+    result += `<dc:language>${this.language}</dc:language>`;
     result += `<dc:date>${dateToISOString(this.publishedAt)}</dc:date>`;
     result += `<meta property="dcterms:modified">${dateToISOString(this.modifiedAt)}</meta>`;
   
@@ -99,7 +102,7 @@ ePubDoc.prototype.generatePackage = function() {
         `<meta refines="#author-${i}" property="file-as">${authors[i]}</meta>`;
     }
   
-    for (let [k, v] of Object.keys(this.rendition)) {
+    for (let [k, v] of Object.entries(this.rendition)) {
       if (v) {
         result += `<meta property="rendition:${k}">${v}</meta>`;
       }
@@ -113,14 +116,14 @@ ePubDoc.prototype.generatePackage = function() {
     // ncx
     result += `<item${objToProps({
       "id": this.ncxId,
-      "href": this.ncxPath,
+      "href": this.ncxRelativePath,
       "media-type": this.ncxType,
     })}/>`;
 
     // nav
     result += `<item${objToProps({
       "id": this.navId,
-      "href": this.navPath,
+      "href": this.navRelativePath,
       "media-type": this.navType,
     })}/>`;
     
@@ -141,6 +144,9 @@ ePubDoc.prototype.generatePackage = function() {
     // pages
     for (let i = 0; i < this.pages.length; i++) {
       const page = this.pages[i];
+      if (!page.manifest) {
+        continue;
+      }
       result += `<item${objToProps({
         "id": page._id,
         "href": page.relativePath,
@@ -195,16 +201,15 @@ ePubDoc.prototype.generatePackage = function() {
     "page-progression-direction": this.pageDirection, 
   });
 
-  const data = `
-<?xml version="1.0" encoding="UTF-8"?>
-<package${packageProps}>
-<metadata${metadataProps}>${A.apply(this)}</metadata>
-<manifest${manifestProps}>${B.apply(this)}</manifest>
-<spine${spineProps}>${C.apply(this)}</spine>
-</package>
-    `;
-
-  return data.trim();
+  let data = "";
+  data += `<?xml version="1.0" encoding="UTF-8"?>`;
+  data += `<package${packageProps}>`;
+  data += `<metadata${metadataProps}>${A.apply(this)}</metadata>`;
+  data += `<manifest${manifestProps}>${B.apply(this)}</manifest>`;
+  data += `<spine${spineProps}>${C.apply(this)}</spine>`;
+  data += `</package>`;
+  // return data;
+  return beautifyHTML(data);
 }
 
 ePubDoc.prototype.generateNCX = function() {
@@ -230,16 +235,16 @@ ePubDoc.prototype.generateNCX = function() {
   // pages or nodes
   function C(items) {
     let result = "";
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    for (const item of items) {
       if (!item.index) {
-        continue;
+        result += C(item.nodes);
+      } else {
+        result += `<navPoint${objToProps({ id: item._id })}>`;
+        result += `<navLabel><text>${item.name}</text></navLabel>`;
+        result += `<content src="${item.href}"/>`;
+        result += C(item.nodes);
+        result += `</navPoint>`;
       }
-      result += `<navPoint${objToProps({ id: item._id })}">`;
-      result += `<navLabel><text>${item.title}</text></navLabel>`;
-      result += `<content src="${item.href}"/>`;
-      result += C(item.nodes);
-      result += `</navPoint>`;
     }
     return result;
   }
@@ -251,23 +256,40 @@ ePubDoc.prototype.generateNCX = function() {
     "xml:lang": this.language,
   });
 
-  const data = `
-<?xml version="1.0" encoding="utf-8"?>
-<ncx${ncxProps}>
-<head>${A.apply(this)}</head>
-${B.apply(this)}
-<navMap>${C.apply(this, [this.pages])}</navMap>
-</ncx>
-    `;
-
-  return data.trim();
+  let data = "";
+  data += `<?xml version="1.0" encoding="utf-8"?>`;
+  data += `<ncx${ncxProps}>`;
+  data += `<head>${A.apply(this)}</head>`;
+  data += `${B.apply(this)}`;
+  data += `<navMap>${C(this.pages)}</navMap>`;
+  data += `</ncx>`;
+  // return data;
+  return beautifyHTML(data);
 }
 
 ePubDoc.prototype.generateNav = function() {
   function A(items) {
-    let result = "";
+    let hasIndex = false;
     for (const item of items) {
-      result += `<li><a href="${item.href}">${item.title}</a>${A(item.nodes)}</li>`;
+      if (item.index) {
+        hasIndex = true;
+        break;
+      }
+    }
+
+    let result = "";
+    if (hasIndex) {
+      result += "<ol>";
+    }
+    for (const item of items) {
+      if (!item.index) {
+        result += A(item.nodes);
+      } else {
+        result += `<li><a href="${item.href}">${item.name}</a>${A(item.nodes)}</li>`;
+      }
+    }
+    if (hasIndex) {
+      result += "</ol>";
     }
     return result;
   }
@@ -280,32 +302,31 @@ ePubDoc.prototype.generateNav = function() {
     "dir": this.textDirection,
   });
 
-  const data = `
-<?xml version="1.0" encoding="UTF-8"?>
-<html${htmlProps}>
-<head>
-<meta charset="utf-8"/>
-<title>Index</title>
-<style></style>
-</head>
-<body>
-<nav epub:type="toc" id="toc">			
-<h1>Table of contents</h1>
-<ol>${A.apply(this, [this.pages])}</ol>
-</nav>
-<nav epub:type="page-list" id="page-list">
-<h1>Page list</h1>
-<ol></ol>
-</nav>
-<nav epub:type="landmarks" id="landmarks">
-<h1>Landmarks</h1>
-<ol></ol>
-</nav>
-</body>
-</html>
-    `;
-
-  return data.trim();
+  let data = "";
+  data += `<?xml version="1.0" encoding="UTF-8"?>`;
+  data += `<html${htmlProps}>`;
+  data += `<head>`;
+  data += `<meta charset="utf-8"/>`;
+  data += `<title>Index</title>`;
+  data += `<style></style>`;
+  data += `</head>`;
+  data += `<body>`;
+  data += `<nav epub:type="toc" id="toc">`;
+  data += `<h1>Table of contents</h1>`;
+  data += `${A(this.pages)}`;
+  data += `</nav>`;
+  // data += `<nav epub:type="page-list" id="page-list">`;
+  // data += `<h1>Page list</h1>`;
+  // data += `<ol></ol>`;
+  // data += `</nav>`;
+  // data += `<nav epub:type="landmarks" id="landmarks">`;
+  // data += `<h1>Landmarks</h1>`;
+  // data += `<ol></ol>`;
+  // data += `</nav>`;
+  data += `</body>`;
+  data += `</html>`;
+  // return data;
+  return beautifyHTML(data);
 }
 
 ePubDoc.prototype.getAuthors = function() {
@@ -342,51 +363,62 @@ ePubDoc.prototype.addPage = function() {
   return page;
 }
 
-ePubDoc.prototype.addFile = function(filename, data, encoding) {
-  const filePath = `EPUB/${filename}`;
-  const file = new ePubFile(this, filePath, data, encoding);
+ePubDoc.prototype.addCover = function(filename, data, encoding) {
+  const file = new ePubFile(this, filename, data, encoding);
+  file.properties.properties = "cover-image";
   this.files.push(file);
   return file;
 }
 
-ePubDoc.prototype.getFiles = function() {
-  let pages = [];
-  for (let i = 0; i < this.pages.length; i++) {
-    const file = this.pages[i].toFile();
-    file._id += i;
-    pages.push(file);
-  }
-  return [...this.files, ...pages];
+ePubDoc.prototype.addFile = function(filename, data, encoding) {
+  const file = new ePubFile(this, filename, data, encoding);
+  this.files.push(file);
+  return file;
 }
 
 ePubDoc.prototype.toFiles = function() {
   let files = [{
-    path: this.mimetypePath,
+    path: this.mimetypeAbsolutePath,
     data: this.generateMimetype(),
     encoding: "utf8",
   }, {
-    path: this.containerPath,
+    path: this.containerAbsolutePath,
     data: this.generateContainer(),
     encoding: "utf8",
   }, {
-    path: this.packagePath,
+    path: this.packageAbsolutePath,
     data: this.generatePackage(),
     encoding: "utf8",
   }, {
-    path: this.ncxPath,
+    path: this.ncxAbsolutePath,
     data: this.generateNCX(),
     encoding: "utf8",
   }, {
-    path: this.navPath,
+    path: this.navAbsolutePath,
     data: this.generateNav(),
     encoding: "utf8",
   }];
 
-  for (const file of this.getFiles()) {
+  for (const file of this.files) {
     files.push({
-      path: file.path,
+      path: file.absolutePath,
       data: typeof file.data === "function" ? file.data() : file.data,
       encoding: file.encoding,
+    });
+  }
+
+  for (const page of this.pages) {
+    // const file = page.toFile();
+    // files.push({
+    //   path: file.absolutePath,
+    //   data: typeof file.data === "function" ? file.data() : file.data,
+    //   encoding: file.encoding,
+    // });
+
+    files.push({
+      path: page.absolutePath,
+      data: page.toString(),
+      encoding: "utf8",
     });
   }
 

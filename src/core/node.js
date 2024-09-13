@@ -14,7 +14,7 @@ class ePubNode {
     }
     this.index = false;
     this._id = generateId();
-    this.title = "No Title";
+    this.name = this._id;
     this.tag = tag;
     this.content = "";
     this.properties = properties;
@@ -27,8 +27,12 @@ class ePubNode {
   set class(v) { this.properties.class = v; }
   get style() { return this.properties.style; }
   set style(v) { this.properties.style = v; }
-  get href() { return `${this.page.relativePath}#${this.properties.id}`; }
+  get href() { return this.properties.id ? `${this.page.relativePath}#${this.properties.id}` : this.page.relativePath; }
   set href(v) {}
+  get innerHTML() { return this.content; }
+  set innerHTML(v) { this.content = v; }
+  get innerText() { return this.content; }
+  set innerText(v) { this.content = v; }
 }
 
 ePubNode.prototype.addNode = function(tag, properties) {
@@ -46,6 +50,21 @@ ePubNode.prototype.addFile = function(file) {
 ePubNode.prototype.removeFile = function(file) {
   const i = this.files.findIndex(e => e == file);
   return i > -1 ? this.files.splice(i, 1) : null;
+}
+
+ePubNode.prototype.removeFiles = function(files) {
+  let result = [];
+  for (const file of files) {
+    const i = this.files.findIndex(e => e == file);
+    if (i > -1) {
+      result.push(this.files.splice(i, 1));
+    }
+  }
+  return result;
+}
+
+ePubNode.prototype.clearFiles = function() {
+  this.files = [];
 }
 
 ePubNode.prototype.remove = function() {
@@ -75,7 +94,7 @@ ePubNode.prototype.toString = function() {
   } else if (["input", "button"].indexOf(tag) > -1) {
     return `<${tag}${objToProps(this.properties)}/>`;
   } else if (["img"].indexOf(tag) > -1) {
-    const props = objToProps(Object.assign({}, properties, { src: this.files[0]?.relativePath || "" }));
+    const props = objToProps(Object.assign({}, this.properties, { src: this.files[0]?.relativePath || "" }));
     return `<${tag}${props}/>`;
   } else if (["audio", "video"].indexOf(tag) > -1) {
     const content = this.files.map(e => `<source src="${e.relativePath}" type="${e.type}">`).join("");
