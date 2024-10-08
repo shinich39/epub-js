@@ -31,7 +31,7 @@ function isEmptyString(obj) {
   return isString(obj) && obj.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "") === "";
 }
 function isObject(obj) {
-  return typeof obj === "object" && obj !== null && obj.constructor === Object && Object.getPrototypeOf(obj) === Object.prototype;
+  return typeof obj === "object" && obj !== null;
 }
 function isEmptyObject(obj) {
   return isObject(obj) && Object.keys(obj).length === 0;
@@ -103,12 +103,12 @@ function isUndefined(obj) {
   return obj === void 0;
 }
 function isSameType(objA, objB) {
-  return typeof objA === typeof objB && objA.constructor === objB.constructor;
+  return isNull(objA) && isNull(objB) || typeof objA === typeof objB && objA.constructor === objB.constructor;
 }
-function random(min, max) {
+function getRandomNumber(min, max) {
   return Math.random() * (max - min) + min;
 }
-function bezier(data, time) {
+function getBezierPoint(data, time) {
   if (data.length === 1) {
     return data[0];
   }
@@ -118,20 +118,20 @@ function bezier(data, time) {
     let y = (1 - time) * data[i][1] + time * data[i + 1][1];
     d.push([x, y]);
   }
-  return bezier(d, time);
+  return getBezierPoint(d, time);
 }
-function animate(data, cb, time, tick) {
+function setAnimation(data, cb, time, tick) {
   if (!time) {
     time = 1e3;
   }
   if (!tick) {
     tick = 10;
   }
-  let now = 0, d = bezier(data, now / time, now);
+  let now = 0, d = getBezierPoint(data, now / time, now);
   cb(d, now, anim());
   function anim() {
     now += tick;
-    d = bezier(data, now / time);
+    d = getBezierPoint(data, now / time);
     return setTimeout(function() {
       if (now < time) {
         cb(d, now, anim());
@@ -161,7 +161,7 @@ function toFullWidth(str) {
     return "\u3000";
   });
 }
-function compareStrings(strA, strB) {
+function compareString(strA, strB) {
   function C(a, b) {
     const dp = [];
     for (let i = 0; i < a.length + 1; i++) {
@@ -222,12 +222,12 @@ function compareStrings(strA, strB) {
   }
   return P(M(C(strA, strB), strA, strB), strA, strB);
 }
-function id() {
+function getObjectId() {
   return Math.floor((/* @__PURE__ */ new Date()).getTime() / 1e3).toString(16) + "xxxxxx".replace(/x/g, function(v) {
     return Math.floor(Math.random() * 16).toString(16);
   }) + (__uniq__++).toString(16).padStart(6, "0");
 }
-function xor(str, salt) {
+function encryptString(str, salt) {
   if (salt.length === 0) {
     return str;
   }
@@ -365,11 +365,11 @@ function createArray(len, value) {
     }
   } else if (isObject(value)) {
     for (let i = 0; i < len; i++) {
-      arr[i] = clone(value);
+      arr[i] = copyObject(value);
     }
   } else if (isArray(value)) {
     for (let i = 0; i < len; i++) {
-      arr[i] = clone(value);
+      arr[i] = copyObject(value);
     }
   } else if (typeof value !== "undefined") {
     for (let i = 0; i < len; i++) {
@@ -405,7 +405,7 @@ function getModeValue(arr) {
   }
   return maxValue;
 }
-function compareObjects(a, b) {
+function compareObject(a, b) {
   const aIdx = TYPE_PRIORITY.findIndex(function(fn) {
     return fn(a);
   });
@@ -436,7 +436,7 @@ function compareObjects(a, b) {
 function sortArray(arr, desc) {
   desc = Boolean(desc);
   return arr.sort(function(a, b) {
-    return desc ? !compareObjects(a, b) : compareObjects(a, b);
+    return desc ? !compareObject(a, b) : compareObject(a, b);
   });
 }
 function sortObject(arr, sorter) {
@@ -447,7 +447,7 @@ function sortObject(arr, sorter) {
     for (const key of sorter) {
       const d = /^-/.test(key);
       const k = key.replace(/^-/, "");
-      const r = compareObjects(a[k], b[k]);
+      const r = compareObject(a[k], b[k]);
       if (r !== 0) {
         return d ? -r : r;
       }
@@ -465,9 +465,9 @@ function shuffleArray(arr) {
   return arr;
 }
 function getRandomValue(arr) {
-  return arr[Math.floor(random(0, arr.length))];
+  return arr[Math.floor(getRandomNumber(0, arr.length))];
 }
-function getCases(arr) {
+function spreadArray(arr) {
   function getFirstIndexes(a) {
     if (a.length < 1) {
       return;
@@ -679,18 +679,22 @@ function promiseAll(funcs) {
   }, Promise.resolve([]));
 }
 export {
-  animate,
-  createArray as array,
-  bezier,
-  getCases as cases,
-  getRandomValue as choose,
-  compareStrings as compare,
-  getContainedSize as contain,
-  copyObject as copy,
-  getCoveredSize as cover,
+  compareString,
+  copyObject,
+  createArray,
+  encryptString,
   fromBase64,
-  groupByKey as group,
-  id,
+  getBezierPoint,
+  getContainedSize,
+  getCoveredSize,
+  getMaxValue,
+  getMeanValue,
+  getMinValue,
+  getModeValue,
+  getObjectId,
+  getRandomNumber,
+  getRandomValue,
+  groupByKey,
   isArray,
   isBoolean,
   isBooleanArray,
@@ -708,24 +712,20 @@ export {
   isSameType,
   isString,
   isStringArray,
-  getMaxValue as max,
-  getMeanValue as mean,
-  getMinValue as min,
-  getModeValue as mode,
   parseCommand,
   parseQueryString,
   parseTemplate,
   promiseAll,
-  queryObject as query,
-  random,
-  shuffleArray as shuffle,
-  sortArray as sort,
-  sortObject as sortBy,
+  queryObject,
+  setAnimation,
+  shuffleArray,
+  sortArray,
+  sortObject,
   splitFloat,
   splitInt,
+  spreadArray,
   toBase64,
   toFullWidth,
   toHalfWidth,
-  wait,
-  xor
+  wait
 };

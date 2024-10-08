@@ -1,7 +1,7 @@
 {
   "name": "epub-js",
   "version": "1.0.0",
-  "description": "Build epub with javascript.",
+  "description": "Build ePub document with javascript",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -16,10 +16,11 @@
   "license": "MIT",
   "devDependencies": {
     "esbuild": "^0.23.0",
+    "path": "^0.12.7",
     "prettier": "^3.3.2"
   },
   "dependencies": {
     "js-beautify": "^1.15.1",
-    "mime-types": "^2.1.35"
+    "mime": "^4.0.4"
   }
 }
