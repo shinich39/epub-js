@@ -1,6 +1,5 @@
 "use strict";
 
-import { objToAttr, } from "../libs/utilities.js";
 import { ePubFile } from "./file.js";
 
 class ePubScript extends ePubFile {
@@ -22,16 +21,21 @@ ePubScript.prototype.remove = function() {
   return this;
 }
 
-ePubScript.prototype.toString = function() {
-  return `<script${objToAttr(
-    Object.assign(
+ePubScript.prototype.toNode = function() {
+  return {
+    tag: "script",
+    attributes: Object.assign(
       {
         type: "text/javascript",
         src: this.getRelativePath(),
       },
-      (typeof this.attributes === "object" ? this.attributes : {}),
-    )
-  )}</script>`;
+      (typeof this.attributes === "object" ? this.attributes : {})
+    ),
+  }
 }
+
+// ePubScript.prototype.toString = function() {
+//   return toStr(this.toNode());
+// }
 
 export { ePubScript }

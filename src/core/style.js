@@ -1,6 +1,5 @@
 "use strict";
 
-import { objToAttr, } from "../libs/utilities.js";
 import { ePubFile } from "./file.js";
 
 class ePubStyle extends ePubFile {
@@ -22,17 +21,23 @@ ePubStyle.prototype.remove = function() {
   return this;
 }
 
-ePubStyle.prototype.toString = function() {
-  return `<link${objToAttr(
-    Object.assign(
+ePubStyle.prototype.toNode = function() {
+  return {
+    tag: "link",
+    closer: " /",
+    attributes: Object.assign(
       {
         rel: "stylesheet",
         type: "text/css",
         href: this.getRelativePath(),
       },
-      (typeof this.attributes === "object" ? this.attributes : {}),
-    )
-  )} />`;
+      (typeof this.attributes === "object" ? this.attributes : {})
+    ),
+  }
 }
+
+// ePubStyle.prototype.toString = function() {
+//   return toStr(this.toNode());
+// }
 
 export { ePubStyle }

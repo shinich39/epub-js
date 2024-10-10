@@ -1,4 +1,5 @@
 import { ePubDoc } from "../index.js";
+import { toStr, toObj } from "../src/libs/dom.mjs";
 import { beautifyHTML } from "../src/libs/utilities.js";
 import path from "node:path";
 import fs from "node:fs";
@@ -12,12 +13,124 @@ const COVER_DATA = fs.readFileSync(COVER_PATH, { encoding: "base64" });
 
 const doc = new ePubDoc();
 
-const { view } = doc.generateCover(COVER_DATA);
-// const { view } = doc.generateNav();
+const coverImage = doc.addImage({
+  path: "EPUB/cover.png",
+  data: COVER_DATA,
+  encoding: "base64",
+  menifest: {
+    properties: "cover-image",
+  },
+});
 
-console.log(view.toObject());
+const coverView = doc.generateCover(coverImage);
 
-console.log(doc.addView(view.toObject()).toString());
+const navView = doc.generateNav();
+const tocNode = navView.getNode({ attributes: { "epub:type": "toc" } });
+
+tocNode.addNodes([
+  {
+    tag: "h1",
+    children: [{
+      content: "TOC"
+    }]
+  }, {
+    tag: "ol",
+    children: [{
+      tag: "li",
+      children: [{
+        tag: "a",
+        attributes: {
+          href: coverView.getRelativePath(),
+        },
+        children: [{
+          content: "Cover"
+        }]
+      }]
+    }, {
+      tag: "li",
+      children: [{
+        tag: "span",
+        children: [{
+          content: "Inner"
+        }]
+      }, {
+        tag: "ol",
+        children: [{
+          tag: "li",
+          children: [{
+            tag: "a",
+            attributes: {
+              href: navView.getRelativePath()
+            },
+            children: [{
+              content: "NAV"
+            }]
+          }]
+        }]
+      }]
+    }]
+  }
+]);
+
+const ncxView = doc.generateNCX(tocNode);
+
+
+const mtView = doc.generateMimetype();
+const cntView = doc.generateContainer();
+const pkgView = doc.generatePackage();
+
+console.log(doc.toFiles())
+
+// console.log(navView.toString())
+// console.log(ncxView.toString())
+
+
+// const coverImage = doc.addImage({
+//   path: "EPUB/cover.png",
+//   data: COVER_DATA,
+//   attributes: {
+//     alt: "This is cover image!"
+//   }
+// });
+
+// const audio = doc.addAudio({
+//   path: "EPUB/cover.png",
+//   data: COVER_DATA,
+//   attributes: {
+//     alt: "This is cover image!",
+//     controls: true
+//   }
+// });
+// console.log(toObj(audio.toString()).children[0])
+
+// const view = doc.addView({
+//   path: "EPUB/1.xhtml",
+// });
+
+// const body = view.getNode({ tag: "body" });
+
+// body.addNode({ tag: "span", name: "0" }).addNode({ content: "T0", name: `T0` });
+// body.addNode({ tag: "span", name: "1" }).addNode({ content: "T1", name: `T1` });
+// const a = body.addNode({ tag: "span", name: "2" }).addNode({ tag: "a" });
+
+// a.addNode({ content: "T2", name: "T2T0" });
+// a.addNode({ content: "T2", name: "T2T1" });
+// a.addNode({ content: "T2", name: "T2T2" });
+// body.addNode({ tag: "span", name: "3" }).addNode({ content: "T3", name: `T3` });
+// body.addNode({ tag: "span", name: "4" }).addNode({ content: "T4", name: `T4` });
+
+// body.getNode({ name: "2" })
+// console.log(view.getTexts())
+
+// const { view } = doc.generateCover(COVER_DATA);
+
+// console.log(view.getNode("img"));
+
+// const doc2 =  new ePubDoc(doc.toObject());
+
+// doc2.removeImages();
+
+// console.log(doc2);
 
 // nav.tocNode.addNode({ tag: "h1", content: "Table of Contents" });
 

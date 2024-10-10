@@ -537,6 +537,7 @@ function queryObject(obj, qry) {
     lessThanOrEqual: ["$lessThanOrEqual", "$lte"],
     equal: ["$equal", "$eq"],
     notEqual: ["$notEqual", "$neq", "$ne"],
+    exists: ["$exists"],
     function: ["$function", "$func", "$fn"],
     regexp: ["$regexp", "$regex", "$re", "$reg"]
   };
@@ -622,6 +623,8 @@ function queryObject(obj, qry) {
       }
     } else if (QUERY_OPERATORS.notEqual.indexOf(o) > -1) {
       return !C(d, q, "$equal");
+    } else if (QUERY_OPERATORS.exists.indexOf(o) > -1) {
+      return (d !== null && d !== void 0) === Boolean(q);
     } else if (QUERY_OPERATORS.function.indexOf(o) > -1) {
       return q(d);
     } else if (QUERY_OPERATORS.regexp.indexOf(o) > -1) {

@@ -1,7 +1,7 @@
 "use strict";
 
+import { objToAttr, beautifyHTML } from "../libs/utilities.js";
 import { toObj, toStr } from "../libs/dom.mjs";
-import { objToAttr } from "../libs/utilities.js";
 import { queryObject } from "../libs/utils.mjs";
 
 class ePubNode {
@@ -14,10 +14,23 @@ class ePubNode {
     this.closer = null;
     this.content = null;
     this.attributes = {};
+
+    /**
+     * object[]  
+     * tag: string|undefined  
+     * closer: string|undefined  
+     * content: string|undefined  
+     * attributes: object  
+     */
     this.children = [];
 
     // Import data
     Object.assign(this, obj || {});
+
+    // Parse DOM
+    if (typeof this.children === "string") {
+      this.children = toObj(this.children);
+    }
 
     // Convert children to ePubNode
     for (let i = 0; i < this.children.length; i++) {
@@ -51,7 +64,7 @@ ePubNode.prototype.getNextNode = function() {
 
 ePubNode.prototype.getAbsolutePath = function() {
   let result = this.view.getAbsolutePath();
-  if (this.attributes.id) {
+  if (this.attributes?.id) {
     result += `#${this.attributes.id}`;
   }
   return result;
@@ -59,25 +72,10 @@ ePubNode.prototype.getAbsolutePath = function() {
 
 ePubNode.prototype.getRelativePath = function() {
   let result = this.view.getRelativePath();
-  if (this.attributes.id) {
+  if (this.attributes?.id) {
     result += `#${this.attributes.id}`;
   }
   return result;
-}
-
-ePubNode.prototype.setTag = function(str) {
-  this.tag = str;
-  return this;
-}
-
-ePubNode.prototype.setContent = function(str) {
-  this.content = str;
-  return this;
-}
-
-ePubNode.prototype.setAttribute = function(key, value) {
-  this.attributes[key] = value;
-  return this;
 }
 
 /**
@@ -96,7 +94,15 @@ ePubNode.prototype.addNode = function(obj) {
   return node;
 }
 
-ePubNode.prototype.getChild = function(query) {
+ePubNode.prototype.addNodes = function(arr) {
+  const result = [];
+  for (const item of arr) {
+    result.push(this.addNode(item));
+  }
+  return result;
+}
+
+ePubNode.prototype.getChild = function(query = {}) {
   for (const child of this.children) {
     if (queryObject(child, query)) {
       return child;
@@ -104,7 +110,7 @@ ePubNode.prototype.getChild = function(query) {
   }
 }
 
-ePubNode.prototype.getChildren = function(query) {
+ePubNode.prototype.getChildren = function(query = {}) {
   const result = [];
   for (const child of this.children) {
     if (queryObject(child, query)) {
@@ -114,7 +120,7 @@ ePubNode.prototype.getChildren = function(query) {
   return result;
 }
 
-ePubNode.prototype.removeChild = function(query) {
+ePubNode.prototype.removeChild = function(query = {}) {
   const child = this.getChild(query);
   if (child) {
     child.remove();
@@ -122,7 +128,7 @@ ePubNode.prototype.removeChild = function(query) {
   return this;
 }
 
-ePubNode.prototype.removeChildren = function(query) {
+ePubNode.prototype.removeChildren = function(query = {}) {
   const children = this.getChildren(query);
   for (const child of children) {
     child.remove();
@@ -130,7 +136,7 @@ ePubNode.prototype.removeChildren = function(query) {
   return this;
 }
 
-ePubNode.prototype.getNode = function(query) {
+ePubNode.prototype.getNode = function(query = {}) {
   for (const child of this.children) {
     if (queryObject(child, query)) {
       return child;
@@ -142,7 +148,7 @@ ePubNode.prototype.getNode = function(query) {
   }
 }
 
-ePubNode.prototype.getNodes = function(query) {
+ePubNode.prototype.getNodes = function(query = {}) {
   const result = [];
   for (const child of this.children) {
     if (queryObject(child, query)) {
@@ -156,7 +162,7 @@ ePubNode.prototype.getNodes = function(query) {
   return result;
 }
 
-ePubNode.prototype.removeNode = function(query) {
+ePubNode.prototype.removeNode = function(query = {}) {
   const node = this.getNode(query);
   if (node) {
     node.remove();
@@ -164,12 +170,54 @@ ePubNode.prototype.removeNode = function(query) {
   return this;
 }
 
-ePubNode.prototype.removeNodes = function(query) {
+ePubNode.prototype.removeNodes = function(query = {}) {
   const nodes = this.getNodes(query);
   for (const node of nodes) {
     node.remove();
   }
   return this;
+}
+
+ePubNode.prototype.getText = function() {
+  const query = {
+    tag: null,
+    content: {
+      $exists: true,
+    }
+  }
+
+  for (const child of this.children) {
+    if (queryObject(child, query)) {
+      return child;
+    }
+    const node = child.getNode(query);
+    if (node) {
+      return node?.content || "";
+    }
+  }
+  return "";
+}
+
+ePubNode.prototype.getTexts = function() {
+  const query = {
+    tag: null,
+    content: {
+      $exists: true,
+    }
+  }
+
+  const result = [];
+  for (const child of this.children) {
+    if (queryObject(child, query)) {
+      result.push(child);
+    }
+    const nodes = child.getNodes(query);
+    for (const node of nodes) {
+      result.push(node);
+    }
+  }
+
+  return result.map(node => node?.content || "").join("");
 }
 
 ePubNode.prototype.move = function(index) {
@@ -202,8 +250,19 @@ ePubNode.prototype.remove = function() {
   return this;
 }
 
+ePubNode.prototype.toNode = function() {
+  return {
+    tag: this.tag,
+    closer: this.closer,
+    content: this.content,
+    attributes: this.attributes,
+    children: this.children.map(child => child.toNode()),
+  };
+}
+
 ePubNode.prototype.toString = function() {
-  return this.document.beautify ? beautifyHTML(toStr(this)) : toStr(this);
+  const str = toStr(this);
+  return this.document._beautify ? beautifyHTML(str) : str;
 }
 
 ePubNode.prototype.toObject = function() {

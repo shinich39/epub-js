@@ -1,6 +1,7 @@
 "use strict";
 
 import { objToAttr } from "../libs/utilities.js";
+import { toStr } from "../libs/dom.mjs";
 import { ePubFile } from "./file.js";
 
 class ePubImage extends ePubFile {
@@ -15,24 +16,28 @@ class ePubImage extends ePubFile {
 }
 
 ePubImage.prototype.remove = function() {
-  // remove image in document.images
   let i = this.document.images.findIndex(item => item._id == this._id);
   if (i > -1) {
     this.document.images.splice(i, 1);
   }
-
   return this;
 }
 
-ePubImage.prototype.toString = function() {
-  return `<img${objToAttr(
-    Object.assign(
+ePubImage.prototype.toNode = function() {
+  return {
+    tag: "img",
+    closer: " /",
+    attributes: Object.assign(
       {
         src: this.getRelativePath(),
       },
       (typeof this.attributes === "object" ? this.attributes : {}),
-    )
-  )} />`;
+    ),
+  }
 }
+
+// ePubImage.prototype.toString = function() {
+//   return toStr(this.toNode());
+// }
 
 export { ePubImage }
