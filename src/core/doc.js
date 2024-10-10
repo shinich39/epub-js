@@ -492,8 +492,8 @@ ePubDoc.prototype.generateCover = function(image) {
       properties: "cover", // ?
     },
     spine: {
-      // linear: "no",
-      linear: "yes",
+      // If linear value is set to "no", the cover page will not be displayed on the first page of ePub.
+      linear: "no",
     },
     children: [{
       tag: "?xml",

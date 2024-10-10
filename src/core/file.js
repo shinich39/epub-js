@@ -8,7 +8,7 @@ class ePubFile {
     this.document = document;
     this._id = this.document.generateId();
     /**
-     * All value is optional.  
+     * All values is optional.  
      * { fallback, *href, *id, media-overlay, *media-type, properties }
      */
     this.manifest = {};
@@ -91,18 +91,6 @@ ePubFile.prototype.toSpine = function() {
     },
     (typeof this.spine === "object" ? this.spine : {}),
   );
-
-  // https://www.w3.org/TR/epub-33/#flow-overrides
-  // Spine overrides 
-  const properties = Object.entries(this.rendition).reduce((acc, [key, value]) => {
-    return value ? `${acc} rendition:${key.replace(/[A-Z]/g, function(str) {
-      return `-${str.toLowerCase()}`;
-    })}-${value}` : acc;
-  }, attributes.properties || "");
-
-  if (properties !== "") {
-    attributes.properties = properties;
-  }
 
   return {
     tag: "itemref",

@@ -13,32 +13,18 @@ class ePubView extends ePubFile {
     this.document = document;
     this._id = this.document.generateId();
     /**
-     * All value is optional.  
+     * All values is optional.  
      * { fallback, *href, *id, media-overlay, *media-type, properties }
      */
     this.manifest = {};
     /**
-     * All value is optional.  
+     * All values is optional.  
      * { id, *idref, linear, properties }  
+     * https://www.w3.org/TR/epub-33/#flow-overrides
      */
     this.spine = {};
     this.encoding = "utf8";
     this.attributes = {};
-    /**
-     * https://www.w3.org/TR/epub-33/#layout  
-     * layout: "pre-paginated", "reflowable"  
-     * orientation: "landscape", "portrait", "auto"  
-     * spread: "none", "landscape", "both", "auto"  
-     * pageSpread: "left", "center", "right"
-     * flow: "paginated", "scrolled-continuous", "scrolled-doc", "auto"  
-     */
-    this.rendition = {
-      layout: null,
-      orientation: null,
-      spread: null,
-      pageSpread: null,
-      flow: null,
-    };
 
     this.tag = null;
     this.closer = null;
@@ -90,8 +76,9 @@ class ePubView extends ePubFile {
     Object.assign(this, obj || {});
 
     // Parse DOM
-    if (typeof this.children === "string") {
-      this.children = toObj(this.children);
+    if (typeof this.data === "string") {
+      this.children = toObj(this.data).children;
+      delete this.data;
     }
 
     // Convert children to ePubNode

@@ -24,7 +24,15 @@ const coverImage = doc.addImage({
 
 const coverView = doc.generateCover(coverImage);
 
+// const testView = doc.addView({
+//   path: "EPUB/test.xhtml",
+//   data: fs.readFileSync(path.join(process.cwd(), "/test/index.html"), "utf8"),
+// });
+
 const navView = doc.generateNav();
+navView.spine.properties = "rendition:orientation-portrait";
+navView.spine.properties += " rendition:page-spread-left";
+
 const tocNode = navView.getNode({ attributes: { "epub:type": "toc" } });
 
 tocNode.addNodes([
