@@ -492,7 +492,8 @@ ePubDoc.prototype.generateCover = function(image) {
       properties: "cover", // ?
     },
     spine: {
-      linear: "no",
+      // linear: "no",
+      linear: "yes",
     },
     children: [{
       tag: "?xml",
@@ -702,42 +703,80 @@ ePubDoc.prototype.generateNCX = function(tocNode) {
     }]
   });
 
-  function create(target, children) {
-    for (const child of children) {
-      if (child.tag === "a") {
-        const href = child.attributes?.href;
-        const text = child.getTexts();
-        if (href && text) {
-          const newNode = target.addNode({
-            tag: "navPoint",
-            children: [{
-              tag: "navLabel",
-              children: [{
-                tag: "text",
-                children: [{
-                  content: text
-                }]
-              }]
-            }, {
-              tag: "content",
-              closer: " /",
-              attributes: {
-                src: href
-              }
-            }]
-          });
+  function create(ncxNode, navNode) {
+    const a = navNode.getChild({ tag: "a" });
+    const list = navNode.getChild({ tag: { $in: ["ol", "ul"] }});
+    let newNode;
 
-          create(newNode, child.children);
-        }
-      } else if (child.tag === "ol" || child.tag === "ul" || child.tag === "li") {
-        create(target, child.children);
+    if (a) {
+      const href = a.attributes?.href;
+      const text = a.getTexts();
+      newNode = ncxNode.addNode({
+        tag: "navPoint",
+        children: [{
+          tag: "navLabel",
+          children: [{
+            tag: "text",
+            children: [{
+              content: text,
+            }]
+          }]
+        }, {
+          tag: "content",
+          closer: " /",
+          attributes: {
+            src: href,
+          }
+        }]
+      });
+    }
+
+    if (list) {
+      const children = list.getChildren({ tag: "li" });
+      for (const child of children) {
+        create(newNode || ncxNode, child);
       }
     }
+
+    // for (const child of children) {
+    //   if (child.tag === "a") {
+    //     const href = child.attributes?.href;
+    //     const text = child.getTexts();
+    //     if (href && text) {
+    //       const newNode = target.addNode({
+    //         tag: "navPoint",
+    //         children: [{
+    //           tag: "navLabel",
+    //           children: [{
+    //             tag: "text",
+    //             children: [{
+    //               content: text,
+    //             }]
+    //           }]
+    //         }, {
+    //           tag: "content",
+    //           closer: " /",
+    //           attributes: {
+    //             src: href,
+    //           }
+    //         }]
+    //       });
+
+    //       create(newNode, child.children);
+    //     }
+    //   } else if (child.tag === "ol" || child.tag === "ul" || child.tag === "li") {
+    //     create(target, child.children);
+    //   }
+    // }
   }
 
   const mapNode = view.getNode({ tag: "ncx" }).addNode({ tag: "navMap" });
+  const tocList = tocNode.getChild({ tag: { $in: ["ol", "ul"] } });
+  const tocItems = tocList.getChildren({ tag: "li" });
 
-  create(mapNode, tocNode.children);
+  for (const item of tocItems) {
+    create(mapNode, item);
+  }
 
   return view;
 }

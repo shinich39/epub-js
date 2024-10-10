@@ -65,9 +65,59 @@ tocNode.addNodes([
             children: [{
               content: "NAV"
             }]
+          }, {
+            tag: "ol",
+            children: [{
+              tag: "li",
+              children: [{
+                tag: "a",
+                attributes: {
+                  href: navView.getRelativePath()
+                },
+                children: [{
+                  content: "NAV INNER"
+                }]
+              }]
+            }]
           }]
         }]
       }]
+    }, {
+      tag: "li",
+      children: [{
+        tag: "span",
+        children: [{
+          content: "Inner2"
+        }]
+      }, {
+        tag: "ol",
+        children: [{
+          tag: "li",
+          children: [{
+            tag: "a",
+            attributes: {
+              href: navView.getRelativePath()
+            },
+            children: [{
+              content: "NAV2"
+            }]
+          }, {
+            tag: "ol",
+            children: [{
+              tag: "li",
+              children: [{
+                tag: "a",
+                attributes: {
+                  href: navView.getRelativePath()
+                },
+                children: [{
+                  content: "NAV INNER2"
+                }]
+              }]
+            }]
+          }]
+        }]
+      }, ]
     }]
   }
 ]);
@@ -79,7 +129,6 @@ const mtView = doc.generateMimetype();
 const cntView = doc.generateContainer();
 const pkgView = doc.generatePackage();
 
-console.log(doc.toFiles())
 
 // console.log(navView.toString())
 // console.log(ncxView.toString())
@@ -186,27 +235,28 @@ console.log(doc.toFiles())
 
 
 // // test write
+const files = doc.toFiles();
+fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
+for (const file of files) {
+  const filePath = path.join(OUTPUT_PATH, file.path);
+  const dirPath = path.dirname(filePath);
+  fs.mkdirSync(dirPath, { recursive: true });
+  fs.writeFileSync(filePath, file.data, { encoding: file.encoding });
+}
+
+// test JSZip
 // fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
-// for (const file of files) {
-//   const filePath = path.join(OUTPUT_PATH, file.path);
-//   const dirPath = path.dirname(filePath);
-//   fs.mkdirSync(dirPath, { recursive: true });
-//   fs.writeFileSync(filePath, file.data, { encoding: file.encoding });
-// }
+// fs.mkdirSync(OUTPUT_PATH);
+const zip = new JSZip();
+for (const file of files) {
+  try {
+    zip.file(file.path, file.data, { base64: file.encoding === "base64" });
+  } catch(err) {
+    console.error(err);
+  }
+}
 
-// // test JSZip
-// // fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
-// // fs.mkdirSync(OUTPUT_PATH);
-// const zip = new JSZip();
-// for (const file of files) {
-//   try {
-//     zip.file(file.path, file.data, { base64: file.encoding === "base64" });
-//   } catch(err) {
-//     console.error(err);
-//   }
-// }
-
-// zip.generateAsync({ type:"base64" })
-//   .then(function(content) {
-//     fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.epub`), content, {encoding: "base64"});
-//   });
+zip.generateAsync({ type:"base64" })
+  .then(function(content) {
+    fs.writeFileSync(path.join(OUTPUT_PATH, `${doc.title}.epub`), content, {encoding: "base64"});
+  });

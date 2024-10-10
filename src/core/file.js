@@ -105,7 +105,7 @@ ePubFile.prototype.toSpine = function() {
   }
 
   return {
-    tag: "item",
+    tag: "itemref",
     closer: " /",
     attributes: attributes,
   }
