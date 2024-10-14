@@ -9,7 +9,13 @@ function dateToISOString(v) {
 }
 
 function normalizeBase64(str) {
-  return str.split(",")[1];
+  return str.replace(/^data\:.*?\,/, "");
+}
+
+function toKebabCase(str) {
+  return str.replace(/[A-Z]/g, function(ch) {
+    return `-${ch.toLowerCase()}`;
+  });
 }
 
 function objToAttr(obj = {}) {
