@@ -3,9 +3,14 @@
 import beautify from "js-beautify";
 import mime from 'mime';
 import path from "path";
+import { parseTemplate } from "./utils.mjs";
 
 function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
+}
+
+function ISOStringToDate(v) {
+  return new Date(v);
 }
 
 function normalizeBase64(str) {
@@ -16,6 +21,21 @@ function toKebabCase(str) {
   return str.replace(/[A-Z]/g, function(ch) {
     return `-${ch.toLowerCase()}`;
   });
+}
+
+function parseProperties(obj, target) {
+  if (Array.isArray(obj)) {
+    for (const _obj of obj) {
+      parseProperties(_obj);
+    }
+  } else if (typeof obj === "object" && obj !== null) {
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "string") {
+        obj[key] = parseTemplate(obj[key], target)
+      }
+    }
+  }
+  return obj;
 }
 
 function objToAttr(obj = {}) {
@@ -86,9 +106,11 @@ function beautifyJS(str) {
 
 export {
   dateToISOString,
+  ISOStringToDate,
   normalizeBase64,
   objToAttr,
   objToStyle,
+  parseProperties,
   mimeToExt,
   extToMime,
   getFilename,

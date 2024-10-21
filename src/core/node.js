@@ -1,16 +1,14 @@
 "use strict";
 
-import { objToAttr, beautifyHTML } from "../libs/utilities.js";
-import { toObj, toStr } from "../libs/dom.mjs";
-import { queryObject } from "../libs/utils.mjs";
+import { copyObject } from "../libs/utils.mjs";
 import { ePubFile } from "./file.js";
 
 class ePubNode {
   constructor(document, rootNode, parentNode, obj) {
-    this._id = document.generateId();
+    this._id = document.generateUUID();
     this.document = document;
     this.rootNode = rootNode;
-    this.parentNode = parentNode || null;
+    this.parentNode = parentNode;
 
     this.tag = null;
     this.closer = null;
@@ -18,16 +16,16 @@ class ePubNode {
     this.attributes = {};
 
     /**
-     * object[]  
-     * tag: string|undefined  
-     * closer: string|undefined  
-     * content: string|undefined  
-     * attributes: object  
+     * @type {object[]}  
+     * @property {string|undefined} tag   
+     * @property {string|undefined} closer   
+     * @property {string|undefined} content   
+     * @property {object} attributes   
      */
     this.children = [];
 
     // Import data
-    Object.assign(this, obj || {});
+    Object.assign(this, copyObject(obj || {}));
 
     // Convert children to ePubNode
     this.init();
@@ -82,31 +80,35 @@ ePubNode.prototype.getRelativePath = function() {
 }
 
 ePubNode.prototype.move = function(index) {
-  const parentNode = this.parentNode;
-  const currentIndex = this.getIndex();
-  if (currentIndex > -1) {
-    if (index > currentIndex) {
-      index = index - 1;
-    } else if (index < 0) {
-      index = parentNode.children.length + index;
+  if (this.parentNode) {
+    const currentIndex = this.getIndex();
+    if (currentIndex > -1) {
+      if (index > currentIndex) {
+        index = index - 1;
+      } else if (index < 0) {
+        index = this.parentNode.children.length + index;
+      }
+      this.parentNode.children.splice(index, 0, this.parentNode.children.splice(currentIndex, 1)[0]);
     }
-    parentNode.children.splice(index, 0, parentNode.children.splice(currentIndex, 1)[0]);
   }
+
   return this;
 }
 
 ePubNode.prototype.remove = function() {
-  // remove children nodes
-  for (const child of this.children) {
-    child.remove();
+  if (this.parentNode) {
+    let i = this.parentNode.children.findIndex(item => item._id == this._id);
+    if (i > -1) {
+      this.parentNode.children.splice(i, 1);
+    }
   }
 
-  // remove node in parent
-  const parentNode = this.parentNode;
-  const i = parentNode.children.findIndex(item => item._id == this._id);
-  if (i > -1) {
-    parentNode.children.splice(i, 1);
-  }
+  // Convert to object
+  Object.assign(this, this.toObject());
+
+  delete this.document;
+  delete this.rootNode;
+  delete this.parentNode;
 
   return this;
 }
@@ -118,21 +120,26 @@ ePubNode.prototype.toObject = function() {
   delete obj.document;
   delete obj.rootNode;
   delete obj.parentNode;
-  return obj;
+  return copyObject(obj);
 }
 
+ePubNode.prototype.update = ePubFile.prototype.update;
 ePubNode.prototype.addNode = ePubFile.prototype.addNode;
 ePubNode.prototype.addNodes = ePubFile.prototype.addNodes;
 ePubNode.prototype.getChild = ePubFile.prototype.getChild;
 ePubNode.prototype.getChildren = ePubFile.prototype.getChildren;
+ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
+ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
 ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
 ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
 ePubNode.prototype.getNode = ePubFile.prototype.getNode;
 ePubNode.prototype.getNodes = ePubFile.prototype.getNodes;
+ePubNode.prototype.updateNode = ePubFile.prototype.updateNode;
+ePubNode.prototype.updateNodes = ePubFile.prototype.updateNodes;
 ePubNode.prototype.removeNode = ePubFile.prototype.removeNode;
 ePubNode.prototype.removeNodes = ePubFile.prototype.removeNodes;
-ePubNode.prototype.getText = ePubFile.prototype.getText;
-ePubNode.prototype.getTexts = ePubFile.prototype.getTexts;
+ePubNode.prototype.getContent = ePubFile.prototype.getContent;
+ePubNode.prototype.getContents = ePubFile.prototype.getContents;
 ePubNode.prototype.toNode = ePubFile.prototype.toNode;
 ePubNode.prototype.toString = ePubFile.prototype.toString;
 

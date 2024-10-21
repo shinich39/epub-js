@@ -417,16 +417,17 @@ function parseQueryString(str) {
   return result;
 }
 function parseTemplate(str, obj) {
-  return str.replace(/\$\{[^}]+\}/g, function(item) {
-    const key = item.substring(2, item.length - 1) ?? "";
-    if (key.indexOf(".") > -1) {
-      return parseTemplate(
-        "${" + key.split(".").slice(1).join(".") + "}",
-        obj[key.split(".")[0]]
-      );
-    } else {
-      return obj[key] ?? "";
+  return str.replace(/\$\{[^}]*?\}/g, function(item) {
+    let target = obj;
+    let keys = item.substring(2, item.length - 1).split(/\.|\[['"]?|['"]?\]/).filter(Boolean);
+    let key = keys.pop();
+    while (typeof target === "object" && keys.length > 0) {
+      target = target[keys.shift()];
     }
+    if (typeof target !== "object") {
+      return "";
+    }
+    return target[key] || "";
   });
 }
 function createArray(len, value) {
