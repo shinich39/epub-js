@@ -1,0 +1,458 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>index.html</title>
+    <style>
+      *, *::after, *::before{
+        font-family: monospace;
+      }
+      body{
+        margin: 2rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>ePub-js</h1>
+    This page has been developed for test browser compatibility.
+    <br />
+    The first line of text file will be contained within an h1.
+    <br />
+    Create a page for each file.
+    <br />
+    <h2>Set Cover</h2>
+    <input id="set-cover" type="file" accept="image/*">
+    <h2>Add Files</h2>
+    <input id="add-files" type="file" multiple>
+    <button id="clear-files">Clear</button>
+    <br />
+    <h2>File List</h2>
+    <ol id="file-list"></ol>
+    <h2>Finish</h2>
+    <button id="download-file">Download</button>
+    
+    <script src="./dist/epub.js"></script>
+    <script src="./test/jszip.min.js"></script>
+    <script src="./src/libs/utils.js"></script>
+    <script>
+      const { ePubDoc } = epub;
+
+      document.getElementById("set-cover").addEventListener("change", setCover);
+      document.getElementById("add-files").addEventListener("change", addFiles);
+      document.getElementById("clear-files").addEventListener("click", clearFiles);
+      document.getElementById("download-file").addEventListener("click", downloadFile);
+
+      function toText(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function() {
+            resolve(reader.result);
+          }
+          reader.readAsText(file);
+        });
+      }
+      
+      function toBase64(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function() {
+            resolve(reader.result);
+          }
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function clearFiles(e) {
+        doc = new ePubDoc({
+          title: "ePub-js",
+          authors: ["shinich39"],
+          createdAt: Date.now(),
+        });
+        
+        doc.appendMimetpye();
+        doc.appendContainer();
+        const pkgPage = doc.appendPackage();
+
+        pkgPage
+          .findNode({
+            tag: "dc:title",
+          })
+          .update({
+            $set: {
+              children: [{
+                content: "ePub-js"
+              }]
+            }
+          });
+        
+        const navPage = doc.appendNav();
+
+        navPage.findNode({
+          tag: "nav",
+          "attributes.id": "toc",
+        }).appendNode({
+          tag: "h1",
+          children: [{
+            content: "Table of Contents",
+          }],
+        });
+
+        doc.updateNode({
+          tag: "manifest",
+        }, {
+          $push: {
+            children: navPage.toManifestNode(),
+          },
+        });
+
+        doc.updateNode({
+          tag: "spine",
+        }, {
+          $push: {
+            children: navPage.toSpineNode(),
+          },
+        });
+        
+        nav = navPage.findNode({
+          tag: "nav",
+          "attributes.id": "toc",
+        }).appendNode({
+          tag: "ol",
+        });
+
+        nav.appendNode({
+          tag: "li",
+          children: [{
+            tag: "a",
+            attributes: {
+              href: navPage.getRelativePath()
+            },
+            children: [{
+              content: "Navigation",
+            }]
+          }]
+        });
+        
+        renderFileList();
+      }
+
+      async function setCover(e) {
+        if (cover) {
+          doc.findNode({
+            tag: "manifest",
+          }).removeNode({
+            "attributes.id": cover._id
+          });
+
+          doc.findNode({
+            tag: "spine",
+          }).removeNode({
+            "attributes.idref": cover._id
+          });
+
+          cover.remove();
+        }
+
+        const file = e.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        const filePath = "cover."+file.type.split("/").pop();
+
+        cover = doc.appendCover({
+          path: filePath,
+          data: await toBase64(file),
+        });
+
+        doc.updateNode({
+          tag: "manifest",
+        }, {
+          $push: {
+            children: cover.toManifestNode(),
+          },
+        }, 0);
+
+        renderFileList();
+      }
+
+      async function addFiles(e) {
+        let newFiles = Array.prototype.slice.call(e.target.files);
+        if (newFiles.length < 1) {
+          return;
+        }
+
+        newFiles = newFiles.sort(function(a, b) {
+          return utils.compareObject(a.name, b.name);
+        });
+
+        let file, page;
+        for (const newFile of newFiles) {
+          const { name, type, size } = newFile;
+
+          let pageIndex = doc.findFiles({ isPage: true }).length + 1,
+              pagePath = `EPUB/page-${pageIndex}.xhtml`,
+              navLabel = `page-${pageIndex}`,
+              filePath = `EPUB/${name}`;
+
+          // Check duplicated file
+          if (!!doc.findFile({ path: filePath })) {
+            continue;
+          }
+
+          if (/^image/.test(type)) {
+            file = doc.appendImage({
+              path: filePath,
+              data: await toBase64(newFile),
+            });
+
+            page = doc.appendPage({
+              isPage: true,
+              path: pagePath
+            });
+
+            page.findNode({
+              tag: "body"
+            }).appendNode({
+              tag: "div",
+              attributes: {
+                style: `
+text-align: center;
+margin: 0;
+padding: 0;
+                `.trim(),
+              },
+              children: [{
+                tag: "img",
+                closer: " /",
+                attributes: {
+                  style: `
+display: inline-block;
+width: auto;
+height: auto;
+margin: 0;
+padding: 0;
+max-width: 100%;
+max-height: 100%;
+                  `.trim(),
+                  src: file.getRelativePath(),
+                  alt: name,
+                }
+              }]
+            });
+          } else if (/^video\/mp4/.test(type)) {
+            file = doc.appendVideo({
+              path: filePath,
+              data: await toBase64(newFile),
+            });
+
+            page = doc.appendPage({
+              isPage: true,
+              path: pagePath,
+            });
+
+            page.findNode({
+              tag: "body"
+            }).appendNode({
+              tag: "div",
+              attributes: {
+                style: `
+text-align: center;
+margin: 0;
+padding: 0;
+                `.trim(),
+              },
+              children: [{
+                tag: "video",
+                attributes: {
+                  style: `
+display: inline-block;
+width: auto;
+height: auto;
+margin: 0;
+padding: 0;
+max-width: 100%;
+max-height: 100%;
+                  `.trim(),
+                  controls: "",
+                },
+                children: [{
+                  tag: "source",
+                  closer: " /",
+                  attributes: {
+                    src: file.getRelativePath(),
+                    type: type,
+                  }
+                }]
+              }]
+            });
+          } else if (/^audio\/mpeg/.test(type)) {
+            file = doc.appendAudio({
+              path: filePath,
+              data: await toBase64(newFile),
+            });
+
+            page = doc.appendPage({
+              isPage: true,
+              path: pagePath
+            });
+
+            page.findNode({
+              tag: "body"
+            }).appendNode({
+              tag: "audio",
+              attributes: {
+                controls: "",
+              },
+              children: [{
+                tag: "source",
+                closer: " /",
+                attributes: {
+                  src: file.getRelativePath(),
+                  type: type,
+                }
+              }]
+            });
+          } else if (/^text\/plain/.test(type)) {
+            page = doc.appendPage({
+              isPage: true,
+              path: pagePath,
+            });
+
+            let toggle = false;
+
+            page.findNode({
+              tag: "body"
+            }).appendNodes(
+              (await toText(newFile))
+                .replace(/\r\n/g, "\n")
+                .replace(/\n\s*\n/g, "\n\n")
+                .split(/\n/)
+                .map(item => {
+                  if (item) {
+                    if (!toggle) {
+                      toggle = true;
+                      return {
+                        tag: "h1",
+                        children: [{
+                          content: item,
+                        }]
+                      }
+                    } else {
+                      return {
+                        tag: "div",
+                        children: [{
+                          content: item,
+                        }]
+                      }
+                    }
+                  } else {
+                    return {
+                      tag: "br",
+                      closer: " /",
+                    }
+                  }
+                })
+            );
+          } else if (/^text\/javascript/.test(type)) {
+            file = doc.appendScript({
+              path: filePath,
+              data: await toText(newFile),
+            });
+          } else if (/^text\/css/.test(type)) {
+            file = doc.appendStyle({
+              path: filePath,
+              data: await toText(newFile),
+            });
+          }
+
+          if (file) {
+            doc.updateNode({
+              tag: "manifest",
+            }, {
+              $push: {
+                children: file.toManifestNode(),
+              },
+            });
+          }
+
+          if (page) {
+            doc.updateNode({
+              tag: "manifest",
+            }, {
+              $push: {
+                children: page.toManifestNode(),
+              },
+            });
+
+            doc.updateNode({
+              tag: "spine",
+            }, {
+              $push: {
+                children: page.toSpineNode(),
+              },
+            });
+
+            nav.appendNode({
+              tag: "li",
+              children: [{
+                tag: "a",
+                attributes: {
+                  href: page.getRelativePath()
+                },
+                children: [{
+                  content: navLabel,
+                }]
+              }]
+            });
+          }
+        }
+
+        document.getElementById("add-files").value = "";
+
+        renderFileList();
+      }
+
+      function renderFileList() {
+        const target = document.getElementById("file-list");
+        target.innerHTML = "";
+
+        for (const file of doc.findFiles({})) {
+          const item = document.createElement("li");
+          // item.innerHTML = `${file.type}: ${file.path}`;
+          item.innerHTML = file.path;
+          target.appendChild(item);
+        }
+      }
+
+      function downloadFile() {
+        const files = doc.toFiles();
+        const zip = new JSZip();
+        for (const file of files) {
+          try {
+            zip.file(file.path, file.data, { base64: file.encoding === "base64" });
+          } catch(err) {
+            console.error(err);
+          }
+        }
+
+        zip.generateAsync({ type: "blob" })
+          .then(function(blob) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "book.epub";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          });
+      }
+
+      let doc, nav, cover;
+
+      clearFiles();
+    </script>
+  </body>
+</html>

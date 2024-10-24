@@ -147,6 +147,35 @@ function splitInt(str) {
 function splitFloat(str) {
   return str.split(/([0-9]+\.[0-9]+)+/);
 }
+function getExtension(path) {
+  return /\.[^\\\/]/.test(path) ? "." + path.split(".").pop() : "";
+}
+function getFilename(path, ext) {
+  if (typeof ext === "string") {
+    path = path.replace(new RegExp(ext + "$"), "");
+  }
+  return path.replace(/[\\\/]$/, "").split(/[\\\/]/).pop();
+}
+function getDirectoryPath(path) {
+  return path.replace(/[^\\\/]+?[\\\/]?$/, "").replace(/(.)[\\\/]$/, "$1") || ".";
+}
+function getRelativePath(from, to) {
+  from = from.replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+  to = to.replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+  if (!from.endsWith("/")) {
+    from += "/";
+  }
+  if (!to.endsWith("/")) {
+    to += "/";
+  }
+  let result = "";
+  while (!to.startsWith(from)) {
+    result += "../";
+    from = from.substring(0, from.lastIndexOf("/", from.length - 2) + 1);
+  }
+  result += to.substring(from.length, to.length);
+  return result.replace(/[\\\/]$/, "");
+}
 function toHalfWidth(str) {
   return str.replace(/[！-～]/g, function(ch) {
     return String.fromCharCode(ch.charCodeAt(0) - 65248);
@@ -222,10 +251,16 @@ function compareString(strA, strB) {
   }
   return P(M(C(strA, strB), strA, strB), strA, strB);
 }
-function getObjectId() {
+function generateObjectId() {
   return Math.floor((/* @__PURE__ */ new Date()).getTime() / 1e3).toString(16) + "xxxxxx".replace(/x/g, function(v) {
     return Math.floor(Math.random() * 16).toString(16);
   }) + (__uniq__++).toString(16).padStart(6, "0");
+}
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    let r = Math.random() * 16 | 0, v = c == "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
 }
 function encryptString(str, salt) {
   if (salt.length === 0) {
@@ -423,8 +458,7 @@ function compareObject(a, b) {
     return a - b;
   } else if (aIdx === 4) {
     return a.localeCompare(b, void 0, {
-      numeric: true,
-      sensitivity: "base"
+      numeric: true
     });
   } else if (aIdx === 5) {
     return Object.keys(a).length - Object.keys(b).length;
@@ -683,21 +717,27 @@ function promiseAll(funcs) {
   }, Promise.resolve([]));
 }
 export {
+  compareObject,
   compareString,
   copyObject,
   createArray,
   encryptString,
   fromBase64,
+  generateObjectId,
+  generateUUID,
   getBezierPoint,
   getContainedSize,
   getCoveredSize,
+  getDirectoryPath,
+  getExtension,
+  getFilename,
   getMaxValue,
   getMeanValue,
   getMinValue,
   getModeValue,
-  getObjectId,
   getRandomNumber,
   getRandomValue,
+  getRelativePath,
   groupByKey,
   isArray,
   isBoolean,

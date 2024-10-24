@@ -1,401 +1,88 @@
 "use strict";
 
-import { copyObject, queryObject } from "../libs/utils.mjs";
-import { ePubFile } from "./file.js";
-import { ePubNode } from "./node.js";
+import { copyObject, generateUUID, isBoolean, isNull, isNumber, isObject, isString, isStringArray, queryObject } from "../libs/utils.mjs";
+import { ePubFile, ePubNode } from "../index.js";
 
 class ePubDoc {
   constructor(obj) {
-    this._id = this.generateUUID();
-
-    // Beatify HTML, CSS, JS
-    this.beautify = true;
-
-    // Default attributes of ePubFile
-    this.defaults = {
-      text: {
-        type: "text",
-        manifest: {},
-        encoding: "utf8",
-      },
-      page: {
-        type: "page",
-        manifest: {},
-        spine: {},
-        tag: null,
-        closer: null,
-        content: null,
-        children: [{
-          tag: "?xml",
-          closer: "?",
-          attributes: {
-            version: "1.0",
-            encoding: "utf-8",
-          },
-        }, {
-          tag: "!DOCTYPE",
-          closer: "",
-          attributes: {
-            html: true,
-          },
-        }, {
-          tag: "html",
-          attributes: {
-            "xmlns": "http://www.w3.org/1999/xhtml",
-            "xmlns:epub": "http://www.idpf.org/2007/ops",
-            "xml:lang": "en",
-            "lang": "en",
-            "dir": null,
-          },
-          children: [{
-            tag: "head",
-            children: [{
-              tag: "title",
-              children: [{
-                content: "No Title",
-              }]
-            }, {
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                charset: "utf-8",
-              }
-            }],
-          }, {
-            tag: "body",
-          }],
-        }],
-        encoding: "utf8",
-      },
-      style: {
-        type: "style",
-        manifest: {},
-        encoding: "utf8",
-      },
-      script: {
-        type: "script",
-        manifest: {},
-        encoding: "utf8",
-      },
-      image: {
-        type: "image",
-        manifest: {},
-        encoding: "base64",
-      },
-      cover: {
-        type: "image",
-        manifest: {
-          properties: "cover-image",
-        },
-        encoding: "base64",
-      },
-      audio: {
-        type: "audio",
-        manifest: {},
-        encoding: "base64",
-      },
-      video: {
-        type: "video",
-        manifest: {},
-        encoding: "base64",
-      },
-      font: {
-        type: "font",
-        manifest: {},
-        encoding: "base64",
-      },
-
-      mimetype: {
-        type: "mimetype",
-        path: "mimetype",
-        manifest: null,
-        spine: null,
-        data: "application/epub+zip",
-        encoding: "utf8",
-      },
-      container: {
-        type: "container",
-        path: "META-INF/container.xml",
-        manifest: null,
-        spine: null,
-        children: [{
-          tag: "?xml",
-          closer: "?",
-          attributes: {
-            version: "1.0",
-            encoding: "utf-8",
-          },
-        }, {
-          tag: "container",
-          attributes: {
-            "version": "1.0",
-            "xmlns": "urn:oasis:names:tc:opendocument:xmlns:container",
-          },
-          children: [{
-            tag: "rootfiles",
-            children: [{
-              tag: "rootfile",
-              closer: " /",
-              attributes: {
-                "full-path": "EPUB/package.opf",
-                "media-type": "application/oebps-package+xml",
-              }
-            }],
-          }],
-        }],
-      },
-      package: {
-        type: "package",
-        path: "EPUB/package.opf",
-        manifest: null,
-        spine: null,
-        children: [{
-          tag: "?xml",
-          closer: "?",
-          attributes: {
-            version: "1.0",
-            encoding: "utf-8",
-          },
-        }, {
-          tag: "package",
-          attributes: {
-            "xmlns": "http://www.idpf.org/2007/opf",
-            "version": "3.0",
-            "unique-identifier": "bookid",
-            "xml:lang": "en",
-            "dir": null,
-          },
-          children: [{
-            tag: "metadata",
-            attributes: {
-              "xmlns:opf": "http://www.idpf.org/2007/opf",
-              "xmlns:dc": "http://purl.org/dc/elements/1.1/",
-              "xmlns:dcterms": "http://purl.org/dc/terms/",
-            },
-            children: [{
-              tag: "dc:identifier",
-              attributes: {
-                id: "bookid",
-              },
-              children: [{
-                content: `urn:uuid:${this._id}`,
-              }],
-            }, {
-              tag: "dc:language",
-              children: [{
-                content: "en",
-              }],
-            }, {
-              tag: "dc:title",
-              attributes: {
-                id: "title",
-              },
-              children: [{
-                content: "No Title",
-              }],
-            }, {
-              tag: "meta",
-              attributes: {
-                property: "dcterms:modified",
-              },
-              children: [{
-                content: new Date().toISOString(),
-              }],
-            }],
-          }, {
-            tag: "manifest",
-            attributes: {},
-          }, {
-            tag: "spine",
-            attributes: {
-              // Set toc to "ncx" for legacy mode
-              "toc": null,
-              // Set page direction value to "ltr" or "rtl"
-              "page-progression-direction": null,
-            },
-          }],
-        }],
-      },
-      nav: {
-        type: "nav",
-        path: "EPUB/nav.xhtml",
-        manifest: {
-          properties: "nav",
-        },
-        spine: {
-          linear: "no",
-        },
-        tag: null,
-        closer: null,
-        content: null,
-        children: [{
-          tag: "?xml",
-          closer: "?",
-          attributes: {
-            version: "1.0",
-            encoding: "utf-8",
-          },
-        }, {
-          tag: "!DOCTYPE",
-          closer: "",
-          attributes: {
-            html: true,
-          },
-        }, {
-          tag: "html",
-          attributes: {
-            "xmlns": "http://www.w3.org/1999/xhtml",
-            "xmlns:epub": "http://www.idpf.org/2007/ops",
-            "xml:lang": "en",
-            "lang": "en",
-            "dir": null,
-          },
-          children: [{
-            tag: "head",
-            children: [{
-              tag: "title",
-              children: [{
-                content: "No Title",
-              }]
-            }, {
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                charset: "utf-8",
-              }
-            }],
-          }, {
-            tag: "body",
-            children: [{
-              tag: "nav",
-              attributes: {
-                "epub:type": "toc",
-                "id": "toc",
-                "role": "doc-toc",
-              }
-            }, {
-              tag: "nav",
-              attributes: {
-                "epub:type": "landmarks",
-                "id": "landmarks",
-                "hidden": "",
-              }
-            }, {
-              tag: "nav",
-              attributes: {
-                "epub:type": "page-list",
-                "id": "page-list",
-                "hidden": "",
-              }
-            }],
-          }],
-        }],
-        encoding: "utf8",
-      },
-      ncx: {
-        type: "ncx",
-        path: "EPUB/toc.ncx",
-        manifest: {
-          properties: "ncx",
-        },
-        children: [{
-          tag: "?xml",
-          closer: "?",
-          attributes: {
-            version: "1.0",
-            encoding: "utf-8",
-          },
-        }, {
-          tag: "!DOCTYPE",
-          closer: "",
-          attributes: {
-            "ncx": true,
-            "PUBLIC": true,
-            '"-//NISO//DTD ncx 2005-1//EN"': true,
-            '"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"': true,
-          },
-        }, {
-          tag: "ncx",
-          attributes: {
-            "xmlns:m": "http://www.w3.org/1998/Math/MathML",
-            "xmlns": "http://www.daisy.org/z3986/2005/ncx/",
-            "version": "2005-1",
-            "xml:lang": "en",
-          },
-          children: [{
-            tag: "head",
-            children: [{
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                name: "dtb:uid",
-                content: `urn:uuid:${this._id}`,
-              }
-            }, {
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                name: "dtb:depth",
-                content: "1",
-              }
-            }, {
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                name: "dtb:totalPageCount",
-                content: "0",
-              }
-            }, {
-              tag: "meta",
-              closer: " /",
-              attributes: {
-                name: "dtb:maxPageNumber",
-                content: "0",
-              }
-            }]
-          }, {
-            tag: "docTitle",
-            children: [{
-              tag: "text",
-              children: [{
-                content: "No Title",
-              }]
-            }],
-          }, {
-            tag: "navMap",
-          }],
-        }]
-      },
-    }
-
+    // Required
+    this._id = generateUUID();
+    this.language = "en";
+    this.title = "No Title";
+    this.authors = ["Anonymous"];
+    this.updatedAt = Date.now();
     this.files = [];
+
+    // Optional
+    this.createdAt = null;
+    this.textDirection = null;
+    this.pageDirection = null;
+    this.legacy = false;
 
     // Import data
     Object.assign(this, copyObject(obj || {}));
 
     this.init();
+    this.validate();
   }
 }
-
 /**
- * Convert files to ePubFile
+ * 
+ * @returns 
  */
 ePubDoc.prototype.init = function() {
+  // Convert files to ePubFile
   for (let i = 0; i < this.files.length; i++) {
     if (!(this.files[i] instanceof ePubFile)) {
       this.files[i] = new ePubFile(this, this.files[i]);
     }
   }
+  return this;
 }
-
-ePubDoc.prototype.generateUUID = function() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, 
-        v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+/**
+ * 
+ * @returns 
+ */
+ePubDoc.prototype.validate = function() {
+  if (!isString(this._id)) {
+    throw new Error("_id must be a string");
+  }
+  if (!isString(this.language)) {
+    throw new Error("language must be a string");
+  }
+  if (!isString(this.title)) {
+    throw new Error("title must be a string");
+  }
+  if (!isStringArray(this.authors)) {
+    throw new Error("authors must be a string-array");
+  }
+  if (!isNumber(this.updatedAt)) {
+    throw new Error("updatedAt must be a number");
+  }
+  if (!isNumber(this.createdAt) && !isNull(this.createdAt)) {
+    throw new Error("createdAt must be a number or null");
+  }
+  if (!isString(this.textDirection) && !isNull(this.textDirection)) {
+    throw new Error("textDirection must be a string or null");
+  }
+  if (!isString(this.pageDirection) && !isNull(this.pageDirection)) {
+    throw new Error("pageDirection must be a string or null");
+  }
+  if (!isBoolean(this.legacy)) {
+    throw new Error("legacy must be a string or null");
+  }
+  for (const file of this.files) {
+    if (!(file instanceof ePubFile)) {
+      throw new Error("files must be a ePubFile-array");
+    }
+  }
+  return this;
 }
-
+/**
+ * 
+ * @param {object} updates 
+ * @returns 
+ */
 ePubDoc.prototype.update = function(updates) {
   for (const operator of Object.keys(updates)) {
     for (let [keys, value] of Object.entries(updates[operator])) {
@@ -404,11 +91,11 @@ ePubDoc.prototype.update = function(updates) {
       let target = this;
       let key = keys.pop();
 
-      while(typeof target === "object" && keys.length > 0) {
+      while(isObject(target) && keys.length > 0) {
         target = target[keys.shift()];
       }
 
-      if (typeof target !== "object") {
+      if (!isObject(target)) {
         continue;
       }
 
@@ -448,23 +135,24 @@ ePubDoc.prototype.update = function(updates) {
   }
 
   this.init();
+  this.validate();
 
   return this;
 }
-
-// ePubFile methods
-
 /**
  * 
  * @param {object} obj
+ * @property {string} type
  * @property {string} path
- * @property {string|undefined} data
+ * @property {string|undefined} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} spine
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
-ePubDoc.prototype.addFile = function(obj, idx) {
-  if (typeof idx !== "number") {
+ePubDoc.prototype.appendFile = function(obj, idx) {
+  if (!isNumber(idx)) {
     idx = -1;
   }
   if (idx < 0) {
@@ -474,215 +162,754 @@ ePubDoc.prototype.addFile = function(obj, idx) {
   this.files.splice(idx, 0, file);
   return file;
 }
+/**
+ * 
+ * @param {object[]} arr
+ * @property {string} type
+ * @property {string} path
+ * @property {string|undefined} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} spine
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendFiles = function(arr, idx) {
+  if (!isNumber(idx)) {
+    idx = -1;
+  }
+  if (idx < 0) {
+    idx += this.files.length + 1;
+  }
+  const result = [];
+  for (const item of arr) {
+    result.push(this.appendFile(item, idx));
+    idx++;
+  }
+  return result;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendText = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "text",
+    manifest: {},
+    encoding: "utf8",
+  }, obj || {}), idx);
 
-ePubDoc.prototype.addText = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.text, obj), idx);
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {array|undefined} children 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} spine
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendPage = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "dom",
+    manifest: {},
+    spine: {},
+    tag: null,
+    closer: null,
+    content: null,
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "!DOCTYPE",
+      closer: "",
+      attributes: {
+        "html": true,
+      },
+    }, {
+      tag: "html",
+      attributes: {
+        "xmlns": "http://www.w3.org/1999/xhtml",
+        "xmlns:epub": "http://www.idpf.org/2007/ops",
+        "xml:lang": this.language,
+        "lang": this.language,
+        "dir": this.textDirection,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "title",
+          children: [{
+            content: this.title,
+          }]
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "charset": "utf-8",
+          }
+        }],
+      }, {
+        tag: "body",
+      }],
+    }],
+    encoding: "utf8",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendStyle = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "style",
+    manifest: {},
+    encoding: "utf8",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendScript = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "script",
+    manifest: {},
+    encoding: "utf8",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendImage = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "image",
+    manifest: {},
+    encoding: "base64",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendAudio = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "audio",
+    manifest: {},
+    encoding: "base64",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendVideo = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "video",
+    manifest: {},
+    encoding: "base64",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data 
+ * @property {object|undefined} manifest
+ * @property {object|undefined} attributes
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendFont = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "font",
+    manifest: {},
+    encoding: "base64",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendMimetpye = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "text",
+    path: "mimetype",
+    data: "application/epub+zip",
+    encoding: "utf8",
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendContainer = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "dom",
+    path: "META-INF/container.xml",
+    encoding: "utf8",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "container",
+      attributes: {
+        "version": "1.0",
+        "xmlns": "urn:oasis:names:tc:opendocument:xmlns:container",
+      },
+      children: [{
+        tag: "rootfiles",
+        children: [{
+          tag: "rootfile",
+          closer: " /",
+          attributes: {
+            "full-path": "EPUB/package.opf",
+            "media-type": "application/oebps-package+xml",
+          }
+        }],
+      }],
+    }],
+  }, obj || {}), idx);
+  
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendPackage = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "dom",
+    path: "EPUB/package.opf",
+    encoding: "utf8",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "package",
+      attributes: {
+        "xmlns": "http://www.idpf.org/2007/opf",
+        "version": "3.0",
+        "unique-identifier": "bookid",
+        "xml:lang": this.language,
+        "dir": this.textDirection,
+      },
+      children: [{
+        tag: "metadata",
+        attributes: {
+          "xmlns:opf": "http://www.idpf.org/2007/opf",
+          "xmlns:dc": "http://purl.org/dc/elements/1.1/",
+          "xmlns:dcterms": "http://purl.org/dc/terms/",
+        },
+        children: [
+          {
+            tag: "dc:identifier",
+            attributes: {
+              "id": "bookid",
+            },
+            children: [{
+              content: this._id,
+            }],
+          }, {
+            tag: "dc:language",
+            children: [{
+              content: this.language,
+            }],
+          }, {
+            tag: "dc:title",
+            attributes: {
+              "id": `title`,
+            },
+            children: [{
+              content: this.title,
+            }],
+          },
+          ...(
+            this.authors.map((item, i) => {
+              return {
+                tag: "dc:creator",
+                attributes: {
+                  "id": `author-${i}`,
+                },
+                children: [{
+                  content: item,
+                }],
+              }
+            })
+          ),
+          ...(
+            isNumber(this.createdAt) ? [{
+              tag: "dc:date",
+              children: [{
+                content: new Date(this.createdAt).toISOString(),
+              }],
+            }] : []
+          ),
+          {
+            tag: "meta",
+            attributes: {
+              "property": "dcterms:modified",
+            },
+            children: [{
+              content: new Date(this.updatedAt).toISOString(),
+            }],
+          }
+        ],
+      }, {
+        tag: "manifest",
+      }, {
+        tag: "spine",
+        attributes: {
+          // Set toc to "ncx" for legacy mode
+          "toc": this.legacy ? "ncx" : null,
+          // Set page direction value to "ltr" or "rtl"
+          "page-progression-direction": this.pageDirection,
+        },
+      }],
+    }],
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendNav = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "dom",
+    path: "EPUB/nav.xhtml",
+    manifest: {
+      properties: "nav",
+    },
+    spine: {
+      linear: "yes",
+    },
+    encoding: "utf8",
+    tag: null,
+    closer: null,
+    content: null,
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "!DOCTYPE",
+      closer: "",
+      attributes: {
+        "html": true,
+      },
+    }, {
+      tag: "html",
+      attributes: {
+        "xmlns": "http://www.w3.org/1999/xhtml",
+        "xmlns:epub": "http://www.idpf.org/2007/ops",
+        "xml:lang": this.language,
+        "lang": this.language,
+        "dir": this.textDirection,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "title",
+          children: [{
+            content: this.title,
+          }]
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "charset": "utf-8",
+          }
+        }],
+      }, {
+        tag: "body",
+        children: [{
+          tag: "nav",
+          attributes: {
+            "epub:type": "toc",
+            "id": "toc",
+            "role": "doc-toc",
+          }
+        }, {
+          tag: "nav",
+          attributes: {
+            "epub:type": "landmarks",
+            "id": "landmarks",
+            "hidden": "",
+          },
+          children: [{
+            tag: "h2",
+            children: [{
+              content: "Landmarks"
+            }]
+          }, {
+            tag: "ol",
+            children: [{
+              tag: "li",
+              children: [{
+                tag: "a",
+                attributes: {
+                  "epub:type": "toc",
+                  "href": "#toc",
+                },
+                children: [{
+                  content: "Table of Contents",
+                }]
+              }]
+            }]
+          }]
+        }],
+      }],
+    }],
+  }, obj || {}), idx);
+
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendNCX = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "dom",
+    path: "EPUB/toc.ncx",
+    manifest: {
+      properties: "ncx",
+    },
+    encoding: "utf8",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "!DOCTYPE",
+      closer: "",
+      attributes: {
+        "ncx": true,
+        "PUBLIC": true,
+        '"-//NISO//DTD ncx 2005-1//EN"': true,
+        '"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"': true,
+      },
+    }, {
+      tag: "ncx",
+      attributes: {
+        "xmlns:m": "http://www.w3.org/1998/Math/MathML",
+        "xmlns": "http://www.daisy.org/z3986/2005/ncx/",
+        "version": "2005-1",
+        "xml:lang": this.language,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:uid",
+          },
+          children: [{
+            "content": this._id,
+          }],
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:depth",
+          },
+          children: [{
+            "content": "1",
+          }],
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:totalPageCount",
+          },
+          children: [{
+            "content": "0",
+          }],
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:maxPageNumber",
+          },
+          children: [{
+            "content": "0",
+          }],
+        }]
+      }, {
+        tag: "docTitle",
+        children: [{
+          tag: "text",
+          children: [{
+            "content": this.title,
+          }]
+        }],
+      },
+      ...(
+        this.authors.map((item, i) => {
+          return {
+            tag: "docAuthor",
+            children: [{
+              tag: "text",
+              chlidren: [{
+                content: item,
+              }]
+            }]
+          }
+        })
+      ),
+      {
+        tag: "navMap",
+      }],
+    }]
+  }, obj || {}), idx);
+  
+  return file;
+}
+/**
+ * 
+ * @param {object} obj
+ * @property {string} path
+ * @property {string} data base64
+ * @param {number|undefined} idx default -1
+ * @returns {ePubFile}
+ */
+ePubDoc.prototype.appendCover = function(obj, idx) {
+  const file = this.appendFile(Object.assign({
+    type: "image",
+    manifest: {
+      properties: "cover-image",
+    },
+    encoding: "base64",
+  }, obj || {}), idx);
+
   return file;
 }
 
-ePubDoc.prototype.addPage = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.page, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addStyle = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.style, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addScript = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.script, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addImage = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.image, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addVideo = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.video, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addAudio = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.audio, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addFont = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.font, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addMimetpye = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.mimetype, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addContainer = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.container, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addPackage = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.package, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addNav = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.nav, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addNCX = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.ncx, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.addCover = function(obj, idx) {
-  const file = this.addFile(Object.assign({}, this.defaults.cover, obj), idx);
-  return file;
-}
-
-ePubDoc.prototype.getFile = function(query = {}) {
+ePubDoc.prototype.findFile = function(query) {
   const file = this.files.find(item => queryObject(item, query));
   return file;
 }
 
-ePubDoc.prototype.getFiles = function(query = {}) {
+ePubDoc.prototype.findFiles = function(query) {
   const file = this.files.filter(item => queryObject(item, query));
   return file;
 }
 
-ePubDoc.prototype.updateFile = function(query = {}, updates) {
-  const file = this.getFile(query);
+ePubDoc.prototype.updateFile = function(query, updates) {
+  const file = this.findFile(query);
   if (file) {
     file.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.updateFiles = function(query = {}, updates) {
-  const files = this.getFiles(query);
+ePubDoc.prototype.updateFiles = function(query, updates) {
+  const files = this.findFiles(query);
   for (const file of files) {
     file.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.removeFile = function(query = {}) {
-  const file = this.getFile(query);
+ePubDoc.prototype.removeFile = function(query) {
+  const file = this.findFile(query);
   if (file) {
     file.remove();
   }
   return this;
 }
 
-ePubDoc.prototype.removeFiles = function(query = {}) {
-  const files = this.getFiles(query);
+ePubDoc.prototype.removeFiles = function(query) {
+  const files = this.findFiles(query);
   for (const file of files) {
     file.remove();
   }
   return this;
 }
 
-// ePubNode methods
-
-ePubDoc.prototype.getChild = function(query = {}) {
+ePubDoc.prototype.findChild = function(query) {
   for (const file of this.files) {
-    const child = file.getChild(query);
+    const child = file.findChild(query);
     if (child) {
       return child;
     }
   }
 }
 
-ePubDoc.prototype.getChildren = function(query = {}) {
+ePubDoc.prototype.findChildren = function(query) {
   let result = [];
   for (const file of this.files) {
-    const children = file.getChildren(query);
+    const children = file.findChildren(query);
     result = result.concat(children);
   }
   return result;
 }
 
-ePubDoc.prototype.updateChild = function(query = {}, updates) {
-  const child = this.getChild(query);
+ePubDoc.prototype.updateChild = function(query, updates) {
+  const child = this.findChild(query);
   if (child) {
     child.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.updateChildren = function(query = {}, updates) {
-  const children = this.getChildren(query);
+ePubDoc.prototype.updateChildren = function(query, updates) {
+  const children = this.findChildren(query);
   for (const child of children) {
     child.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.removeChild = function(query = {}) {
-  const child = this.getChild(query);
+ePubDoc.prototype.removeChild = function(query) {
+  const child = this.findChild(query);
   if (child) {
     child.remove();
   }
   return this;
 }
 
-ePubDoc.prototype.removeChildren = function(query = {}) {
-  const children = this.getChildren(query);
+ePubDoc.prototype.removeChildren = function(query) {
+  const children = this.findChildren(query);
   for (const child of children) {
     child.remove();
   }
   return this;
 }
 
-ePubDoc.prototype.getNode = function(query = {}) {
+ePubDoc.prototype.findNode = function(query) {
   for (const file of this.files) {
-    const node = file.getNode(query);
+    const node = file.findNode(query);
     if (node) {
       return node;
     }
   }
 }
 
-ePubDoc.prototype.getNodes = function(query = {}) {
+ePubDoc.prototype.findNodes = function(query) {
   let result = [];
   for (const file of this.files) {
-    const nodes = file.getNodes(query);
+    const nodes = file.findNodes(query);
     result = result.concat(nodes);
   }
   return result;
 }
 
-ePubDoc.prototype.updateNode = function(query = {}, updates) {
-  const node = this.getNode(query);
+ePubDoc.prototype.updateNode = function(query, updates) {
+  const node = this.findNode(query);
   if (node) {
     node.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.updateNodes = function(query = {}, updates) {
-  const nodes = this.getNodes(query);
+ePubDoc.prototype.updateNodes = function(query, updates) {
+  const nodes = this.findNodes(query);
   for (const node of nodes) {
     node.update(updates);
   }
   return this;
 }
 
-ePubDoc.prototype.removeNode = function(query = {}) {
-  const node = this.getNode(query);
+ePubDoc.prototype.removeNode = function(query) {
+  const node = this.findNode(query);
   if (node) {
     node.remove();
   }
   return this;
 }
 
-ePubDoc.prototype.removeNodes = function(query = {}) {
-  const nodes = this.getNodes(query);
+ePubDoc.prototype.removeNodes = function(query) {
+  const nodes = this.findNodes(query);
   for (const node of nodes) {
     node.remove();
   }

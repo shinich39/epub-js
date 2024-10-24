@@ -2,19 +2,19 @@
 
 import beautify from "js-beautify";
 import mime from 'mime';
-import path from "path";
 import { parseTemplate } from "./utils.mjs";
 
 function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
 }
 
-function ISOStringToDate(v) {
-  return new Date(v);
-}
-
 function normalizeBase64(str) {
   return str.replace(/^data\:.*?\,/, "");
+}
+
+function normalizePath(str) {
+  return str.replace(/[\\\/]/, "\/")
+    .replace(/^\.?\//, "");
 }
 
 function toKebabCase(str) {
@@ -23,15 +23,34 @@ function toKebabCase(str) {
   });
 }
 
-function parseProperties(obj, target) {
+function parsePropertyValues(obj, target) {
   if (Array.isArray(obj)) {
     for (const _obj of obj) {
-      parseProperties(_obj);
+      parsePropertyValues(_obj, target);
     }
   } else if (typeof obj === "object" && obj !== null) {
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === "string") {
-        obj[key] = parseTemplate(obj[key], target)
+        obj[key] = parseTemplate(obj[key], target);
+      } else if (typeof obj[key] === "object" && obj[key] !== null) {
+        parsePropertyValues(obj[key], target);
+      }
+    }
+  }
+  return obj;
+}
+
+function updatePropertyValues(obj, targetKey, newValue) {
+  if (Array.isArray(obj)) {
+    for (const _obj of obj) {
+      updatePropertyValues(_obj, targetKey, newValue);
+    }
+  } else if (typeof obj === "object" && obj !== null) {
+    for (const key of Object.keys(obj)) {
+      if (key === targetKey) {
+        obj[key] = newValue;
+      } else if (typeof obj[key] === "object" && obj[key] !== null) {
+        updatePropertyValues(obj[key], targetKey, newValue);
       }
     }
   }
@@ -66,26 +85,6 @@ function extToMime(ext) {
   return mime.getType(ext);
 }
 
-function getFilename(p, ext) {
-  return path.basename(p, ext);
-}
-
-function getExtension(p) {
-  return path.extname(p);
-}
-
-function changeFilename(p, n) {
-  return path.join(path.dirname(p), n + path.extname(p));
-}
-
-function getRelativePath(from, to) {
-  return path.relative(from, to);
-}
-
-function getDirname(p, ext) {
-  return path.dirname(p, ext);
-}
-
 function beautifyHTML(str) {
   return beautify.html(str, {
     indent_size: 2,
@@ -106,18 +105,15 @@ function beautifyJS(str) {
 
 export {
   dateToISOString,
-  ISOStringToDate,
   normalizeBase64,
+  normalizePath,
+  toKebabCase,
   objToAttr,
   objToStyle,
-  parseProperties,
+  parsePropertyValues,
+  updatePropertyValues,
   mimeToExt,
   extToMime,
-  getFilename,
-  getExtension,
-  getRelativePath,
-  getDirname,
-  changeFilename,
   beautifyHTML,
   beautifyCSS,
   beautifyJS,
