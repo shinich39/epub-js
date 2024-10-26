@@ -4267,9 +4267,6 @@ var epub = (() => {
   });
 
   // src/libs/utils.mjs
-  function isBoolean(obj) {
-    return typeof obj === "boolean";
-  }
   function isNumber(obj) {
     return typeof obj === "number" && !Number.isNaN(obj) && Number.isFinite(obj);
   }
@@ -4472,15 +4469,21 @@ var epub = (() => {
       this.createdAt = null;
       this.textDirection = null;
       this.pageDirection = null;
-      this.legacy = false;
+      this.rendition = {
+        layout: null,
+        orientation: null,
+        spread: null
+      };
       Object.assign(this, copyObject(obj || {}));
       this.init();
-      this.validate();
     }
   };
   ePubDoc.prototype.init = function() {
+    this.validate();
     for (let i = 0; i < this.files.length; i++) {
-      if (!(this.files[i] instanceof ePubFile)) {
+      if (this.files[i] instanceof ePubFile) {
+        this.files[i].init();
+      } else {
         this.files[i] = new ePubFile(this, this.files[i]);
       }
     }
@@ -4511,12 +4514,15 @@ var epub = (() => {
     if (!isString(this.pageDirection) && !isNull(this.pageDirection)) {
       throw new Error("pageDirection must be a string or null");
     }
-    if (!isBoolean(this.legacy)) {
-      throw new Error("legacy must be a string or null");
+    if (!isObject(this.rendition)) {
+      throw new Error("rendition must be a object");
+    }
+    if (!isArray(this.files)) {
+      throw new Error("files must be a array");
     }
     for (const file of this.files) {
-      if (!(file instanceof ePubFile)) {
-        throw new Error("files must be a ePubFile-array");
+      if (!(file instanceof ePubFile) && !isObject(file)) {
+        throw new Error("files[] elements must be ePubFile or object");
       }
     }
     return this;
@@ -4568,7 +4574,6 @@ var epub = (() => {
       }
     }
     this.init();
-    this.validate();
     return this;
   };
   ePubDoc.prototype.appendFile = function(obj, idx) {
@@ -4598,7 +4603,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendText = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "text",
       manifest: {},
       encoding: "utf8"
     }, obj || {}), idx);
@@ -4606,7 +4610,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendPage = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "dom",
       manifest: {},
       spine: {},
       tag: null,
@@ -4658,7 +4661,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendStyle = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "style",
       manifest: {},
       encoding: "utf8"
     }, obj || {}), idx);
@@ -4666,7 +4668,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendScript = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "script",
       manifest: {},
       encoding: "utf8"
     }, obj || {}), idx);
@@ -4674,7 +4675,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendImage = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "image",
       manifest: {},
       encoding: "base64"
     }, obj || {}), idx);
@@ -4682,7 +4682,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendAudio = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "audio",
       manifest: {},
       encoding: "base64"
     }, obj || {}), idx);
@@ -4690,7 +4689,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendVideo = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "video",
       manifest: {},
       encoding: "base64"
     }, obj || {}), idx);
@@ -4698,7 +4696,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendFont = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "font",
       manifest: {},
       encoding: "base64"
     }, obj || {}), idx);
@@ -4706,7 +4703,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendMimetpye = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "text",
       path: "mimetype",
       data: "application/epub+zip",
       encoding: "utf8"
@@ -4715,7 +4711,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendContainer = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "dom",
       path: "META-INF/container.xml",
       encoding: "utf8",
       children: [{
@@ -4748,7 +4743,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendPackage = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "dom",
       path: "EPUB/package.opf",
       encoding: "utf8",
       children: [{
@@ -4824,15 +4818,27 @@ var epub = (() => {
               children: [{
                 content: new Date(this.updatedAt).toISOString()
               }]
-            }
+            },
+            ...Object.entries(this.rendition).filter((key, value) => {
+              return isString(value);
+            }).map(([key, value]) => {
+              return {
+                tag: "meta",
+                closer: "/",
+                attributes: {
+                  property: `rendition:${key}`
+                },
+                children: [{
+                  content: value
+                }]
+              };
+            })
           ]
         }, {
           tag: "manifest"
         }, {
           tag: "spine",
           attributes: {
-            // Set toc to "ncx" for legacy mode
-            "toc": this.legacy ? "ncx" : null,
             // Set page direction value to "ltr" or "rtl"
             "page-progression-direction": this.pageDirection
           }
@@ -4843,7 +4849,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendNav = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "dom",
       path: "EPUB/nav.xhtml",
       manifest: {
         properties: "nav"
@@ -4936,7 +4941,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendNCX = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "dom",
       path: "EPUB/toc.ncx",
       manifest: {
         properties: "ncx"
@@ -5037,7 +5041,6 @@ var epub = (() => {
   };
   ePubDoc.prototype.appendCover = function(obj, idx) {
     const file = this.appendFile(Object.assign({
-      type: "image",
       manifest: {
         properties: "cover-image"
       },
@@ -5505,6 +5508,22 @@ var epub = (() => {
   var src_default = new Mime_default(standard_default, other_default)._freeze();
 
   // src/libs/utilities.js
+  function isDOM(str) {
+    return [
+      // .xml
+      "application/atom+xml",
+      "application/xml",
+      "text/xml",
+      // .xhtml
+      "application/xhtml+xml",
+      // .html
+      "text/html",
+      // .opf
+      "application/oebps-package+xml",
+      // .ncx
+      "application/x-dtbncx+xml"
+    ].indexOf(str) > -1 || /\+xml$/.test(str);
+  }
   function normalizeBase64(str) {
     return str.replace(/^data\:.*?\,/, "");
   }
@@ -5514,7 +5533,7 @@ var epub = (() => {
   function extToMime(ext) {
     return src_default.getType(ext);
   }
-  function beautifyHTML(str) {
+  function beautifyHTML2(str) {
     return import_js_beautify.default.html(str, {
       indent_size: 2
     });
@@ -5527,8 +5546,14 @@ var epub = (() => {
       this.manifest = null;
       this.spine = null;
       this._id = generateUUID();
-      this.type = null;
       this.path = null;
+      this.basename = null;
+      this.filename = null;
+      this.dirname = null;
+      this.extension = null;
+      this.mimetype = null;
+      this.absolutePath = null;
+      this.relativePath = null;
       this.data = null;
       this.encoding = "utf8";
       this.attributes = {};
@@ -5538,24 +5563,25 @@ var epub = (() => {
       this.children = [];
       Object.assign(this, copyObject(obj || {}));
       this.init();
-      this.validate();
     }
   };
   ePubFile.prototype.init = function() {
-    if (isString(this.path)) {
-      this.path = normalizePath(this.path);
-    }
-    if (this.type === "node" || this.type === "page") {
+    this.validate();
+    this.tag = null;
+    this.closer = null;
+    this.content = null;
+    this.path = normalizePath(this.path);
+    this.basename = getFilename(this.path);
+    this.filename = getFilename(this.path, getExtension(this.path));
+    this.dirname = getDirectoryPath(this.path);
+    this.extension = getExtension(this.path);
+    this.mimetype = extToMime(this.path);
+    this.absolutePath = this.path;
+    this.relativePath = getRelativePath("EPUB", this.path);
+    if (isDOM(this.mimetype)) {
       if (isString(this.data)) {
-        this.children = strToObj(this.data).children;
+        Object.assign(this, strToObj(this.data));
         this.data = null;
-      }
-    }
-    if (isArray(this.children)) {
-      for (let i = 0; i < this.children.length; i++) {
-        if (!(this.children[i] instanceof ePubNode)) {
-          this.children[i] = new ePubNode(this.document, this, this, this.children[i]);
-        }
       }
     }
     if (this.encoding === "base64") {
@@ -5563,83 +5589,76 @@ var epub = (() => {
         this.data = normalizeBase64(this.data);
       }
     }
+    for (let i = 0; i < this.children.length; i++) {
+      if (this.children[i] instanceof ePubNode) {
+        this.children[i].init();
+      } else {
+        this.children[i] = new ePubNode(this.document, this, this, this.children[i]);
+      }
+    }
     return this;
   };
   ePubFile.prototype.validate = function() {
+    if (!(this.document instanceof ePubDoc)) {
+      throw new Error("document must be a ePubDoc");
+    }
     if (!isString(this._id)) {
       throw new Error("_id must be a string");
-    }
-    if (!isString(this.type)) {
-      throw new Error("type must be a string");
     }
     if (!isString(this.path)) {
       throw new Error("path must be a string");
     }
+    if (!isArray(this.children)) {
+      throw new Error("children must be a array");
+    }
     for (const child of this.children) {
-      if (!(child instanceof ePubNode)) {
-        throw new Error("children must be a ePubNode-array");
+      if (!(child instanceof ePubNode) && !isObject(child)) {
+        throw new Error("children[] elements must be a ePubNode or object");
       }
     }
     return this;
   };
   ePubFile.prototype.move = function(index) {
-    if (this.document) {
-      const currentIndex = this.getIndex();
-      if (currentIndex > -1) {
-        if (index > currentIndex) {
-          index = index - 1;
-        } else if (index < 0) {
-          index = this.document.files.length + index;
-        }
-        this.document.files.splice(index, 0, this.document.files.splice(currentIndex, 1)[0]);
+    const currentIndex = this.getIndex();
+    if (currentIndex > -1) {
+      if (index > currentIndex) {
+        index = index - 1;
+      } else if (index < 0) {
+        index = this.document.files.length + index;
       }
+      this.document.files.splice(index, 0, this.document.files.splice(currentIndex, 1)[0]);
     }
     return this;
   };
   ePubFile.prototype.remove = function() {
-    if (this.document) {
-      let i = this.document.files.findIndex((item) => item._id == this._id);
-      if (i > -1) {
-        this.document.files.splice(i, 1);
-      }
+    const currentIndex = this.getIndex();
+    if (currentIndex > -1) {
+      this.document.files.splice(currentIndex, 1);
     }
     Object.assign(this, this.toObject());
     delete this.document;
     return this;
   };
   ePubFile.prototype.getIndex = function() {
+    if (!this.document) {
+      return -1;
+    }
     return this.document.files.findIndex((item) => item._id == this._id);
   };
-  ePubFile.prototype.getPrevious = function() {
-    return this.document.files[this.getIndex() - 1];
+  ePubFile.prototype.getNextSibling = function() {
+    if (!this.document) {
+      return -1;
+    }
+    return this.document.files.findIndex((item) => item._id == this._id);
   };
-  ePubFile.prototype.getNext = function() {
-    return this.document.files[this.getIndex() + 1];
-  };
-  ePubFile.prototype.getBasename = function() {
-    return getFilename(this.path);
-  };
-  ePubFile.prototype.getExtension = function() {
-    return getExtension(this.path);
-  };
-  ePubFile.prototype.getFilename = function() {
-    return getFilename(this.path, getExtension(this.path));
-  };
-  ePubFile.prototype.getDirname = function() {
-    return getDirectoryPath(this.path);
-  };
-  ePubFile.prototype.getMimetype = function() {
-    return extToMime(this.path);
-  };
-  ePubFile.prototype.getAbsolutePath = function() {
-    return this.path;
-  };
-  ePubFile.prototype.getRelativePath = function() {
-    return getRelativePath("EPUB", this.path);
+  ePubFile.prototype.getPreviousSibling = function() {
+    if (!this.document) {
+      return -1;
+    }
+    return this.document.files.findIndex((item) => item._id == this._id);
   };
   ePubFile.prototype.getContent = function() {
     const query = {
-      tag: null,
       content: {
         $exists: true
       }
@@ -5663,7 +5682,7 @@ var epub = (() => {
     if (idx < 0) {
       idx += this.children.length + 1;
     }
-    const node = new ePubNode(this.document, this, this, obj || {});
+    const node = new ePubNode(this.document, this.rootNode || this, this, obj || {});
     this.children.splice(idx, 0, node);
     return node;
   };
@@ -5795,8 +5814,8 @@ var epub = (() => {
       attributes: Object.assign(
         {
           "id": this._id,
-          "href": this.getRelativePath(),
-          "media-type": this.getMimetype()
+          "href": this.relativePath,
+          "media-type": this.mimetype
         },
         isObject(this.manifest) ? this.manifest : {},
         isObject(this.obj) ? obj : {}
@@ -5817,7 +5836,7 @@ var epub = (() => {
     };
   };
   ePubFile.prototype.toString = function() {
-    return this.type === "dom" ? beautifyHTML(objToStr(this)) : this.data;
+    return isDOM(this.mimetype) ? beautifyHTML2(objToStr(this)) : this.data;
   };
   ePubFile.prototype.toObject = function() {
     const obj = Object.assign({}, this, {
@@ -5828,7 +5847,7 @@ var epub = (() => {
   };
   ePubFile.prototype.toFile = function() {
     return {
-      path: this.getAbsolutePath(),
+      path: this.absolutePath,
       data: this.toString(),
       encoding: this.encoding
     };
@@ -5841,6 +5860,8 @@ var epub = (() => {
       this.document = document;
       this.rootNode = rootNode;
       this.parentNode = parentNode;
+      this.absolutePath = null;
+      this.relativePath = null;
       this._id = generateUUID();
       this.tag = null;
       this.closer = null;
@@ -5849,7 +5870,6 @@ var epub = (() => {
       this.children = [];
       Object.assign(this, copyObject(obj || {}));
       this.init();
-      this.validate();
     }
     // Deprecated
     // get id() { return this.attributes.id; }
@@ -5864,39 +5884,64 @@ var epub = (() => {
     // set innerText(v) { this.content = v; }
   };
   ePubNode.prototype.init = function() {
+    this.validate();
+    if (isString(this.tag)) {
+      this.content = null;
+    } else {
+      this.tag = null;
+      this.closer = null;
+      this.children = [];
+    }
     for (let i = 0; i < this.children.length; i++) {
-      if (!(this.children[i] instanceof ePubNode)) {
+      if (this.children[i] instanceof ePubNode) {
+        this.children[i].init();
+      } else {
         this.children[i] = new ePubNode(this.document, this.rootNode, this, this.children[i]);
       }
     }
+    this.absolutePath = `${this.rootNode.absolutePath}#${this.attributes?.id || ""}`;
+    this.relativePath = `${this.rootNode.relativePath}#${this.attributes?.id || ""}`;
     return this;
   };
   ePubNode.prototype.validate = function() {
+    if (!(this.document instanceof ePubDoc)) {
+      throw new Error("document must be a ePubDoc");
+    }
+    if (!(this.rootNode instanceof ePubFile)) {
+      throw new Error("rootNode must be a ePubFile");
+    }
+    if (!(this.parentNode instanceof ePubFile) && !(this.parentNode instanceof ePubNode)) {
+      throw new Error("parentNode must be a ePubFile or ePubNode");
+    }
     if (!isString(this._id)) {
       throw new Error("_id must be a string");
+    }
+    if (!isArray(this.children)) {
+      throw new Error("children must be a array");
+    }
+    for (const child of this.children) {
+      if (!(child instanceof ePubNode) && !isObject(child)) {
+        throw new Error("children[] elements must be a ePubNode or object");
+      }
     }
     return this;
   };
   ePubNode.prototype.move = function(index) {
-    if (this.parentNode) {
-      const currentIndex = this.getIndex();
-      if (currentIndex > -1) {
-        if (index > currentIndex) {
-          index = index - 1;
-        } else if (index < 0) {
-          index = this.parentNode.children.length + index;
-        }
-        this.parentNode.children.splice(index, 0, this.parentNode.children.splice(currentIndex, 1)[0]);
+    const currentIndex = this.getIndex();
+    if (currentIndex > -1) {
+      if (index > currentIndex) {
+        index = index - 1;
+      } else if (index < 0) {
+        index = this.parentNode.children.length + index;
       }
+      this.parentNode.children.splice(index, 0, this.parentNode.children.splice(currentIndex, 1)[0]);
     }
     return this;
   };
   ePubNode.prototype.remove = function() {
-    if (this.parentNode) {
-      let i = this.parentNode.children.findIndex((item) => item._id == this._id);
-      if (i > -1) {
-        this.parentNode.children.splice(i, 1);
-      }
+    const currentIndex = this.getIndex();
+    if (currentIndex > -1) {
+      this.parentNode.children.splice(currentIndex, 1);
     }
     Object.assign(this, this.toObject());
     delete this.document;
@@ -5905,27 +5950,13 @@ var epub = (() => {
     return this;
   };
   ePubNode.prototype.getIndex = function() {
+    if (!this.parentNode) {
+      return -1;
+    }
     return this.parentNode.children.findIndex((item) => item._id == this._id);
   };
-  ePubNode.prototype.getPrevious = function() {
-    return this.parentNode.children[this.getIndex() - 1];
-  };
-  ePubNode.prototype.getNext = function() {
-    return this.parentNode.children[this.getIndex() + 1];
-  };
-  ePubNode.prototype.getAbsolutePath = function() {
-    let result = this.parentNode.getAbsolutePath();
-    if (this.attributes?.id) {
-      result += `#${this.attributes.id}`;
-    }
-    return result;
-  };
-  ePubNode.prototype.getRelativePath = function() {
-    let result = this.parentNode.getRelativePath();
-    if (this.attributes?.id) {
-      result += `#${this.attributes.id}`;
-    }
-    return result;
+  ePubNode.prototype.toString = function() {
+    return beautifyHTML(toStr(this));
   };
   ePubNode.prototype.toObject = function() {
     const obj = Object.assign({}, this, {
@@ -5955,6 +5986,5 @@ var epub = (() => {
   ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
   ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
   ePubNode.prototype.toNode = ePubFile.prototype.toNode;
-  ePubNode.prototype.toString = ePubFile.prototype.toString;
   return __toCommonJS(epub_js_exports);
 })();

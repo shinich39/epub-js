@@ -4,6 +4,24 @@ import beautify from "js-beautify";
 import mime from 'mime';
 import { parseTemplate } from "./utils.mjs";
 
+function isDOM(str) {
+  return /[/+](xml|html)$/.test(str);
+  // return [
+  //   // .xml
+  //   "application/atom+xml",
+  //   "application/xml",
+  //   "text/xml",
+  //   // .xhtml
+  //   "application/xhtml+xml",
+  //   // .html
+  //   "text/html",
+  //   // .opf
+  //   "application/oebps-package+xml",
+  //   // .ncx
+  //   "application/x-dtbncx+xml",
+  // ].indexOf(str) > -1
+}
+
 function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
 }
@@ -104,6 +122,7 @@ function beautifyJS(str) {
 }
 
 export {
+  isDOM,
   dateToISOString,
   normalizeBase64,
   normalizePath,

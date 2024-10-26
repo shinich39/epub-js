@@ -28,7 +28,7 @@ const navFile = doc.appendNav();
 
 // Create a cover file
 const coverImage = doc.appendCover({
-  path: "EPUB/cover.png",
+  path: "EPUB/images/cover.png",
   data: fs.readFileSync(COVER_PATH, { encoding: "base64" }),
 });
 
@@ -48,7 +48,7 @@ doc
 
 // Create text page
 const textPage = doc.appendPage({
-  path: "EPUB/page-01.xhtml",
+  path: "EPUB/texts/page-01.xhtml",
 });
 
 
@@ -93,7 +93,7 @@ textPage
 
 // Create image page
 const imagePage = doc.appendPage({
-  path: "EPUB/page-02.xhtml",
+  path: "EPUB/texts/page-02.xhtml",
 });
 
 const imageNode = imagePage.findNode({
@@ -105,7 +105,7 @@ const imageNode = imagePage.findNode({
     attributes: {
       id: "cover-image",
       style: "max-width: 100%;",
-      src: coverImage.getRelativePath(),
+      src: coverImage.relativePath,
       alt: "Cover image",
     }
   });
@@ -130,7 +130,7 @@ navFile
       children: [{
         tag: "a",
         attributes: {
-          href: navFile.getRelativePath(),
+          href: navFile.relativePath,
         },
         children: [{
           content: "Navigation"
@@ -141,7 +141,7 @@ navFile
       children: [{
         tag: "a",
         attributes: {
-          href: textPage.getRelativePath(),
+          href: textPage.relativePath,
         },
         children: [{
           content: "Page 1"
@@ -152,7 +152,7 @@ navFile
       children: [{
         tag: "a",
         attributes: {
-          href: imagePage.getRelativePath(),
+          href: imagePage.relativePath,
         },
         children: [{
           content: "Page 2"
@@ -164,7 +164,7 @@ navFile
           children: [{
             tag: "a",
             attributes: {
-              href: imageNode.getRelativePath(),
+              href: imageNode.relativePath,
             },
             children: [{
               content: "Image",
@@ -305,12 +305,6 @@ const authors = doc.findNode({
   })
   .getContent();
 
-
-console.log(title);
-console.log(titles);
-console.log(language);
-console.log(authors);
-
 // Export document to JSON
 const exportedObject = doc.toObject();
 
@@ -339,7 +333,7 @@ for (const file of files) {
   }
 }
 
-zip.generateAsync({ type:"base64" })
+zip.generateAsync({ type: "base64" })
   .then(function(content) {
     fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.epub`), content, {encoding: "base64"});
   });

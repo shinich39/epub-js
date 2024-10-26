@@ -1,6 +1,6 @@
 "use strict";
 
-import { copyObject, generateUUID, isBoolean, isNull, isNumber, isObject, isString, isStringArray, queryObject } from "../libs/utils.mjs";
+import { copyObject, generateUUID, isArray, isBoolean, isNull, isNumber, isObject, isObjectArray, isString, isStringArray, queryObject } from "../libs/utils.mjs";
 import { ePubFile, ePubNode } from "../index.js";
 
 class ePubDoc {
@@ -17,13 +17,16 @@ class ePubDoc {
     this.createdAt = null;
     this.textDirection = null;
     this.pageDirection = null;
-    this.legacy = false;
+    this.rendition = {
+      layout: null,
+      orientation: null,
+      spread: null,
+    }
 
     // Import data
     Object.assign(this, copyObject(obj || {}));
 
     this.init();
-    this.validate();
   }
 }
 /**
@@ -31,12 +34,17 @@ class ePubDoc {
  * @returns 
  */
 ePubDoc.prototype.init = function() {
+  this.validate();
+
   // Convert files to ePubFile
   for (let i = 0; i < this.files.length; i++) {
-    if (!(this.files[i] instanceof ePubFile)) {
+    if (this.files[i] instanceof ePubFile) {
+      this.files[i].init();
+    } else {
       this.files[i] = new ePubFile(this, this.files[i]);
     }
   }
+
   return this;
 }
 /**
@@ -68,12 +76,15 @@ ePubDoc.prototype.validate = function() {
   if (!isString(this.pageDirection) && !isNull(this.pageDirection)) {
     throw new Error("pageDirection must be a string or null");
   }
-  if (!isBoolean(this.legacy)) {
-    throw new Error("legacy must be a string or null");
+  if (!isObject(this.rendition)) {
+    throw new Error("rendition must be a object");
+  }
+  if (!isArray(this.files)) {
+    throw new Error("files must be a array");
   }
   for (const file of this.files) {
-    if (!(file instanceof ePubFile)) {
-      throw new Error("files must be a ePubFile-array");
+    if (!(file instanceof ePubFile) && !isObject(file)) {
+      throw new Error("files[] elements must be ePubFile or object");
     }
   }
   return this;
@@ -135,7 +146,6 @@ ePubDoc.prototype.update = function(updates) {
   }
 
   this.init();
-  this.validate();
 
   return this;
 }
@@ -200,7 +210,6 @@ ePubDoc.prototype.appendFiles = function(arr, idx) {
  */
 ePubDoc.prototype.appendText = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "text",
     manifest: {},
     encoding: "utf8",
   }, obj || {}), idx);
@@ -220,7 +229,6 @@ ePubDoc.prototype.appendText = function(obj, idx) {
  */
 ePubDoc.prototype.appendPage = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "dom",
     manifest: {},
     spine: {},
     tag: null,
@@ -283,7 +291,6 @@ ePubDoc.prototype.appendPage = function(obj, idx) {
  */
 ePubDoc.prototype.appendStyle = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "style",
     manifest: {},
     encoding: "utf8",
   }, obj || {}), idx);
@@ -302,7 +309,6 @@ ePubDoc.prototype.appendStyle = function(obj, idx) {
  */
 ePubDoc.prototype.appendScript = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "script",
     manifest: {},
     encoding: "utf8",
   }, obj || {}), idx);
@@ -321,7 +327,6 @@ ePubDoc.prototype.appendScript = function(obj, idx) {
  */
 ePubDoc.prototype.appendImage = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "image",
     manifest: {},
     encoding: "base64",
   }, obj || {}), idx);
@@ -340,7 +345,6 @@ ePubDoc.prototype.appendImage = function(obj, idx) {
  */
 ePubDoc.prototype.appendAudio = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "audio",
     manifest: {},
     encoding: "base64",
   }, obj || {}), idx);
@@ -359,7 +363,6 @@ ePubDoc.prototype.appendAudio = function(obj, idx) {
  */
 ePubDoc.prototype.appendVideo = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "video",
     manifest: {},
     encoding: "base64",
   }, obj || {}), idx);
@@ -378,7 +381,6 @@ ePubDoc.prototype.appendVideo = function(obj, idx) {
  */
 ePubDoc.prototype.appendFont = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "font",
     manifest: {},
     encoding: "base64",
   }, obj || {}), idx);
@@ -393,7 +395,6 @@ ePubDoc.prototype.appendFont = function(obj, idx) {
  */
 ePubDoc.prototype.appendMimetpye = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "text",
     path: "mimetype",
     data: "application/epub+zip",
     encoding: "utf8",
@@ -409,7 +410,6 @@ ePubDoc.prototype.appendMimetpye = function(obj, idx) {
  */
 ePubDoc.prototype.appendContainer = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "dom",
     path: "META-INF/container.xml",
     encoding: "utf8",
     children: [{
@@ -449,7 +449,6 @@ ePubDoc.prototype.appendContainer = function(obj, idx) {
  */
 ePubDoc.prototype.appendPackage = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "dom",
     path: "EPUB/package.opf",
     encoding: "utf8",
     children: [{
@@ -527,15 +526,28 @@ ePubDoc.prototype.appendPackage = function(obj, idx) {
             children: [{
               content: new Date(this.updatedAt).toISOString(),
             }],
-          }
+          },
+          ...Object.entries(this.rendition)
+            .filter((key, value) => {
+              return isString(value);
+            })
+            .map(([key, value]) => {
+              return {
+                tag: "meta",
+                attributes: {
+                  property: `rendition:${key}`,
+                },
+                children: [{
+                  content: value,
+                }],
+              }
+            })
         ],
       }, {
         tag: "manifest",
       }, {
         tag: "spine",
         attributes: {
-          // Set toc to "ncx" for legacy mode
-          "toc": this.legacy ? "ncx" : null,
           // Set page direction value to "ltr" or "rtl"
           "page-progression-direction": this.pageDirection,
         },
@@ -554,7 +566,6 @@ ePubDoc.prototype.appendPackage = function(obj, idx) {
  */
 ePubDoc.prototype.appendNav = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "dom",
     path: "EPUB/nav.xhtml",
     manifest: {
       properties: "nav",
@@ -655,7 +666,6 @@ ePubDoc.prototype.appendNav = function(obj, idx) {
  */
 ePubDoc.prototype.appendNCX = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "dom",
     path: "EPUB/toc.ncx",
     manifest: {
       properties: "ncx",
@@ -764,7 +774,6 @@ ePubDoc.prototype.appendNCX = function(obj, idx) {
  */
 ePubDoc.prototype.appendCover = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    type: "image",
     manifest: {
       properties: "cover-image",
     },

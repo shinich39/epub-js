@@ -15,13 +15,109 @@
   </head>
 
   <body>
-    <h1>ePub-js</h1>
-    This page has been developed for test browser compatibility.
-    <br />
-    The first line of text file will be contained within an h1.
-    <br />
-    Create a page for each file.
-    <br />
+    <h1>epub-js</h1>
+    <p>This page has been developed for test browser compatibility.</p>
+    <p>The first line of text file will be contained within an h1.</p>
+    <p>Create a page for each file.</p>
+
+    <h2>Import</h2>
+    <p>Load from exported JSON</p>
+    <input id="import-file" type="file" accept="text/json">
+
+    <h2>Options</h2>
+    <p>Manga: ...</p>
+    <p>
+      <strong>Text Direction</strong>
+      <label>
+        <input name="text-direction" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="text-direction" type="radio" value="ltr">
+        ltr
+      </label>
+      <label>
+        <input name="text-direction" type="radio" value="rtl">
+        rtl
+      </label>
+    </p>
+
+    <p>
+      <strong>Page Direction</strong>
+      <label>
+        <input name="page-direction" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="page-direction" type="radio" value="ltr">
+        ltr
+      </label>
+      <label>
+        <input name="page-direction" type="radio" value="rtl">
+        rtl
+      </label>
+    </p>
+
+    <p>
+      <strong>Layout</strong>
+      <label>
+        <input name="rendition:layout" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:layout" type="radio" value="pre-paginated">
+        pre-paginated
+      </label>
+      <label>
+        <input name="rendition:layout" type="radio" value="reflowable">
+        reflowable
+      </label>
+    </p>
+
+    <p>
+      <strong>Orientation</strong>
+      <label>
+        <input name="rendition:orientation" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="auto">
+        Auto
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="landscape">
+        Landscape
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="portrait">
+        Portrait
+      </label>
+    </p>
+
+    <p>
+      <strong>Spread</strong>
+      <label>
+        <input name="rendition:spread" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="auto">
+        Auto
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="both">
+        Both
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="landscape">
+        Landscape
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="portrait" disabled>
+        Portrait
+      </label>
+    </p>
+
     <h2>Set Cover</h2>
     <input id="set-cover" type="file" accept="image/*">
     <h2>Add Files</h2>
@@ -29,9 +125,11 @@
     <button id="clear-files">Clear</button>
     <br />
     <h2>File List</h2>
+    <p>Check the box to add it to TOC.</p>
     <ol id="file-list"></ol>
     <h2>Finish</h2>
     <button id="download-file">Download</button>
+    <button id="export-file">Export</button>
     
     <script src="./dist/epub.js"></script>
     <script src="./test/jszip.min.js"></script>
@@ -43,6 +141,28 @@
       document.getElementById("add-files").addEventListener("change", addFiles);
       document.getElementById("clear-files").addEventListener("click", clearFiles);
       document.getElementById("download-file").addEventListener("click", downloadFile);
+      document.getElementById("export-file").addEventListener("click", exportFile);
+      document.getElementById("import-file").addEventListener("change", importFile);
+
+      document.querySelectorAll("[name='rendition:layout']").forEach(item => {
+        item.addEventListener("change", updateRendition);
+      });
+
+      document.querySelectorAll("[name='rendition:orientation']").forEach(item => {
+        item.addEventListener("change", updateRendition);
+      });
+
+      document.querySelectorAll("[name='rendition:spread']").forEach(item => {
+        item.addEventListener("change", updateRendition);
+      });
+
+      document.querySelectorAll("[name='text-direction']").forEach(item => {
+        item.addEventListener("change", updateTextDirection);
+      });
+
+      document.querySelectorAll("[name='page-direction']").forEach(item => {
+        item.addEventListener("change", updatePageDirection);
+      });
 
       function toText(file) {
         return new Promise(function(resolve, reject) {
@@ -65,29 +185,19 @@
       }
 
       function clearFiles(e) {
-        doc = new ePubDoc({
-          title: "ePub-js",
-          authors: ["shinich39"],
-          createdAt: Date.now(),
-        });
+        const obj = getOptions();
+
+        console.log("Options", obj);
+
+        doc = new ePubDoc(obj);
         
         doc.appendMimetpye();
         doc.appendContainer();
-        const pkgPage = doc.appendPackage();
+        pkg = doc.appendPackage();
 
-        pkgPage
-          .findNode({
-            tag: "dc:title",
-          })
-          .update({
-            $set: {
-              children: [{
-                content: "ePub-js"
-              }]
-            }
-          });
-        
-        const navPage = doc.appendNav();
+        const navPage = doc.appendNav({
+          isChecked: true,
+        });
 
         navPage.findNode({
           tag: "nav",
@@ -99,22 +209,6 @@
           }],
         });
 
-        doc.updateNode({
-          tag: "manifest",
-        }, {
-          $push: {
-            children: navPage.toManifestNode(),
-          },
-        });
-
-        doc.updateNode({
-          tag: "spine",
-        }, {
-          $push: {
-            children: navPage.toSpineNode(),
-          },
-        });
-        
         nav = navPage.findNode({
           tag: "nav",
           "attributes.id": "toc",
@@ -122,19 +216,6 @@
           tag: "ol",
         });
 
-        nav.appendNode({
-          tag: "li",
-          children: [{
-            tag: "a",
-            attributes: {
-              href: navPage.getRelativePath()
-            },
-            children: [{
-              content: "Navigation",
-            }]
-          }]
-        });
-        
         renderFileList();
       }
 
@@ -144,12 +225,6 @@
             tag: "manifest",
           }).removeNode({
             "attributes.id": cover._id
-          });
-
-          doc.findNode({
-            tag: "spine",
-          }).removeNode({
-            "attributes.idref": cover._id
           });
 
           cover.remove();
@@ -167,13 +242,9 @@
           data: await toBase64(file),
         });
 
-        doc.updateNode({
+        doc.findNode({
           tag: "manifest",
-        }, {
-          $push: {
-            children: cover.toManifestNode(),
-          },
-        }, 0);
+        }).appendNode(cover.toManifestNode(), 0);
 
         renderFileList();
       }
@@ -192,7 +263,11 @@
         for (const newFile of newFiles) {
           const { name, type, size } = newFile;
 
-          let pageIndex = doc.findFiles({ isPage: true }).length + 1,
+          let pageIndex = doc.findFiles({
+              spine: {
+                $exists: true,
+              }
+            }).length,
               pagePath = `EPUB/page-${pageIndex}.xhtml`,
               navLabel = `page-${pageIndex}`,
               filePath = `EPUB/${name}`;
@@ -209,38 +284,19 @@
             });
 
             page = doc.appendPage({
-              isPage: true,
-              path: pagePath
+              path: pagePath,
+              // isChecked: true,
             });
 
             page.findNode({
               tag: "body"
             }).appendNode({
-              tag: "div",
+              tag: "img",
+              closer: " /",
               attributes: {
-                style: `
-text-align: center;
-margin: 0;
-padding: 0;
-                `.trim(),
-              },
-              children: [{
-                tag: "img",
-                closer: " /",
-                attributes: {
-                  style: `
-display: inline-block;
-width: auto;
-height: auto;
-margin: 0;
-padding: 0;
-max-width: 100%;
-max-height: 100%;
-                  `.trim(),
-                  src: file.getRelativePath(),
-                  alt: name,
-                }
-              }]
+                src: file.relativePath,
+                alt: name,
+              }
             });
           } else if (/^video\/mp4/.test(type)) {
             file = doc.appendVideo({
@@ -249,44 +305,25 @@ max-height: 100%;
             });
 
             page = doc.appendPage({
-              isPage: true,
               path: pagePath,
+              // isChecked: true,
             });
 
             page.findNode({
               tag: "body"
             }).appendNode({
-              tag: "div",
-              attributes: {
-                style: `
-text-align: center;
-margin: 0;
-padding: 0;
-                `.trim(),
-              },
-              children: [{
-                tag: "video",
+              tag: "video",
                 attributes: {
-                  style: `
-display: inline-block;
-width: auto;
-height: auto;
-margin: 0;
-padding: 0;
-max-width: 100%;
-max-height: 100%;
-                  `.trim(),
                   controls: "",
                 },
                 children: [{
                   tag: "source",
                   closer: " /",
                   attributes: {
-                    src: file.getRelativePath(),
+                    src: file.relativePath,
                     type: type,
                   }
                 }]
-              }]
             });
           } else if (/^audio\/mpeg/.test(type)) {
             file = doc.appendAudio({
@@ -295,8 +332,8 @@ max-height: 100%;
             });
 
             page = doc.appendPage({
-              isPage: true,
-              path: pagePath
+              path: pagePath,
+              // isChecked: true,
             });
 
             page.findNode({
@@ -310,15 +347,15 @@ max-height: 100%;
                 tag: "source",
                 closer: " /",
                 attributes: {
-                  src: file.getRelativePath(),
+                  src: file.relativePath,
                   type: type,
                 }
               }]
             });
           } else if (/^text\/plain/.test(type)) {
             page = doc.appendPage({
-              isPage: true,
               path: pagePath,
+              // isChecked: true,
             });
 
             let toggle = false;
@@ -368,45 +405,38 @@ max-height: 100%;
             });
           }
 
-          if (file) {
-            doc.updateNode({
-              tag: "manifest",
-            }, {
-              $push: {
-                children: file.toManifestNode(),
-              },
-            });
-          }
-
+          // Set viewport and styles
           if (page) {
-            doc.updateNode({
-              tag: "manifest",
+            page.findNode({
+              tag: "head",
+            }).appendNodes([{
+              tag: "meta",
+              closer: "/",
+              attributes: {
+                name: "viewport",
+                content: "width=600, height=800",
+              }
             }, {
-              $push: {
-                children: page.toManifestNode(),
-              },
-            });
-
-            doc.updateNode({
-              tag: "spine",
-            }, {
-              $push: {
-                children: page.toSpineNode(),
-              },
-            });
-
-            nav.appendNode({
-              tag: "li",
+              tag: "style",
               children: [{
-                tag: "a",
-                attributes: {
-                  href: page.getRelativePath()
-                },
-                children: [{
-                  content: navLabel,
-                }]
+                content: `
+                  body {
+                    width: 600px;
+                    height: 800px;
+                    margin: 0;
+                    overflow: hidden;
+                  }
+
+                  img {
+                    max-width: 100%;
+                  }
+
+                  video {
+                    max-width: 100%;
+                  }
+                `,
               }]
-            });
+            }]);
           }
         }
 
@@ -415,19 +445,236 @@ max-height: 100%;
         renderFileList();
       }
 
+      function getOptions() {
+        return doc ? {
+          title: doc.title,
+          authors: doc.authors,
+          createdAt: doc.createdAt,
+          textDirection: doc.textDirection,
+          pageDirection: doc.pageDirection,
+          rendition: doc.rendition,
+        } : {
+          title: "epub-js",
+          authors: ["shinich39"],
+          createdAt: Date.now(),
+          textDirection: null,
+          pageDirection: null,
+          rendition: {
+            layout: null,
+            orientation: null,
+            spread: null,
+          },
+        };
+      }
+
+      function updateCheckboxes() {
+        function match(a, b) {
+          return (
+            (a == null || a == "") && 
+            (b == null || b == "")
+          ) || a == b
+        }
+
+        document.querySelectorAll("[name='rendition:layout']").forEach(item => {
+          if (match(item.value, doc.rendition.layout)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='rendition:orientation']").forEach(item => {
+          if (match(item.value, doc.rendition.orientation)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='rendition:spread']").forEach(item => {
+          if (match(item.value, doc.rendition.spread)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='text-direction']").forEach(item => {
+          if (match(item.value, doc.textDirection)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='page-direction']").forEach(item => {
+          if (match(item.value, doc.pageDirection)) {
+            item.checked = true;
+            return;
+          }
+        });
+      }
+
+      function updateManifest() {
+        doc.updateNode({
+          tag: "manifest",
+        }, {
+          $set: {
+            children: doc.findFiles({})
+              .filter(file => file.manifest)
+              .map(file => file.toManifestNode())
+          },
+        });
+      }
+
+      function updateSpine() {
+        doc.updateNode({
+          tag: "spine",
+        }, {
+          $set: {
+            children: doc.findFiles({})
+              .filter(file => file.spine)
+              .map(file => file.toSpineNode())
+          },
+        });
+      }
+
+      function updateNav() {
+        nav.update({
+          $set: {
+            children: doc.findFiles({})
+              .filter(file => file.isChecked)
+              .map(file => {
+                return {
+                  tag: "li",
+                  children: [{
+                    tag: "a",
+                    attributes: {
+                      href: file.relativePath,
+                    },
+                    children: [{
+                      content: file.filename,
+                    }]
+                  }]
+                }
+              }),
+          }
+        });
+      }
+
+      function getRadioValue(name) {
+        let result;
+        document.querySelectorAll(`[name='${name}']`).forEach(item => {
+          if (item.checked) {
+            result = item.value;
+            return;
+          }
+        });
+        return result || null;
+      }
+
+      function updateTextDirection() {
+        const value = getRadioValue("text-direction");
+
+        doc.textDirection = value;
+
+        console.log("Updated", getOptions());
+
+        doc.updateNodes({
+          tag: {
+            $in: ["html", "package"]
+          }
+        }, {
+          $set: {
+            "attributes.dir": value || null
+          }
+        });
+      }
+
+      function updatePageDirection() {
+        const value = getRadioValue("page-direction");
+
+        doc.pageDirection = value;
+
+        console.log("Updated", getOptions());
+
+        pkg.updateNode({
+          tag: "spine",
+        }, {
+          $set: {
+            "attributes.page-progression-direction": value || null
+          }
+        });
+      }
+
+      function updateRendition() {
+        let obj = {
+          layout: getRadioValue("rendition:layout"), 
+          orientation: getRadioValue("rendition:orientation"), 
+          spread: getRadioValue("rendition:spread"),
+        }
+
+        doc.rendition = obj;
+
+        console.log("Updated", getOptions());
+
+        pkg.removeNodes({
+          tag: "meta",
+          "attributes.property": {
+            $in: Object.keys(obj).map(item => `rendition:${item}`),
+          }
+        });
+
+        for (const [key, value] of Object.entries(obj)) {
+          if (!!value) {
+            pkg.updateNode({
+              tag: "metadata",
+            }, {
+              $push: {
+                children: {
+                  tag: "meta",
+                  closer: "/",
+                  attributes: {
+                    property: `rendition:${key}`,
+                  },
+                  children: [{
+                    content: value
+                  }]
+                }
+              }
+            });
+          }
+        }
+      }
+
       function renderFileList() {
         const target = document.getElementById("file-list");
         target.innerHTML = "";
 
         for (const file of doc.findFiles({})) {
           const item = document.createElement("li");
-          // item.innerHTML = `${file.type}: ${file.path}`;
-          item.innerHTML = file.path;
+
+          const label = document.createElement("label");
+          const span = document.createElement("span");
+          span.innerHTML += file.path;
+
+          const box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = file.isChecked;
+          box.disabled = !file.spine;
+
+          box.addEventListener("change", function(e) {
+            file.isChecked = e.target.checked;
+          });
+
+          label.appendChild(box);
+          label.appendChild(span);
+          item.appendChild(label);
           target.appendChild(item);
         }
       }
 
       function downloadFile() {
+        updateManifest();
+        updateSpine();
+        updateNav();
+
         const files = doc.toFiles();
         const zip = new JSZip();
         for (const file of files) {
@@ -450,7 +697,37 @@ max-height: 100%;
           });
       }
 
-      let doc, nav, cover;
+      function exportFile() {
+        const obj = doc.toObject();
+        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null ,2));
+        const a = document.createElement('a');
+        a.href = data;
+        a.download = "epub-js.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }
+
+      async function importFile(e) {
+        const file = e.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        const data = JSON.parse(await toText(file));
+
+        console.log("Imported data", data);
+
+        doc = new ePubDoc(data);
+
+        updateCheckboxes();
+        renderFileList();
+
+        e.target.value = "";
+      }
+
+      let doc, pkg, nav, cover;
 
       clearFiles();
     </script>

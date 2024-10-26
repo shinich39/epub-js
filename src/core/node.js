@@ -1,6 +1,6 @@
 "use strict";
 
-import { copyObject, generateUUID, isString } from "../libs/utils.mjs";
+import { copyObject, generateUUID, isArray, isNumber, isObject, isString } from "../libs/utils.mjs";
 import { ePubDoc, ePubFile } from "../index.js";
 
 class ePubNode {
@@ -8,6 +8,9 @@ class ePubNode {
     this.document = document;
     this.rootNode = rootNode;
     this.parentNode = parentNode;
+
+    this.absolutePath = null;
+    this.relativePath = null;
 
     this._id = generateUUID();
     this.tag = null;
@@ -28,7 +31,6 @@ class ePubNode {
     Object.assign(this, copyObject(obj || {}));
 
     this.init();
-    this.validate();
   }
   // Deprecated
   // get id() { return this.attributes.id; }
@@ -47,12 +49,30 @@ class ePubNode {
  * @returns 
  */
 ePubNode.prototype.init = function() {
+  this.validate();
+
+  // Convert text node
+  if (isString(this.tag)) {
+    this.content = null;
+  } else {
+    this.tag = null;
+    this.closer = null;
+    this.children = [];
+  }
+
   // Convert children to ePubNode
   for (let i = 0; i < this.children.length; i++) {
-    if (!(this.children[i] instanceof ePubNode)) {
+    if (this.children[i] instanceof ePubNode) {
+      this.children[i].init();
+    } else {
       this.children[i] = new ePubNode(this.document, this.rootNode, this, this.children[i]);
     }
   }
+
+  // Set path
+  this.absolutePath = `${this.rootNode.absolutePath}#${this.attributes?.id || ""}`;
+  this.relativePath = `${this.rootNode.relativePath}#${this.attributes?.id || ""}`;
+
   return this;
 }
 /**
@@ -60,34 +80,47 @@ ePubNode.prototype.init = function() {
  * @returns 
  */
 ePubNode.prototype.validate = function() {
+  if (!(this.document instanceof ePubDoc)) {
+    throw new Error("document must be a ePubDoc");
+  }
+  if (!(this.rootNode instanceof ePubFile)) {
+    throw new Error("rootNode must be a ePubFile");
+  }
+  if (!(this.parentNode instanceof ePubFile) && !(this.parentNode instanceof ePubNode)) {
+    throw new Error("parentNode must be a ePubFile or ePubNode");
+  }
   if (!isString(this._id)) {
     throw new Error("_id must be a string");
+  }
+  if (!isArray(this.children)) {
+    throw new Error("children must be a array");
+  }
+  for (const child of this.children) {
+    if (!(child instanceof ePubNode) && !isObject(child)) {
+      throw new Error("children[] elements must be a ePubNode or object");
+    }
   }
   return this;
 }
 
 ePubNode.prototype.move = function(index) {
-  if (this.parentNode) {
-    const currentIndex = this.getIndex();
-    if (currentIndex > -1) {
-      if (index > currentIndex) {
-        index = index - 1;
-      } else if (index < 0) {
-        index = this.parentNode.children.length + index;
-      }
-      this.parentNode.children.splice(index, 0, this.parentNode.children.splice(currentIndex, 1)[0]);
+  const currentIndex = this.getIndex();
+  if (currentIndex > -1) {
+    if (index > currentIndex) {
+      index = index - 1;
+    } else if (index < 0) {
+      index = this.parentNode.children.length + index;
     }
+    this.parentNode.children.splice(index, 0, this.parentNode.children.splice(currentIndex, 1)[0]);
   }
 
   return this;
 }
 
 ePubNode.prototype.remove = function() {
-  if (this.parentNode) {
-    let i = this.parentNode.children.findIndex(item => item._id == this._id);
-    if (i > -1) {
-      this.parentNode.children.splice(i, 1);
-    }
+  const currentIndex = this.getIndex();
+  if (currentIndex > -1) {
+    this.parentNode.children.splice(currentIndex, 1);
   }
 
   // Convert to object
@@ -101,40 +134,25 @@ ePubNode.prototype.remove = function() {
 }
 
 ePubNode.prototype.getIndex = function() {
+  if (!this.parentNode) {
+    return -1;
+  }
   return this.parentNode.children.findIndex(item => item._id == this._id);
 }
 
-ePubNode.prototype.getPrevious = function() {
-  return this.parentNode.children[this.getIndex() - 1];
-}
-
-ePubNode.prototype.getNext = function() {
-  return this.parentNode.children[this.getIndex() + 1];
-}
-
-ePubNode.prototype.getAbsolutePath = function() {
-  let result = this.parentNode.getAbsolutePath();
-  if (this.attributes?.id) {
-    result += `#${this.attributes.id}`;
-  }
-  return result;
-}
-
-ePubNode.prototype.getRelativePath = function() {
-  let result = this.parentNode.getRelativePath();
-  if (this.attributes?.id) {
-    result += `#${this.attributes.id}`;
-  }
-  return result;
+ePubNode.prototype.toString = function() {
+  return beautifyHTML(toStr(this));
 }
 
 ePubNode.prototype.toObject = function() {
   const obj = Object.assign({}, this, {
     children: (this.children || []).map(item => item.toObject()),
   });
+
   delete obj.document;
   delete obj.rootNode;
   delete obj.parentNode;
+
   return copyObject(obj);
 }
 
@@ -157,6 +175,5 @@ ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
 ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
 ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
 ePubNode.prototype.toNode = ePubFile.prototype.toNode;
-ePubNode.prototype.toString = ePubFile.prototype.toString;
 
 export { ePubNode }
