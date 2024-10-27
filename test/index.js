@@ -51,7 +51,6 @@ const textPage = doc.appendPage({
   path: "EPUB/texts/page-01.xhtml",
 });
 
-
 textPage
   .findNode({
     tag: "body",
@@ -322,8 +321,8 @@ for (const file of files) {
 }
 
 // test JSZip
-// fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
-// fs.mkdirSync(OUTPUT_PATH);
+fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
+fs.mkdirSync(OUTPUT_PATH);
 const zip = new JSZip();
 for (const file of files) {
   try {

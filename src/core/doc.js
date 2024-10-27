@@ -95,56 +95,58 @@ ePubDoc.prototype.validate = function() {
  * @returns 
  */
 ePubDoc.prototype.update = function(updates) {
-  for (const operator of Object.keys(updates)) {
-    for (let [keys, value] of Object.entries(updates[operator])) {
-      keys = keys.split(".");
-
-      let target = this;
-      let key = keys.pop();
-
-      while(isObject(target) && keys.length > 0) {
-        target = target[keys.shift()];
-      }
-
-      if (!isObject(target)) {
-        continue;
-      }
-
-      if (operator === "$set") {
-        if (target[key] !== value) {
-          target[key] = value;
+  if (isObject(updates)) {
+    for (const operator of Object.keys(updates)) {
+      for (let [keys, value] of Object.entries(updates[operator])) {
+        keys = keys.split(".");
+  
+        let target = this;
+        let key = keys.pop();
+  
+        while(isObject(target) && keys.length > 0) {
+          target = target[keys.shift()];
         }
-      } else if (operator === "$unset") {
-        if (!!value) {
-          delete target[key];
+  
+        if (!isObject(target)) {
+          continue;
         }
-      } else if (operator === "$push") {
-        target[key].push(value);
-      } else if (operator === "$pushAll") {
-        target[key].concat(value);
-      } else if (operator === "$pull") {
-        for (let i = target[key].length; i >= 0; i--) {
-          if (target[key][i] === value) {
-            target[key].splice(i, 1);
-            break;
+  
+        if (operator === "$set") {
+          if (target[key] !== value) {
+            target[key] = value;
           }
-        }
-      } else if (operator === "$pullAll") {
-        target[key] = target[key].filter(item => value.indexOf(item) === -1);
-      } else if (operator === "$addToSet") {
-        if (target[key].indexOf(value) === -1) {
+        } else if (operator === "$unset") {
+          if (!!value) {
+            delete target[key];
+          }
+        } else if (operator === "$push") {
           target[key].push(value);
-        }
-      } else if (operator === "$addToSetAll") {
-        for (const v of value) {
-          if (target[key].indexOf(v) === -1) {
-            target[key].push(v);
+        } else if (operator === "$pushAll") {
+          target[key].concat(value);
+        } else if (operator === "$pull") {
+          for (let i = target[key].length; i >= 0; i--) {
+            if (target[key][i] === value) {
+              target[key].splice(i, 1);
+              break;
+            }
           }
-        }
-      } 
+        } else if (operator === "$pullAll") {
+          target[key] = target[key].filter(item => value.indexOf(item) === -1);
+        } else if (operator === "$addToSet") {
+          if (target[key].indexOf(value) === -1) {
+            target[key].push(value);
+          }
+        } else if (operator === "$addToSetAll") {
+          for (const v of value) {
+            if (target[key].indexOf(v) === -1) {
+              target[key].push(v);
+            }
+          }
+        } 
+      }
     }
   }
-
+  
   this.init();
 
   return this;
@@ -925,12 +927,11 @@ ePubDoc.prototype.removeNodes = function(query) {
   return this;
 }
 
-// Export methods
-
 ePubDoc.prototype.toObject = function() {
   const obj = Object.assign({}, this, {
     files: this.files.map(item => item.toObject()),
   });
+
   return copyObject(obj);
 }
 

@@ -196,7 +196,8 @@
         pkg = doc.appendPackage();
 
         const navPage = doc.appendNav({
-          isChecked: true,
+          toc: true,
+          isFirstPage: false,
         });
 
         navPage.findNode({
@@ -285,18 +286,23 @@
 
             page = doc.appendPage({
               path: pagePath,
-              // isChecked: true,
             });
 
             page.findNode({
               tag: "body"
             }).appendNode({
-              tag: "img",
-              closer: " /",
+              tag: "div",
               attributes: {
-                src: file.relativePath,
-                alt: name,
-              }
+                class: "image"
+              },
+              children: [{
+                tag: "img",
+                closer: " /",
+                attributes: {
+                  src: file.relativePath,
+                  alt: name,
+                }
+              }]
             });
           } else if (/^video\/mp4/.test(type)) {
             file = doc.appendVideo({
@@ -306,13 +312,17 @@
 
             page = doc.appendPage({
               path: pagePath,
-              // isChecked: true,
             });
 
             page.findNode({
               tag: "body"
             }).appendNode({
-              tag: "video",
+              tag: "div",
+              attributes: {
+                class: "image"
+              },
+              children: [{
+                tag: "video",
                 attributes: {
                   controls: "",
                 },
@@ -324,6 +334,7 @@
                     type: type,
                   }
                 }]
+              }],
             });
           } else if (/^audio\/mpeg/.test(type)) {
             file = doc.appendAudio({
@@ -333,7 +344,6 @@
 
             page = doc.appendPage({
               path: pagePath,
-              // isChecked: true,
             });
 
             page.findNode({
@@ -355,7 +365,6 @@
           } else if (/^text\/plain/.test(type)) {
             page = doc.appendPage({
               path: pagePath,
-              // isChecked: true,
             });
 
             let toggle = false;
@@ -410,29 +419,30 @@
             page.findNode({
               tag: "head",
             }).appendNodes([{
-              tag: "meta",
-              closer: "/",
-              attributes: {
-                name: "viewport",
-                content: "width=600, height=800",
-              }
-            }, {
               tag: "style",
               children: [{
                 content: `
-                  body {
-                    width: 600px;
-                    height: 800px;
-                    margin: 0;
-                    overflow: hidden;
+                  .image{
+                    width: 90%;
+                    text-align: center;
+                    page-break-inside: avoid !important;
+                    page-break-after: always !important;
                   }
-
                   img {
-                    max-width: 100%;
+                    display: inline-block;
+                    width: 100%;
+                    margin: 0 auto;
                   }
-
+                  .video{
+                    width: 90%;
+                    text-align: center;
+                    page-break-inside: avoid !important;
+                    page-break-after: always !important;
+                  }
                   video {
-                    max-width: 100%;
+                    display: inline-block;
+                    width: 100%;
+                    margin: 0 auto;
                   }
                 `,
               }]
@@ -524,13 +534,27 @@
       }
 
       function updateSpine() {
+        const isPaginated = doc.rendition.layout === "pre-paginated";
+
+        let children = doc.findFiles({})
+            .filter(file => file.spine)
+            .map(file => file.toSpineNode());
+
+        if (isPaginated) {
+          children = children.map((item, i) => {
+            item.attributes.properties = i % 2 === 0 ? 
+              "page-spread-left" :
+              "page-spread-right";
+              
+            return item;
+          })
+        }
+
         doc.updateNode({
           tag: "spine",
         }, {
           $set: {
-            children: doc.findFiles({})
-              .filter(file => file.spine)
-              .map(file => file.toSpineNode())
+            children: children
           },
         });
       }
@@ -539,7 +563,7 @@
         nav.update({
           $set: {
             children: doc.findFiles({})
-              .filter(file => file.isChecked)
+              .filter(file => file.toc)
               .map(file => {
                 return {
                   tag: "li",
@@ -629,7 +653,6 @@
               $push: {
                 children: {
                   tag: "meta",
-                  closer: "/",
                   attributes: {
                     property: `rendition:${key}`,
                   },
@@ -654,16 +677,15 @@
           const span = document.createElement("span");
           span.innerHTML += file.path;
 
-          const box = document.createElement("input");
-          box.type = "checkbox";
-          box.checked = file.isChecked;
-          box.disabled = !file.spine;
-
-          box.addEventListener("change", function(e) {
-            file.isChecked = e.target.checked;
+          const tocBox = document.createElement("input");
+          tocBox.type = "checkbox";
+          tocBox.checked = file.toc;
+          tocBox.disabled = !file.spine;
+          tocBox.addEventListener("change", function(e) {
+            file.toc = e.target.checked;
           });
 
-          label.appendChild(box);
+          label.appendChild(tocBox);
           label.appendChild(span);
           item.appendChild(label);
           target.appendChild(item);
@@ -689,7 +711,7 @@
           .then(function(blob) {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = "book.epub";
+            a.download = "epub-js.epub";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -698,6 +720,10 @@
       }
 
       function exportFile() {
+        updateManifest();
+        updateSpine();
+        updateNav();
+        
         const obj = doc.toObject();
         const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null ,2));
         const a = document.createElement('a');
