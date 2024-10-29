@@ -1,6 +1,6 @@
 "use strict";
 
-import { copyObject, generateUUID, isArray, isNumber, isObject, isString } from "../libs/utils.mjs";
+import { copyObject, generateUUID, getRelativePath, isArray, isNumber, isObject, isString } from "../libs/utils.mjs";
 import { ePubDoc, ePubFile } from "../index.js";
 
 class ePubNode {
@@ -9,15 +9,15 @@ class ePubNode {
     this.rootNode = rootNode;
     this.parentNode = parentNode;
 
-    this.absolutePath = null;
-    this.relativePath = null;
+    // Object properties
 
+    // Common properties
     this._id = generateUUID();
+    this.path = null;
     this.tag = null;
     this.closer = null;
     this.content = null;
     this.attributes = {};
-
     /**
      * @type {object[]}  
      * @property {string|undefined} tag   
@@ -28,9 +28,11 @@ class ePubNode {
     this.children = [];
 
     // Import data
-    Object.assign(this, copyObject(obj || {}));
+    Object.assign(this, copyObject(isObject(obj) ? obj : {}));
 
+    this.preValidate();
     this.init();
+    this.postValidate();
   }
   // Deprecated
   // get id() { return this.attributes.id; }
@@ -49,8 +51,6 @@ class ePubNode {
  * @returns 
  */
 ePubNode.prototype.init = function() {
-  this.validate();
-
   // Convert text node
   if (isString(this.tag)) {
     this.content = null;
@@ -59,6 +59,10 @@ ePubNode.prototype.init = function() {
     this.closer = null;
     this.children = [];
   }
+
+  // Set path
+  this.path = this.rootNode.getAbsolutePath() + 
+    (isString(this.attributes.id) ? "#" + this.attributes.id : "");
 
   // Convert children to ePubNode
   for (let i = 0; i < this.children.length; i++) {
@@ -69,17 +73,13 @@ ePubNode.prototype.init = function() {
     }
   }
 
-  // Set path
-  this.absolutePath = `${this.rootNode.absolutePath}#${this.attributes?.id || ""}`;
-  this.relativePath = `${this.rootNode.relativePath}#${this.attributes?.id || ""}`;
-
   return this;
 }
 /**
  * 
  * @returns 
  */
-ePubNode.prototype.validate = function() {
+ePubNode.prototype.preValidate = function() {
   if (!(this.document instanceof ePubDoc)) {
     throw new Error("document must be a ePubDoc");
   }
@@ -92,6 +92,9 @@ ePubNode.prototype.validate = function() {
   if (!isString(this._id)) {
     throw new Error("_id must be a string");
   }
+  if (!isObject(this.attributes)) {
+    throw new Error("attributes must be a object");
+  }
   if (!isArray(this.children)) {
     throw new Error("children must be a array");
   }
@@ -101,6 +104,26 @@ ePubNode.prototype.validate = function() {
     }
   }
   return this;
+}
+/**
+ * 
+ * @returns 
+ */
+ePubNode.prototype.postValidate = function() {
+  return this;
+}
+
+ePubNode.prototype.getAbsolutePath = function() {
+  return this.path;
+}
+
+ePubNode.prototype.getRelativePath = function(from) {
+  if (from instanceof ePubFile) {
+    from = from.getAbsolutePath();
+  } else if (!isString(from)) {
+    from = "EPUB";
+  }
+  return getRelativePath(from, this.getAbsolutePath());
 }
 
 ePubNode.prototype.move = function(index) {
@@ -131,6 +154,56 @@ ePubNode.prototype.remove = function() {
   delete this.parentNode;
 
   return this;
+}
+/**
+ * 
+ * @param {ePubFile} file 
+ * @param {object|undefined} obj attributes
+ * @property {string} id - Optional
+ * @property {string} href - Optional
+ * @property {string} media-overlay - Optional
+ * @property {string} media-type - Optional
+ * @property {string} properties - Optional
+ * @property {string} fallback - Optional
+ * @returns {ePubNode}
+ */
+ePubNode.prototype.appendManifestChild = function(file, obj) {
+  return this.appendNode({
+    tag: "item",
+    closer: " /",
+    attributes: Object.assign(
+      {
+        "id": file._id,
+        "href": file.getRelativePath(this.rootNode.getAbsolutePath()),
+        "media-type": file.mimetype,
+      }, 
+      (isObject(file.manifest) ? file.manifest : {}),
+      (isObject(obj) ? obj : {}),
+    ),
+  });
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {ePubFile} file
+ * @param {object|undefined} obj attributes
+ * @property {string} id - Optional
+ * @property {string} idref - Optional
+ * @property {string} linear - Optional, "yes" or "no"
+ * @property {string} properties - Optional
+ * @returns {ePubNode}
+ */
+ePubNode.prototype.appendSpineChild = function(file, obj) {
+  return this.appendNode({
+    tag: "itemref",
+    closer: " /",
+    attributes: Object.assign(
+      {
+        "idref": file._id,
+      },
+      (isObject(file.spine) ? file.spine : {}),
+      (isObject(obj) ? obj : {}),
+    ),
+  });
 }
 
 ePubNode.prototype.getIndex = function() {

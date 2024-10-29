@@ -9,28 +9,6 @@ class ePubFile {
   constructor(document, obj) {
     this.document = document;
 
-    /**
-     * https://www.w3.org/TR/epub-33/#sec-item-elem
-     * @type {object|undefined}
-     * @property {string|undefined} id
-     * @property {string|undefined} href
-     * @property {string|undefined} media-overlay
-     * @property {string|undefined} media-type
-     * @property {string|undefined} properties
-     * @property {string|undefined} fallback
-     */
-    this.manifest = null;
-    
-    /**
-     * https://www.w3.org/TR/epub-33/#sec-itemref-elem
-     * @type {object|undefined}
-     * @property {string|undefined} id
-     * @property {string|undefined} idref
-     * @property {string|undefined} linear "yes" or "no"
-     * @property {string|undefined} properties
-     */
-    this.spine = null;
-
     // Common properties
     this._id = generateUUID();
     this.path = null;
@@ -39,11 +17,29 @@ class ePubFile {
     this.dirname = null;
     this.extension = null;
     this.mimetype = null;
-    this.absolutePath = null;
-    this.relativePath = null;
     this.data = null;
     this.encoding = "utf8";
     this.attributes = {};
+    /**
+     * https://www.w3.org/TR/epub-33/#sec-item-elem
+     * @type {object|undefined}
+     * @property {string} id
+     * @property {string} href
+     * @property {string} media-overlay
+     * @property {string} media-type
+     * @property {string} properties
+     * @property {string} fallback
+     */
+    this.manifest = null;
+    /**
+     * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+     * @type {object|undefined}
+     * @property {string} id
+     * @property {string} idref
+     * @property {string} linear "yes" or "no"
+     * @property {string} properties
+     */
+    this.spine = null;
 
     // Page properties
     this.tag = null;
@@ -52,9 +48,11 @@ class ePubFile {
     this.children = [];
 
     // Import data
-    Object.assign(this, copyObject(obj || {}));
+    Object.assign(this, copyObject(isObject(obj) ? obj : {}));
 
+    this.preValidate();
     this.init();
+    this.postValidate();
   }
 }
 /**
@@ -62,8 +60,6 @@ class ePubFile {
  * @returns 
  */
 ePubFile.prototype.init = function() {
-  this.validate();
-
   this.tag = null;
   this.closer = null;
   this.content = null;
@@ -73,8 +69,6 @@ ePubFile.prototype.init = function() {
   this.dirname = getDirectoryPath(this.path);
   this.extension = getExtension(this.path);
   this.mimetype = extToMime(this.path);
-  this.absolutePath = this.path;
-  this.relativePath = getRelativePath("EPUB", this.path);
 
   // Parse imported by string DOM
   if (isDOM(this.mimetype)) {
@@ -106,7 +100,7 @@ ePubFile.prototype.init = function() {
  * 
  * @returns 
  */
-ePubFile.prototype.validate = function() {
+ePubFile.prototype.preValidate = function() {
   if (!(this.document instanceof ePubDoc)) {
     throw new Error("document must be a ePubDoc");
   }
@@ -125,6 +119,26 @@ ePubFile.prototype.validate = function() {
     }
   }
   return this;
+}
+/**
+ * 
+ * @returns 
+ */
+ePubFile.prototype.postValidate = function() {
+  return this;
+}
+
+ePubFile.prototype.getAbsolutePath = function() {
+  return this.path;
+}
+
+ePubFile.prototype.getRelativePath = function(from) {
+  if (from instanceof ePubFile) {
+    from = from.getAbsolutePath();
+  } else if (!isString(from)) {
+    from = "EPUB";
+  }
+  return getRelativePath(from, this.getAbsolutePath());
 }
 
 ePubFile.prototype.move = function(index) {
@@ -213,7 +227,7 @@ ePubFile.prototype.appendNode = function(obj, idx) {
   if (idx < 0) {
     idx += this.children.length + 1;
   }
-  const node = new ePubNode(this.document, this.rootNode || this, this, obj || {});
+  const node = new ePubNode(this.document, this.rootNode || this, this, isObject(obj) ? obj : {});
   this.children.splice(idx, 0, node);
   return node;
 }
@@ -364,36 +378,6 @@ ePubFile.prototype.toNode = function() {
   }
 }
 
-ePubFile.prototype.toManifestNode = function(obj) {
-  return {
-    tag: "item",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "id": this._id,
-        "href": this.relativePath,
-        "media-type": this.mimetype,
-      },
-      (isObject(this.manifest) ? this.manifest : {}),
-      (isObject(this.obj) ? obj : {}),
-    )
-  }
-}
-
-ePubFile.prototype.toSpineNode = function(obj) {
-  return {
-    tag: "itemref",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "idref": this._id,
-      },
-      (isObject(this.spine) ? this.spine : {}),
-      (isObject(this.obj) ? obj : {}),
-    ),
-  }
-}
-
 ePubFile.prototype.toString = function() {
   return isDOM(this.mimetype) ? 
     beautifyHTML(toStr(this)) : 
@@ -412,7 +396,7 @@ ePubFile.prototype.toObject = function() {
 
 ePubFile.prototype.toFile = function() {
   return {
-    path: this.absolutePath,
+    path: this.getAbsolutePath(),
     data: this.toString(),
     encoding: this.encoding,
   }

@@ -726,7 +726,7 @@ function queryObject(obj, qry) {
           return false;
         }
         for (let i = 0; i < q.length; i++) {
-          if (d[i] !== q[i]) {
+          if (!C(d[i], q[i], "$equal")) {
             return false;
           }
         }
