@@ -22,7 +22,7 @@
 
     <h2>Import</h2>
     <p>Load from exported JSON</p>
-    <input id="import-file" type="file" accept="text/json">
+    <input id="import-file" type="file" accept="application/json">
 
     <h2>Options</h2>
     <p>Manga: ...</p>
@@ -185,50 +185,100 @@
       }
 
       function clearFiles(e) {
-        const obj = getOptions();
+        initDoc();
+        getMetadataFromDoc();
+        updateCheckboxes();
+        updateTextDirection();
+        updatePageDirection();
+        updateRendition();
+        renderFileList();
+      }
 
-        console.log("Options", obj);
+      function initDoc(data) {
+        doc = new ePubDoc(data);
 
-        doc = new ePubDoc(obj);
+        packageFile = doc.findFile({ filename: "package" });
+        packageNode = packageFile.findNode({ tag: "package" });
+        metadataNode = packageFile.findNode({ tag: "metadata" });
+        manifestNode = packageFile.findNode({ tag: "manifest" });
+        spineNode = packageFile.findNode({ tag: "spine" });
         
-        doc.appendMimetpye();
-        doc.appendContainer();
-        pkg = doc.appendPackage();
+        idNode = metadataNode.findNode({ tag: "dc:identifier" });
+        titleNode = metadataNode.findNode({ tag: "dc:title" });
+        languageNode = metadataNode.findNode({ tag: "dc:language" });
 
-        const navPage = doc.appendNav({
+        authorNode = metadataNode.findNode({
+          tag: "dc:creator",
+        }) || metadataNode.appendNode({
+          tag: "dc:creator",
+          children: [{
+            content: "shinich39",
+          }]
+        });
+
+        navFile = doc.findFile({
+          manifest: {
+            properties: "nav"
+          }
+        }) || doc.appendNav({
           toc: true,
           isFirstPage: false,
         });
 
-        navPage.findNode({
+        tocNode = navFile.findNode({
           tag: "nav",
           "attributes.id": "toc",
-        }).appendNode({
-          tag: "h1",
-          children: [{
-            content: "Table of Contents",
-          }],
         });
 
-        nav = navPage.findNode({
-          tag: "nav",
-          "attributes.id": "toc",
-        }).appendNode({
-          tag: "ol",
-        });
+        if (tocNode.children.length < 1) {
+          tocNode.appendNode({
+            tag: "h1",
+            children: [{
+              content: "Table of Contents",
+            }],
+          });
 
-        renderFileList();
+          listNode = tocNode.appendNode({
+            tag: "ol"
+          });
+        } else {
+          listNode.findNode({
+            tag: {
+              $in: ["ol", "ul"],
+            },
+          });
+        }
+      }
+
+      function initPage(page) {
+        page.updateNode({
+          tag: "title",
+        }, {
+          $set: {
+            children: [{
+              content: metadata.title,
+            }]
+          }
+        });
+        
+        page.updateNode({
+          tag: "html"
+        }, {
+          $set: {
+            "attributes.dir": metadata.textDirection,
+          }
+        });
       }
 
       async function setCover(e) {
-        if (cover) {
+        if (coverFile) {
           doc.findNode({
             tag: "manifest",
           }).removeNode({
-            "attributes.id": cover._id
+            "attributes.id": coverFile._id
           });
 
-          cover.remove();
+          coverFile.remove();
         }
 
         const file = e.target.files[0];
@@ -238,14 +288,10 @@
 
         const filePath = "cover."+file.type.split("/").pop();
 
-        cover = doc.appendCover({
+        coverFile = doc.appendCover({
           path: filePath,
           data: await toBase64(file),
         });
-
-        doc.findNode({
-          tag: "manifest",
-        }).appendNode(cover.toManifestNode(), 0);
 
         renderFileList();
       }
@@ -265,10 +311,10 @@
           const { name, type, size } = newFile;
 
           let pageIndex = doc.findFiles({
-              spine: {
-                $exists: true,
-              }
-            }).length,
+                spine: {
+                  $exists: true,
+                }
+              }).length,
               pagePath = `EPUB/page-${pageIndex}.xhtml`,
               navLabel = `page-${pageIndex}`,
               filePath = `EPUB/${name}`;
@@ -299,7 +345,7 @@
                 tag: "img",
                 closer: " /",
                 attributes: {
-                  src: file.relativePath,
+                  src: file.getRelativePath(page),
                   alt: name,
                 }
               }]
@@ -330,7 +376,7 @@
                   tag: "source",
                   closer: " /",
                   attributes: {
-                    src: file.relativePath,
+                    src: file.getRelativePath(page),
                     type: type,
                   }
                 }]
@@ -357,7 +403,7 @@
                 tag: "source",
                 closer: " /",
                 attributes: {
-                  src: file.relativePath,
+                  src: file.getRelativePath(page),
                   type: type,
                 }
               }]
@@ -416,6 +462,9 @@
 
           // Set viewport and styles
           if (page) {
+            // Set metadata
+            initPage(page);
+            
             page.findNode({
               tag: "head",
             }).appendNodes([{
@@ -446,26 +495,30 @@
         renderFileList();
       }
 
-      function getOptions() {
-        return doc ? {
-          title: doc.title,
-          authors: doc.authors,
-          createdAt: doc.createdAt,
-          textDirection: doc.textDirection,
-          pageDirection: doc.pageDirection,
-          rendition: doc.rendition,
-        } : {
-          title: "epub-js",
-          authors: ["shinich39"],
-          createdAt: Date.now(),
-          textDirection: null,
-          pageDirection: null,
-          rendition: {
-            layout: null,
-            orientation: null,
-            spread: null,
-          },
-        };
+      function getMetadataFromDoc() {
+        metadata.id = idNode.getContent();
+        metadata.title = titleNode.getContent();
+        metadata.language = languageNode.getContent();
+        metadata.authors = [authorNode.getContent()];
+        metadata.textDirection = packageNode.attributes?.["dir"] || null;
+        metadata.pageDirection = spineNode.attributes?.["page-progression-direction"] || null;
+
+        metadata.rendition.layout = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:layout",
+        })?.getContent() || null;
+
+        metadata.rendition.orientation = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:orientation",
+        })?.getContent() || null;
+
+        metadata.rendition.spread = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:spread",
+        })?.getContent() || null;
+
+        console.log("getMetadataFromDoc()", metadata);
       }
 
       function updateCheckboxes() {
@@ -473,39 +526,39 @@
           return (
             (a == null || a == "") && 
             (b == null || b == "")
-          ) || a == b
+          ) || a == b;
         }
 
         document.querySelectorAll("[name='rendition:layout']").forEach(item => {
-          if (match(item.value, doc.rendition.layout)) {
+          if (match(item.value, metadata.rendition.layout)) {
             item.checked = true;
             return;
           }
         });
 
         document.querySelectorAll("[name='rendition:orientation']").forEach(item => {
-          if (match(item.value, doc.rendition.orientation)) {
+          if (match(item.value, metadata.rendition.orientation)) {
             item.checked = true;
             return;
           }
         });
 
         document.querySelectorAll("[name='rendition:spread']").forEach(item => {
-          if (match(item.value, doc.rendition.spread)) {
+          if (match(item.value, metadata.rendition.spread)) {
             item.checked = true;
             return;
           }
         });
 
         document.querySelectorAll("[name='text-direction']").forEach(item => {
-          if (match(item.value, doc.textDirection)) {
+          if (match(item.value, metadata.textDirection)) {
             item.checked = true;
             return;
           }
         });
 
         document.querySelectorAll("[name='page-direction']").forEach(item => {
-          if (match(item.value, doc.pageDirection)) {
+          if (match(item.value, metadata.pageDirection)) {
             item.checked = true;
             return;
           }
@@ -513,55 +566,47 @@
       }
 
       function updateManifest() {
-        doc.updateNode({
-          tag: "manifest",
-        }, {
-          $set: {
-            children: doc.findFiles({})
-              .filter(file => file.manifest)
-              .map(file => file.toManifestNode())
-          },
+        let files = doc.findFiles({
+          manifest: {
+            $exists: true,
+          }
         });
+
+        manifestNode.appendManifestChildren(files);
       }
 
       function updateSpine() {
-        const isPaginated = doc.rendition.layout === "pre-paginated";
+        let files = doc.findFiles({
+          spine: {
+            $exists: true,
+          }
+        });
 
-        let children = doc.findFiles({})
-            .filter(file => file.spine)
-            .map(file => file.toSpineNode());
+        spineNode.appendSpineChildren(files);
 
-        if (isPaginated) {
-          children = children.map((item, i) => {
-            item.attributes.properties = i % 2 === 0 ? 
+        const isPaginated = metadata.rendition.layout === "pre-paginated";
+        if (metadata.rendition.layout === "pre-paginated") {
+          for (let i = 0; i < spineNode.children.length; i++) {
+            const child = spineNode.children[i];
+
+            child.attributes.properties = i % 2 === 0 ?
               "page-spread-left" :
               "page-spread-right";
-              
-            return item;
-          })
+          }
         }
-
-        doc.updateNode({
-          tag: "spine",
-        }, {
-          $set: {
-            children: children
-          },
-        });
       }
 
       function updateNav() {
-        nav.update({
+        listNode.update({
           $set: {
-            children: doc.findFiles({})
-              .filter(file => file.toc)
+            children: doc.findFiles({ toc: true })
               .map(file => {
                 return {
                   tag: "li",
                   children: [{
                     tag: "a",
                     attributes: {
-                      href: file.relativePath,
+                      href: file.getRelativePath(navFile),
                     },
                     children: [{
                       content: file.filename,
@@ -584,63 +629,50 @@
         return result || null;
       }
 
-      function updateTextDirection() {
-        const value = getRadioValue("text-direction");
+      function updateTextDirection(e) {
+        metadata.textDirection = e.target.value || null;
+        console.log("updateTextDirection()", metadata.textDirection);
+        updateMetadata();
+      }
 
-        doc.textDirection = value;
+      function updatePageDirection(e) {
+        metadata.pageDirection = e.target.value || null;
+        console.log("updatePageDirection()", metadata.pageDirection);
+        updateMetadata();
+      }
 
-        console.log("Updated", getOptions());
+      function updateRendition(e) {
+        const name = e.target.name.replace("rendition:", "");
+        metadata.rendition[name] = e.target.value || null;
+        console.log("updateRendition()", metadata.rendition);
+        updateMetadata();
+      }
 
+      function updateMetadata() {
         doc.updateNodes({
           tag: {
             $in: ["html", "package"]
           }
         }, {
           $set: {
-            "attributes.dir": value || null
+            "attributes.dir": metadata.textDirection,
           }
         });
-      }
 
-      function updatePageDirection() {
-        const value = getRadioValue("page-direction");
-
-        doc.pageDirection = value;
-
-        console.log("Updated", getOptions());
-
-        pkg.updateNode({
-          tag: "spine",
-        }, {
+        spineNode.update({
           $set: {
-            "attributes.page-progression-direction": value || null
-          }
-        });
-      }
-
-      function updateRendition() {
-        let obj = {
-          layout: getRadioValue("rendition:layout"), 
-          orientation: getRadioValue("rendition:orientation"), 
-          spread: getRadioValue("rendition:spread"),
-        }
-
-        doc.rendition = obj;
-
-        console.log("Updated", getOptions());
-
-        pkg.removeNodes({
-          tag: "meta",
-          "attributes.property": {
-            $in: Object.keys(obj).map(item => `rendition:${item}`),
+            "attributes.page-progression-direction": metadata.pageDirection
           }
         });
 
-        for (const [key, value] of Object.entries(obj)) {
+        for (const [key, value] of Object.entries(metadata.rendition)) {
+          metadataNode.removeNode({
+            tag: "meta",
+            "attributes.property": `rendition:${key}`,
+          });
+          
           if (!!value) {
-            pkg.updateNode({
-              tag: "metadata",
-            }, {
+            metadataNode.update({
               $push: {
                 children: {
                   tag: "meta",
@@ -736,15 +768,41 @@
 
         console.log("Imported data", data);
 
-        doc = new ePubDoc(data);
-
+        initDoc(data);
+        getMetadataFromDoc();
         updateCheckboxes();
         renderFileList();
 
         e.target.value = "";
       }
 
-      let doc, pkg, nav, cover;
+      let metadata = {
+            id: null,
+            title: "epub-js",
+            language: "en",
+            authors: ["shinich39"],
+            textDirection: null,
+            pageDirection: null,
+            rendition: {
+              layout: null,
+              orientation: null,
+              spread: null,
+            },
+          },
+          doc, 
+          packageFile,
+          packageNode,
+          metadataNode, 
+          idNode,
+          titleNode,
+          languageNode,
+          authorNode,
+          manifestNode, 
+          spineNode,
+          navFile,
+          tocNode,
+          listNode,
+          coverFile;
 
       clearFiles();
     </script>

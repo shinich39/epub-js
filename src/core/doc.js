@@ -572,7 +572,34 @@ ePubDoc.prototype.appendPackage = function(obj, idx) {
           children: [{
             content: new Date().toISOString(),
           }],
-        }],
+        },
+        // Example
+        // {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:layout",
+        //   },
+        //   children: [{
+        //     content: "pre-paginated"|"reflowable"
+        //   }]
+        // }, {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:orientation",
+        //   },
+        //   children: [{
+        //     content: "auto"|"landscape"|"portrait"
+        //   }]
+        // }, {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:spread",
+        //   },
+        //   children: [{
+        //     content: "auto"|"both"|"landscape"|"none"
+        //   }]
+        // }
+        ],
       }, {
         tag: "manifest",
       }, {
@@ -761,21 +788,7 @@ ePubDoc.prototype.appendNCX = function(obj, idx) {
             "content": "Untitled",
           }]
         }],
-      },
-      // ...(
-      //   authors.map((item, i) => {
-      //     return {
-      //       tag: "docAuthor",
-      //       children: [{
-      //         tag: "text",
-      //         chlidren: [{
-      //           content: item,
-      //         }]
-      //       }]
-      //     }
-      //   })
-      // ),
-      {
+      }, {
         tag: "navMap",
       }],
     }]

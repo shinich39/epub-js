@@ -2,6 +2,7 @@ import { ePubDoc } from "../index.js";
 import path from "node:path";
 import fs from "node:fs";
 import JSZip from "./jszip.min.mjs";
+import { getDirectoryPath, getRelativePath } from "../src/libs/utils.mjs";
 
 const INPUT_PATH = path.join(process.cwd(), "input");
 const OUTPUT_PATH = path.join(process.cwd(), "output");
@@ -433,7 +434,6 @@ console.log("ID:", id);
 console.log("Title:", title);
 console.log("Authors:", authors);
 console.log("Language:", language);
-
 
 // Clear output
 console.log();

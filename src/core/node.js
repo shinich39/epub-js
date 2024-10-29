@@ -113,19 +113,6 @@ ePubNode.prototype.postValidate = function() {
   return this;
 }
 
-ePubNode.prototype.getAbsolutePath = function() {
-  return this.path;
-}
-
-ePubNode.prototype.getRelativePath = function(from) {
-  if (from instanceof ePubFile) {
-    from = from.getAbsolutePath();
-  } else if (!isString(from)) {
-    from = "EPUB";
-  }
-  return getRelativePath(from, this.getAbsolutePath());
-}
-
 ePubNode.prototype.move = function(index) {
   const currentIndex = this.getIndex();
   if (currentIndex > -1) {
@@ -183,6 +170,34 @@ ePubNode.prototype.appendManifestChild = function(file, obj) {
   });
 }
 /**
+ * 
+ * @param {ePubFile[]} files 
+ * @returns {ePubNode[]}
+ */
+ePubNode.prototype.appendManifestChildren = function(files) {
+  let result = [], 
+      p = this.rootNode.getAbsolutePath();
+
+  for (const file of files) {
+    result.push(
+      this.appendNode({
+        tag: "item",
+        closer: " /",
+        attributes: Object.assign(
+          {
+            "id": file._id,
+            "href": file.getRelativePath(p),
+            "media-type": file.mimetype,
+          }, 
+          (isObject(file.manifest) ? file.manifest : {}),
+        ),
+      })
+    );
+  }
+
+  return result;
+}
+/**
  * https://www.w3.org/TR/epub-33/#sec-item-elem
  * @param {ePubFile} file
  * @param {object|undefined} obj attributes
@@ -204,6 +219,31 @@ ePubNode.prototype.appendSpineChild = function(file, obj) {
       (isObject(obj) ? obj : {}),
     ),
   });
+}
+/**
+ * 
+ * @param {ePubFile[]} files 
+ * @returns {ePubNode[]}
+ */
+ePubNode.prototype.appendSpineChildren = function(files) {
+  let result = [];
+
+  for (const file of files) {
+    result.push(
+      this.appendNode({
+        tag: "itemref",
+        closer: " /",
+        attributes: Object.assign(
+          {
+            "idref": file._id,
+          },
+          (isObject(file.spine) ? file.spine : {}),
+        ),
+      })
+    );
+  }
+
+  return result;
 }
 
 ePubNode.prototype.getIndex = function() {
@@ -230,6 +270,8 @@ ePubNode.prototype.toObject = function() {
 }
 
 ePubNode.prototype.update = ePubDoc.prototype.update;
+ePubNode.prototype.getAbsolutePath = ePubFile.prototype.getAbsolutePath;
+ePubNode.prototype.getRelativePath = ePubFile.prototype.getRelativePath;
 ePubNode.prototype.getContent = ePubFile.prototype.getContent;
 ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
 ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
