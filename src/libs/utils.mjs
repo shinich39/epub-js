@@ -148,7 +148,11 @@ function splitFloat(str) {
   return str.split(/([0-9]+\.[0-9]+)+/);
 }
 function getExtension(path) {
-  return /\.[^\\\/]/.test(path) ? "." + path.split(".").pop() : "";
+  if (/\.[^\\\/]/.test(path)) {
+    return "." + path.split(".").pop();
+  } else {
+    return "";
+  }
 }
 function getFilename(path, ext) {
   if (typeof ext === "string") {
@@ -160,9 +164,9 @@ function getDirectoryPath(path) {
   return path.replace(/[^\\\/]+?[\\\/]?$/, "").replace(/(.)[\\\/]$/, "$1") || ".";
 }
 function getRelativePath(from, to) {
-  let result = "";
   from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
   to = (to + "/").replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+  let result = "";
   while (!to.startsWith(from)) {
     result += "../";
     from = from.substring(0, from.lastIndexOf("/", from.length - 2) + 1);
@@ -252,7 +256,12 @@ function generateObjectId() {
 }
 function generateUUID() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-    let r = Math.random() * 16 | 0, v = c == "x" ? r : r & 3 | 8;
+    let r = Math.random() * 16 | 0, v;
+    if (c == "x") {
+      v = r;
+    } else {
+      v = r & 3 | 8;
+    }
     return v.toString(16);
   });
 }
@@ -277,13 +286,7 @@ function toBase64(str, type) {
       "The string to be encoded contains characters outside of the Latin1 range."
     );
   }
-  let padding = str.length % 3;
-  let output = "";
-  let position = -1;
-  let a;
-  let b;
-  let c;
-  let buffer;
+  let padding = str.length % 3, output = "", position = -1, a, b, c, buffer;
   let length = str.length - padding;
   while (++position < length) {
     a = str.charCodeAt(position) << 16;
@@ -301,7 +304,11 @@ function toBase64(str, type) {
     buffer = str.charCodeAt(position);
     output += BASE64_CHARACTERS.charAt(buffer >> 2) + BASE64_CHARACTERS.charAt(buffer << 4 & 63) + "==";
   }
-  return (type ? `data:${type};base64,` : "") + output;
+  if (type) {
+    return "data:" + type + ";base64," + output;
+  } else {
+    return output;
+  }
 }
 function fromBase64(str) {
   str = String(str).replace(/^data:([A-Za-z-+\/]+);[A-Za-z0-9]+,/, "").replace(/[\t\n\f\r ]/g, "");
@@ -315,14 +322,15 @@ function fromBase64(str) {
       "Invalid character: the string to be decoded is not correctly encoded."
     );
   }
-  let bitCounter = 0;
-  let bitStorage;
-  let buffer;
-  let output = "";
-  let position = -1;
+  let bitCounter = 0, bitStorage, buffer, output = "", position = -1;
   while (++position < length) {
     buffer = BASE64_CHARACTERS.indexOf(str.charAt(position));
-    bitStorage = bitCounter % 4 ? bitStorage * 64 + buffer : buffer;
+    bitStorage;
+    if (bitCounter % 4) {
+      bitStorage = bitStorage * 64 + buffer;
+    } else {
+      bitStorage = buffer;
+    }
     if (bitCounter++ % 4) {
       output += String.fromCharCode(
         255 & bitStorage >> (-2 * bitCounter & 6)
@@ -362,9 +370,11 @@ function parseCommand(str) {
   return result;
 }
 function parseQueryString(str) {
-  const qs = str.indexOf("?") > -1 ? str.split("?").pop() : str;
+  if (str.indexOf("?") > -1) {
+    str = str.split("?").pop();
+  }
   let result = {};
-  for (const [key, value] of new URLSearchParams(qs).entries()) {
+  for (const [key, value] of new URLSearchParams(str).entries()) {
     if (!result[key]) {
       result[key] = [value];
     } else {
@@ -375,16 +385,15 @@ function parseQueryString(str) {
 }
 function parseTemplate(str, obj) {
   return str.replace(/\$\{[^}]*?\}/g, function(item) {
-    let target = obj;
-    let keys = item.substring(2, item.length - 1).split(/\.|\[['"]?|['"]?\]/).filter(Boolean);
-    let key = keys.pop();
-    while (typeof target === "object" && keys.length > 0) {
+    let target = obj, keys = item.substring(2, item.length - 1).split(/\.|\[['"]?|['"]?\]/).filter(Boolean), key = keys.pop();
+    while (isObject(target) && keys.length > 0) {
       target = target[keys.shift()];
     }
-    if (typeof target !== "object") {
+    if (!isObject(target) && !isArray(target)) {
       return "";
+    } else {
+      return target[key];
     }
-    return target[key] || "";
   });
 }
 function createArray(len, value) {
@@ -410,12 +419,20 @@ function createArray(len, value) {
 }
 function getMinValue(arr) {
   return arr.reduce(function(prev, curr) {
-    return curr < prev ? curr : prev;
+    if (curr < prev) {
+      return curr;
+    } else {
+      return prev;
+    }
   }, arr[0] || 0);
 }
 function getMaxValue(arr) {
   return arr.reduce(function(prev, curr) {
-    return curr > prev ? curr : prev;
+    if (curr > prev) {
+      return curr;
+    } else {
+      return prev;
+    }
   }, arr[0] || 0);
 }
 function getMeanValue(arr) {
@@ -427,7 +444,11 @@ function getModeValue(arr) {
   let seen = {}, maxValue = arr[0], maxCount = 1;
   for (let i = 0; i < arr.length; i++) {
     const value = arr[i];
-    seen[value] = seen[value] ? seen[value] + 1 : 1;
+    if (!seen[value]) {
+      seen[value] = 1;
+    } else {
+      seen[value] += 1;
+    }
     if (seen[value] > maxCount) {
       maxValue = value;
       maxCount = seen[value];
@@ -447,7 +468,13 @@ function compareObject(a, b) {
   } else if (aIdx === 0 || aIdx === 1) {
     return 0;
   } else if (aIdx === 2) {
-    return a !== b ? a ? 1 : -1 : 0;
+    if (a !== b) {
+      return 0;
+    } else if (a) {
+      return 1;
+    } else {
+      return -1;
+    }
   } else if (aIdx === 3) {
     return a - b;
   } else if (aIdx === 4) {
@@ -465,7 +492,11 @@ function compareObject(a, b) {
 function sortArray(arr, desc) {
   desc = Boolean(desc);
   return arr.sort(function(a, b) {
-    return desc ? !compareObject(a, b) : compareObject(a, b);
+    if (desc) {
+      return !compareObject(a, b);
+    } else {
+      return compareObject(a, b);
+    }
   });
 }
 function sortObject(arr, sorter) {
@@ -474,11 +505,13 @@ function sortObject(arr, sorter) {
   }
   return arr.sort(function(a, b) {
     for (const key of sorter) {
-      const d = /^-/.test(key);
-      const k = key.replace(/^-/, "");
-      const r = compareObject(a[k], b[k]);
+      const d = /^-/.test(key), k = key.replace(/^-/, ""), r = compareObject(a[k], b[k]);
       if (r !== 0) {
-        return d ? -r : r;
+        if (d) {
+          return -r;
+        } else {
+          return r;
+        }
       }
     }
     return 0;
@@ -501,47 +534,58 @@ function spreadArray(arr) {
     if (a.length < 1) {
       return;
     }
-    const result2 = [];
+    let result = [];
     for (let i = 0; i < a.length; i++) {
-      result2.push(0);
+      result.push(0);
     }
-    return result2;
+    return result;
   }
-  function getNextIndexes(a, indexes2) {
+  function getNextIndexes(a, indexes) {
     for (let i = a.length - 1; i >= 0; i--) {
-      if (indexes2[i] < a[i].length - 1) {
-        indexes2[i] += 1;
-        return indexes2;
+      if (indexes[i] < a[i].length - 1) {
+        indexes[i] += 1;
+        return indexes;
       }
-      indexes2[i] = 0;
+      indexes[i] = 0;
     }
     return;
   }
-  function getValues(a, indexes2) {
-    const result2 = [];
+  function getValues(a, indexes) {
+    let result = [];
     for (let i = 0; i < a.length; i++) {
-      result2.push(a[i][indexes2[i]]);
+      result.push(a[i][indexes[i]]);
     }
-    return result2;
+    return result;
   }
-  const result = [];
-  let indexes = getFirstIndexes(arr);
-  while (indexes) {
-    const values = getValues(arr, indexes);
-    result.push(values);
-    indexes = getNextIndexes(arr, indexes);
+  function exec() {
+    let result = [];
+    let indexes = getFirstIndexes(arr);
+    while (indexes) {
+      result.push(getValues(arr, indexes));
+      indexes = getNextIndexes(arr, indexes);
+    }
+    return result;
   }
-  return result;
+  return exec();
 }
 function copyObject(obj) {
-  const result = isArray(obj) ? [] : {};
+  let result;
+  if (isArray(obj)) {
+    result = [];
+  } else {
+    result = {};
+  }
   for (const [key, value] of Object.entries(obj)) {
-    result[key] = isObject(value) && !isNull(value) ? copyObject(value) : value;
+    if (isObject(value) && !isNull(value)) {
+      result[key] = copyObject(value);
+    } else {
+      result[key] = value;
+    }
   }
   return result;
 }
 function groupByKey(arr, key) {
-  const group = {};
+  let group = {};
   for (const obj of arr) {
     if (!group[String(obj[key])]) {
       group[String(obj[key])] = [obj];

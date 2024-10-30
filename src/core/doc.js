@@ -164,8 +164,8 @@ ePubDoc.prototype.update = function(updates) {
       for (let [keys, value] of Object.entries(updates[operator])) {
         keys = keys.split(".");
   
-        let target = this;
-        let key = keys.pop();
+        let target = this,
+            key = keys.pop();
   
         while(isObject(target) && keys.length > 0) {
           target = target[keys.shift()];

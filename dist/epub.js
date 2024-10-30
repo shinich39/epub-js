@@ -4287,7 +4287,11 @@ var epub = (() => {
     }
   }
   function getExtension(path) {
-    return /\.[^\\\/]/.test(path) ? "." + path.split(".").pop() : "";
+    if (/\.[^\\\/]/.test(path)) {
+      return "." + path.split(".").pop();
+    } else {
+      return "";
+    }
   }
   function getFilename(path, ext) {
     if (typeof ext === "string") {
@@ -4299,9 +4303,9 @@ var epub = (() => {
     return path.replace(/[^\\\/]+?[\\\/]?$/, "").replace(/(.)[\\\/]$/, "$1") || ".";
   }
   function getRelativePath(from, to) {
-    let result = "";
     from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
     to = (to + "/").replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+    let result = "";
     while (!to.startsWith(from)) {
       result += "../";
       from = from.substring(0, from.lastIndexOf("/", from.length - 2) + 1);
@@ -4311,14 +4315,28 @@ var epub = (() => {
   }
   function generateUUID() {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-      let r = Math.random() * 16 | 0, v = c == "x" ? r : r & 3 | 8;
+      let r = Math.random() * 16 | 0, v;
+      if (c == "x") {
+        v = r;
+      } else {
+        v = r & 3 | 8;
+      }
       return v.toString(16);
     });
   }
   function copyObject(obj) {
-    const result = isArray(obj) ? [] : {};
+    let result;
+    if (isArray(obj)) {
+      result = [];
+    } else {
+      result = {};
+    }
     for (const [key, value] of Object.entries(obj)) {
-      result[key] = isObject(value) && !isNull(value) ? copyObject(value) : value;
+      if (isObject(value) && !isNull(value)) {
+        result[key] = copyObject(value);
+      } else {
+        result[key] = value;
+      }
     }
     return result;
   }
@@ -4578,8 +4596,7 @@ var epub = (() => {
       for (const operator of Object.keys(updates)) {
         for (let [keys, value] of Object.entries(updates[operator])) {
           keys = keys.split(".");
-          let target = this;
-          let key = keys.pop();
+          let target = this, key = keys.pop();
           while (isObject(target) && keys.length > 0) {
             target = target[keys.shift()];
           }
@@ -5706,6 +5723,29 @@ var epub = (() => {
     }
     return result.map((node) => node?.content || "").join("");
   };
+  ePubFile.prototype.setContent = function(str) {
+    return this.update({
+      $set: {
+        closer: null,
+        children: [{
+          content: str
+        }]
+      }
+    });
+  };
+  ePubFile.prototype.getAttribute = function(key) {
+    if (!isObject(this.attributes)) {
+      return;
+    }
+    return this.attributes[key];
+  };
+  ePubFile.prototype.setAttribute = function(key, value) {
+    return this.update({
+      $set: {
+        ["attributes." + key]: value
+      }
+    });
+  };
   ePubFile.prototype.appendNode = function(obj, idx) {
     if (!isNumber(idx)) {
       idx = -1;
@@ -6045,6 +6085,9 @@ var epub = (() => {
   ePubNode.prototype.getAbsolutePath = ePubFile.prototype.getAbsolutePath;
   ePubNode.prototype.getRelativePath = ePubFile.prototype.getRelativePath;
   ePubNode.prototype.getContent = ePubFile.prototype.getContent;
+  ePubNode.prototype.setContent = ePubFile.prototype.setContent;
+  ePubNode.prototype.getAttribute = ePubFile.prototype.getAttribute;
+  ePubNode.prototype.setAttribute = ePubFile.prototype.setAttribute;
   ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
   ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
   ePubNode.prototype.findNode = ePubFile.prototype.findNode;

@@ -213,6 +213,45 @@ ePubFile.prototype.getContent = function() {
 }
 /**
  * 
+ * @param {string} str 
+ * @returns 
+ */
+ePubFile.prototype.setContent = function(str) {
+  return this.update({
+    $set: {
+      closer: null,
+      children: [{
+        content: str
+      }]
+    }
+  });
+}
+/**
+ * 
+ * @param {string} key 
+ * @returns 
+ */
+ePubFile.prototype.getAttribute = function(key) {
+  if (!isObject(this.attributes)) {
+    return;
+  }
+  return this.attributes[key];
+}
+/**
+ * 
+ * @param {string} key 
+ * @param {*} value 
+ * @returns 
+ */
+ePubFile.prototype.setAttribute = function(key, value) {
+  return this.update({
+    $set: {
+      ["attributes."+key]: value
+    }
+  });
+}
+/**
+ * 
  * @param {object} obj  
  * @property {string|undefined} tag
  * @property {string|undefined} closer
