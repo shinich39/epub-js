@@ -133,9 +133,14 @@ spineNode.update({
 // ### Add cover file
 
 // Create a cover file
-const coverImage = doc.appendCover({
+const coverImage = doc.appendImage({
   path: "EPUB/images/cover.png",
   data: fs.readFileSync(COVER_PATH, { encoding: "base64" }),
+});
+
+// Add coverImage to manifest
+packageFile.appendManifestChild(coverImage, {
+  properties: "cover-image",
 });
 
 // Add metadata for ePub 2.0 compatibility
@@ -153,8 +158,28 @@ metadataNode.appendNode({
 // Create a navigation file
 const navFile = doc.appendNav();
 
+// Add nav to manifest
+packageFile.appendManifestChild(navFile, {
+  properties: "nav",
+});
+
+// Add nav to spine
+packageFile.appendSpineChild(navFile, {
+  linear: "yes",
+});
+
 // Create a NCX file
 const ncxPage = doc.appendNCX();
+
+// Add ncx to manifest
+packageFile.appendManifestChild(ncxPage, {
+  properties: "ncx",
+});
+
+// Add ncx to spine
+packageFile.appendSpineChild(ncxPage, {
+  linear: "yes",
+});
 
 // Set EPUB2 compatibility for using NCX file
 // <spine ... toc="ncx">...</spine>
@@ -229,6 +254,12 @@ const textPage = doc.appendPage({
   path: "EPUB/texts/page-01.xhtml",
 });
 
+// Add new page to manifest
+packageFile.appendManifestChild(textPage);
+
+// Add new page to spine
+packageFile.appendSpineChild(textPage);
+
 // Add <h1> to <body>
 // <h1 id="heading" class="heading" style="font-size 1rem;">Text page</h1>
 textPage.findNode({
@@ -282,6 +313,12 @@ textPage.findNode({
 const imagePage = doc.appendPage({
   path: "EPUB/texts/page-02.xhtml",
 });
+
+// Add new page to manifest
+packageFile.appendManifestChild(imagePage);
+
+// Add new page to spine
+packageFile.appendSpineChild(imagePage);
 
 // Add <img> to <body>
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
@@ -369,31 +406,30 @@ tocNode.appendNode({
   }],
 });
 
-// Find manifest files
-const manifestFiles = doc.findFiles({
-  manifest: {
-    $exists: true
+// Find page files
+const pageFiles = doc.findFiles({
+  extension: ".xhtml",
+});
+
+// Remove page files from manifest
+packageFile.removeManifestChildren({
+  id: {
+    $in: pageFiles.map(item => item._id)
   }
 });
 
-// Add children to <manifest> node
-// const manifestNode = doc.findNode({ tag: "manifest" });
-manifestFiles.forEach(file => {
-  manifestNode.appendManifestChild(file);
-});
-
-// Find spine files
-const spineFiles = doc.findFiles({
-  manifest: {
-    $exists: true
+// Remove page files from spine
+packageFile.removeSpineChildren({
+  idref: {
+    $in: pageFiles.map(item => item._id)
   }
 });
 
-// Add children to <spine> node
-// const spineNode = doc.findNode({ tag: "spine" });
-spineFiles.forEach(file => {
-  spineNode.appendSpineChild(file);
-});
+// Add mutiple files to manifest
+packageFile.appendManifestChildren(pageFiles);
+
+// Add mutiple files to spine
+packageFile.appendSpineChildren(pageFiles);
 
 // Set text direction to all pages
 // doc.updateNodes({

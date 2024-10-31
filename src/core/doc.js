@@ -119,7 +119,6 @@ class ePubDoc {
  * @returns 
  */
 ePubDoc.prototype.init = function() {
-
   // Convert files to ePubFile
   for (let i = 0; i < this.files.length; i++) {
     if (this.files[i] instanceof ePubFile) {
@@ -223,8 +222,6 @@ ePubDoc.prototype.update = function(updates) {
  * @property {string} type
  * @property {string} path
  * @property {string|undefined} data 
- * @property {object|undefined} manifest
- * @property {object|undefined} spine
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
@@ -246,10 +243,8 @@ ePubDoc.prototype.appendFile = function(obj, idx) {
  * @property {string} type
  * @property {string} path
  * @property {string|undefined} data 
- * @property {object|undefined} manifest
- * @property {object|undefined} spine
  * @property {object|undefined} attributes
- * @param {number|undefined} idx default -1
+ * @param {number|undefined} idx - default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendFiles = function(arr, idx) {
@@ -259,9 +254,9 @@ ePubDoc.prototype.appendFiles = function(arr, idx) {
   if (idx < 0) {
     idx += this.files.length + 1;
   }
-  const result = [];
-  for (const item of arr) {
-    result.push(this.appendFile(item, idx));
+  let result = [];
+  for (const obj of arr) {
+    result.push(this.appendFile(obj, idx));
     idx++;
   }
   return result;
@@ -271,14 +266,12 @@ ePubDoc.prototype.appendFiles = function(arr, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendText = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "utf8",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -289,16 +282,12 @@ ePubDoc.prototype.appendText = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {array|undefined} children 
- * @property {object|undefined} manifest
- * @property {object|undefined} spine
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendPage = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
-    spine: {},
     tag: null,
     closer: null,
     content: null,
@@ -352,14 +341,12 @@ ePubDoc.prototype.appendPage = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendStyle = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "utf8",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -370,14 +357,12 @@ ePubDoc.prototype.appendStyle = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendScript = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "utf8",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -388,14 +373,12 @@ ePubDoc.prototype.appendScript = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendImage = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "base64",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -406,14 +389,12 @@ ePubDoc.prototype.appendImage = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendAudio = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "base64",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -424,14 +405,12 @@ ePubDoc.prototype.appendAudio = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendVideo = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "base64",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -442,14 +421,12 @@ ePubDoc.prototype.appendVideo = function(obj, idx) {
  * @param {object} obj
  * @property {string} path
  * @property {string} data 
- * @property {object|undefined} manifest
  * @property {object|undefined} attributes
  * @param {number|undefined} idx default -1
  * @returns {ePubFile}
  */
 ePubDoc.prototype.appendFont = function(obj, idx) {
   const file = this.appendFile(Object.assign({
-    manifest: {},
     encoding: "base64",
   }, isObject(obj) ? obj : {}), idx);
 
@@ -624,12 +601,6 @@ ePubDoc.prototype.appendPackage = function(obj, idx) {
 ePubDoc.prototype.appendNav = function(obj, idx) {
   const file = this.appendFile(Object.assign({
     path: "EPUB/nav.xhtml",
-    manifest: {
-      properties: "nav",
-    },
-    spine: {
-      linear: "yes",
-    },
     encoding: "utf8",
     tag: null,
     closer: null,
@@ -724,9 +695,6 @@ ePubDoc.prototype.appendNav = function(obj, idx) {
 ePubDoc.prototype.appendNCX = function(obj, idx) {
   const file = this.appendFile(Object.assign({
     path: "EPUB/toc.ncx",
-    manifest: {
-      properties: "ncx",
-    },
     encoding: "utf8",
     children: [{
       tag: "?xml",
@@ -757,28 +725,22 @@ ePubDoc.prototype.appendNCX = function(obj, idx) {
           closer: " /",
           attributes: {
             "name": "dtb:depth",
-          },
-          children: [{
             "content": "1",
-          }],
+          },
         }, {
           tag: "meta",
           closer: " /",
           attributes: {
             "name": "dtb:totalPageCount",
-          },
-          children: [{
             "content": "0",
-          }],
+          },
         }, {
           tag: "meta",
           closer: " /",
           attributes: {
             "name": "dtb:maxPageNumber",
-          },
-          children: [{
             "content": "0",
-          }],
+          },
         }]
       }, {
         tag: "docTitle",
@@ -794,24 +756,6 @@ ePubDoc.prototype.appendNCX = function(obj, idx) {
     }]
   }, isObject(obj) ? obj : {}), idx);
   
-  return file;
-}
-/**
- * 
- * @param {object} obj
- * @property {string} path
- * @property {string} data base64
- * @param {number|undefined} idx default -1
- * @returns {ePubFile}
- */
-ePubDoc.prototype.appendCover = function(obj, idx) {
-  const file = this.appendFile(Object.assign({
-    manifest: {
-      properties: "cover-image",
-    },
-    encoding: "base64",
-  }, isObject(obj) ? obj : {}), idx);
-
   return file;
 }
 
@@ -955,31 +899,6 @@ ePubDoc.prototype.removeNodes = function(query) {
     node.remove();
   }
   return this;
-}
-
-/**
- * Example
- * @returns 
- */
-ePubDoc.prototype.findContainer = function() {
-  return this.findFile({
-    path: "META-INF/container.xml",
-  });
-}
-
-/**
- * Example
- * @returns 
- */
-ePubDoc.prototype.findPackage = function() {
-  const pkgPath = this.findContainer()
-    ?.findNode({ tag: "rootfile" })
-    ?.attributes
-    ?.["full-path"];
-
-  return pkgPath ? this.findFiles({
-    path: pkgPath
-  }) : undefined;
 }
 
 ePubDoc.prototype.toObject = function() {

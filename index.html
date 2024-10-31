@@ -17,12 +17,11 @@
   <body>
     <h1>epub-js</h1>
     <p>This page has been developed for test browser compatibility.</p>
-    <p>The first line of text file will be contained within an h1.</p>
-    <p>Create a page for each file.</p>
 
     <h2>Import</h2>
-    <p>Auto generation from JSON, EPUB and ZIP file.</p>
+    <p>Create a ePub doucment from JSON, EPUB and ZIP files.</p>
     <input id="import-file" type="file" accept="application/json, application/zip, application/x-zip-compressed, application/epub+zip">
+    <button id="clear-files">Clear</button>
 
     <h2>Options</h2>
     <p>
@@ -120,16 +119,26 @@
     <h2>Set Cover</h2>
     <input id="set-cover" type="file" accept="image/*">
     <h2>Add Files</h2>
+    <p>The first line of .txt file will be contained within an h1.</p>
+    <p>Create a page for each file.</p>
     <input id="add-files" type="file" multiple>
-    <button id="clear-files">Clear</button>
     <br />
     <h2>File List</h2>
     <p>Check the box to add it to TOC.</p>
+    <p>Add all files to manifest.</p>
+    <p>Add .xhtml files to spine.</p>
     <ol id="file-list"></ol>
-    <h2>Finish</h2>
-    <button id="download-file">Download</button>
-    <button id="export-file">Export</button>
-    
+    <h2>Download</h2>
+    <button id="download-file">ePub</button>
+    <button id="export-file">JSON</button>
+
+    <h2>References</h2>
+    <p>
+      <a href="https://github.com/shinich39/epub-js">Git</a>
+      /
+      <a href="https://www.w3.org/TR/epub-33/">W3C</a>
+    </p>
+
     <script src="./dist/epub.js"></script>
     <script src="./test/jszip.min.js"></script>
     <script src="./test/jszip-utils.min.js"></script>
@@ -137,12 +146,12 @@
     <script>
       const { ePubDoc } = epub;
 
-      document.getElementById("set-cover").addEventListener("change", setCover);
-      document.getElementById("add-files").addEventListener("change", addFiles);
-      document.getElementById("clear-files").addEventListener("click", clearFiles);
-      document.getElementById("download-file").addEventListener("click", downloadFile);
-      document.getElementById("export-file").addEventListener("click", exportFile);
-      document.getElementById("import-file").addEventListener("change", importFile);
+      document.getElementById("set-cover").addEventListener("change", setCoverHandler);
+      document.getElementById("add-files").addEventListener("change", addFilesHandler);
+      document.getElementById("clear-files").addEventListener("click", clearFilesHandler);
+      document.getElementById("download-file").addEventListener("click", downloadFileHandler);
+      document.getElementById("export-file").addEventListener("click", exportFileHandler);
+      document.getElementById("import-file").addEventListener("change", importFileHandler);
 
       document.querySelectorAll("[name='rendition:layout']").forEach(item => {
         item.addEventListener("change", updateMetadata);
@@ -214,8 +223,6 @@
           // Clear
           doc.removeFiles({});
 
-          doc.preventUpdateSpine = true;
-          
           let b = await toBinary(file);
           b = await JSZip.loadAsync(b);
 
@@ -240,6 +247,8 @@
             switch(ext) {
               case ".mimetype":
                 doc.appendText({
+                  manifest: null,
+                  spine: null,
                   path: path,
                   data: await f.async("string"),
                 });
@@ -259,6 +268,7 @@
               case ".xml":
               case ".opf":
                 doc.appendPage({
+                  manifest: null,
                   spine: null,
                   path: path,
                   data: await f.async("string"),
@@ -299,7 +309,7 @@
           }
         }
 
-        packageFile = doc.findFile({ filename: "package" });
+        packageFile = doc.findFile({ extension: ".opf" });
         packageNode = packageFile.findNode({ tag: "package" });
         metadataNode = packageFile.findNode({ tag: "metadata" });
         manifestNode = packageFile.findNode({ tag: "manifest" });
@@ -351,6 +361,12 @@
             toc: true,
           });
 
+          // append manifest
+          packageFile.appendManifestChild(navFile);
+
+          // append spine
+          packageFile.appendSpineChild(navFile);
+
           tocNode = navFile.findNode({
             tag: "nav",
             "attributes.epub:type": "toc",
@@ -374,10 +390,6 @@
               $in: ["ol", "ul"],
             },
           });
-        }
-        if (file) {
-          console.log(file.type)
-
         }
 
         if (file && (
@@ -476,6 +488,8 @@
           }
         }
 
+        await setCover();
+
         setCheckboxes();
         renderFileList();
 
@@ -519,7 +533,7 @@
             closer: "/",
             attributes: {
               name: "viewport",
-              content: "width=512, height=768"
+              content: "width=512, height=768",
             }
           }, {
             tag: "style",
@@ -534,6 +548,7 @@
                   page-break-inside: avoid !important;
                   page-break-after: always !important;
                 }
+
                 img,
                 video{
                   display: inline-block;
@@ -694,7 +709,7 @@
         });
       }
 
-      async function setCover(e) {
+      async function setCover() {
         if (coverFile) {
           doc.findNode({
             tag: "manifest",
@@ -705,7 +720,7 @@
           coverFile.remove();
         }
 
-        const file = e.target.files[0];
+        const file = document.getElementById("set-cover").files[0];
         if (!file) {
           return;
         }
@@ -717,10 +732,15 @@
           data: await toBase64(file),
         });
 
+        packageFile.appendManifestChild(coverFile);
+      }
+
+      async function setCoverHandler() {
+        await setCover();
         renderFileList();
       }
 
-      async function addFiles(e) {
+      async function addFilesHandler(e) {
         let newFiles = Array.prototype.slice.call(e.target.files);
         if (newFiles.length < 1) {
           return;
@@ -779,25 +799,7 @@
         renderFileList();
       }
 
-      function updateManifest() {
-        if (doc.preventUpdateManifest) {
-          return;
-        }
-
-        let files = doc.findFiles({
-          manifest: {
-            $exists: true,
-          }
-        });
-
-        manifestNode.appendManifestChildren(files);
-      }
-
       function updateSpine() {
-        if (doc.preventUpdateSpine) {
-          return;
-        }
-
         const metadata = getMetadata();
 
         let files = doc.findFiles({
@@ -806,25 +808,22 @@
           }
         });
 
-        spineNode.appendSpineChildren(files);
-
         const isPaginated = metadata.rendition.layout === "pre-paginated";
-        if (metadata.rendition.layout === "pre-paginated") {
-          for (let i = 0; i < spineNode.children.length; i++) {
-            const child = spineNode.children[i];
-
-            child.attributes.properties = i % 2 === 0 ?
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (!isPaginated) {
+            file.attributes.properties = null;
+          } else {
+            file.attributes.properties = i % 2 === 0 ?
               "page-spread-left" :
               "page-spread-right";
           }
         }
+
+        console.log("Spine nodes updated");
       }
 
       function updateNav() {
-        if (doc.preventUpdateNav) {
-          return;
-        }
-
         listNode.update({
           $set: {
             children: doc.findFiles({ toc: true })
@@ -888,6 +887,12 @@
               }
             })
         );
+        
+        // append manifest
+        packageFile.appendManifestChild(page);
+
+        // append spine
+        packageFile.appendSpineChild(page);
 
         return [null, page];
       }
@@ -920,6 +925,12 @@
           }]
         });
 
+        // append manifest
+        packageFile.appendManifestChildren([file, page]);
+
+        // append spine
+        packageFile.appendSpineChild(page);
+
         return [file, page];
       }
 
@@ -951,6 +962,12 @@
           }]
         });
 
+        // append manifest
+        packageFile.appendManifestChildren([file, page]);
+
+        // append spine
+        packageFile.appendSpineChild(page);
+
         return [file, page];
       }
 
@@ -981,6 +998,12 @@
             }
           }]
         });
+
+        // append manifest
+        packageFile.appendManifestChildren([file, page]);
+
+        // append spine
+        packageFile.appendSpineChild(page);
 
         return [file, page];
       }
@@ -1041,12 +1064,11 @@
         }
       }
 
-      function clearFiles() {
+      function clearFilesHandler() {
         initDoc();
       }
 
-      function downloadFile() {
-        updateManifest();
+      function downloadFileHandler() {
         updateSpine();
         updateNav();
 
@@ -1072,8 +1094,7 @@
           });
       }
 
-      function exportFile() {
-        updateManifest();
+      function exportFileHandler() {
         updateSpine();
         updateNav();
         
@@ -1088,7 +1109,7 @@
         URL.revokeObjectURL(a.href);
       }
 
-      async function importFile(e) {
+      async function importFileHandler(e) {
         const file = e.target.files[0];
         if (!file) {
           return;

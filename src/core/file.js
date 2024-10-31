@@ -20,28 +20,8 @@ class ePubFile {
     this.data = null;
     this.encoding = "utf8";
     this.attributes = {};
-    /**
-     * https://www.w3.org/TR/epub-33/#sec-item-elem
-     * @type {object|undefined}
-     * @property {string} id
-     * @property {string} href
-     * @property {string} media-overlay
-     * @property {string} media-type
-     * @property {string} properties
-     * @property {string} fallback
-     */
-    this.manifest = null;
-    /**
-     * https://www.w3.org/TR/epub-33/#sec-itemref-elem
-     * @type {object|undefined}
-     * @property {string} id
-     * @property {string} idref
-     * @property {string} linear "yes" or "no"
-     * @property {string} properties
-     */
-    this.spine = null;
 
-    // Page properties
+    // DOM properties
     this.tag = null;
     this.closer = null;
     this.content = null;
@@ -90,7 +70,7 @@ ePubFile.prototype.init = function() {
     if (this.children[i] instanceof ePubNode) {
       this.children[i].init();
     } else {
-      this.children[i] = new ePubNode(this.document, this, this, this.children[i]);
+      this.children[i] = new ePubNode(this, this.children[i]);
     }
   }
 
@@ -136,20 +116,27 @@ ePubFile.prototype.getRelativePath = function(from) {
   if (from instanceof ePubFile) {
     from = from.getAbsolutePath();
   } else if (from instanceof ePubNode) {
-    from = from.rootNode.getAbsolutePath();
+    from = from.getAbsolutePath();
   } else if (!isString(from)) {
     throw new Error("from must be an ePubFile or ePubNode or string"); 
   }
   return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
 }
 
+ePubFile.prototype.getIndex = function() {
+  if (!this.document) {
+    return -1;
+  }
+  return this.document.files.findIndex(item => item._id == this._id);
+}
+
 ePubFile.prototype.move = function(index) {
   const currentIndex = this.getIndex();
   if (currentIndex > -1) {
     if (index > currentIndex) {
-      index = index - 1;
+      index -= 1;
     } else if (index < 0) {
-      index = this.document.files.length + index;
+      index += this.document.files.length;
     }
     this.document.files.splice(index, 0, this.document.files.splice(currentIndex, 1)[0]);
   }
@@ -163,53 +150,30 @@ ePubFile.prototype.remove = function() {
     this.document.files.splice(currentIndex, 1);
   }
 
-  // Convert to object
-  Object.assign(this, this.toObject());
-
   delete this.document;
 
   return this;
 }
 
-ePubFile.prototype.getIndex = function() {
-  if (!this.document) {
-    return -1;
-  }
-  return this.document.files.findIndex(item => item._id == this._id);
-}
-
-ePubFile.prototype.getNextSibling = function() {
-  if (!this.document) {
-    return -1;
-  }
-  return this.document.files.findIndex(item => item._id == this._id);
-}
-
-ePubFile.prototype.getPreviousSibling = function() {
-  if (!this.document) {
-    return -1;
-  }
-  return this.document.files.findIndex(item => item._id == this._id);
-}
-
 ePubFile.prototype.getContent = function() {
   const query = {
+    closer: null,
     content: {
       $exists: true,
     }
   }
 
-  const result = [];
+  let result = [];
   for (const child of this.children) {
     if (queryObject(child, query)) {
-      result.push(child);
+      result.push(child.content);
     }
     const nodes = child.findNodes(query);
     for (const node of nodes) {
-      result.push(node);
+      result.push(node.content);
     }
   }
-  return result.map(node => node?.content || "").join("");
+  return result.join("");
 }
 /**
  * 
@@ -268,7 +232,7 @@ ePubFile.prototype.appendNode = function(obj, idx) {
   if (idx < 0) {
     idx += this.children.length + 1;
   }
-  const node = new ePubNode(this.document, this.rootNode || this, this, isObject(obj) ? obj : {});
+  const node = new ePubNode(this, isObject(obj) ? obj : {});
   this.children.splice(idx, 0, node);
   return node;
 }
@@ -290,9 +254,9 @@ ePubFile.prototype.appendNodes = function(arr, idx) {
   if (idx < 0) {
     idx += this.children.length + 1;
   }
-  const result = [];
-  for (const item of arr) {
-    result.push(this.appendNode(item, idx));
+  let result = [];
+  for (const obj of arr) {
+    result.push(this.appendNode(obj, idx));
     idx++;
   }
   return result;
@@ -311,7 +275,7 @@ ePubFile.prototype.findNode = function(query) {
 }
 
 ePubFile.prototype.findNodes = function(query) {
-  const result = [];
+  let result = [];
   for (const child of this.children) {
     if (queryObject(child, query)) {
       result.push(child);
@@ -368,7 +332,7 @@ ePubFile.prototype.findChild = function(query) {
 }
 
 ePubFile.prototype.findChildren = function(query) {
-  const result = [];
+  let result = [];
   for (const child of this.children) {
     if (queryObject(child, query)) {
       result.push(child);
@@ -405,6 +369,150 @@ ePubFile.prototype.removeChildren = function(query) {
   const children = this.findChildren(query);
   for (const child of children) {
     child.remove();
+  }
+  return this;
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {ePubFile} file 
+ * @param {object|undefined} attributes - attributes of item node
+ * @property {string} id
+ * @property {string} href
+ * @property {string} media-overlay
+ * @property {string} media-type
+ * @property {string} properties
+ * @property {string} fallback
+ * @returns {ePubNode|undefined}
+ */
+ePubFile.prototype.appendManifestChild = function(file, attributes) {
+  const manifestNode = this.findNode({ tag: "manifest" });
+  if (!manifestNode) {
+    return;
+  } else {
+    return manifestNode.appendManifestChild(file, attributes);
+  }
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {ePubFile[]} files 
+ * @param {object|undefined} attributes - attributes of item node
+ * @property {string} id
+ * @property {string} href
+ * @property {string} media-overlay
+ * @property {string} media-type
+ * @property {string} properties
+ * @property {string} fallback
+ * @returns {ePubNode[]}
+ */
+ePubFile.prototype.appendManifestChildren = function(files, attributes) {
+  const manifestNode = this.findNode({ tag: "manifest" });
+  if (!manifestNode) {
+    return [];
+  } else {
+    return manifestNode.appendManifestChildren(files, attributes);
+  }
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {object} query - attributes 
+ * @property {string} id
+ * @property {string} href
+ * @property {string} media-overlay
+ * @property {string} media-type
+ * @property {string} properties
+ * @property {string} fallback
+ * @returns 
+ */
+ePubFile.prototype.removeManifestChild = function(query) {
+  const manifestNode = this.findNode({ tag: "manifest" });
+  if (manifestNode) {
+    manifestNode.removeManifestChild(query);
+  }
+  return this;
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {object} query - attributes 
+ * @property {string} id
+ * @property {string} href
+ * @property {string} media-overlay
+ * @property {string} media-type
+ * @property {string} properties
+ * @property {string} fallback
+ * @returns 
+ */
+ePubFile.prototype.removeManifestChildren = function(query) {
+  const manifestNode = this.findNode({ tag: "manifest" });
+  if (manifestNode) {
+    manifestNode.removeManifestChildren(query);
+  }
+  return this;
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+ * @param {ePubFile} file
+ * @param {object|undefined} attributes - attributes of itemref node
+ * @property {string} id 
+ * @property {string} idref 
+ * @property {string} linear "yes" or "no"
+ * @property {string} properties 
+ * @returns {ePubNode|undefined}
+ */
+ePubFile.prototype.appendSpineChild = function(file, attributes) {
+  const spineNode = this.findNode({ tag: "spine" });
+  if (!spineNode) {
+    return;
+  } else {
+    return spineNode.appendSpineChild(file, attributes);
+  }
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+ * @param {ePubFile[]} files 
+ * @param {object|undefined} attributes - attributes of itemref node
+ * @property {string} id 
+ * @property {string} idref 
+ * @property {string} linear "yes" or "no"
+ * @property {string} properties 
+ * @returns {ePubNode[]}
+ */
+ePubFile.prototype.appendSpineChildren = function(files, attributes) {
+  const spineNode = this.findNode({ tag: "spine" });
+  if (!spineNode) {
+    return [];
+  } else {
+    return spineNode.appendSpineChildren(files, attributes);
+  }
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+ * @param {object} query - attributes
+ * @property {string} id 
+ * @property {string} idref
+ * @property {string} linear "yes" or "no"
+ * @property {string} properties 
+ * @returns 
+ */
+ePubFile.prototype.removeSpineChild = function(query) {
+  const spineNode = this.findNode({ tag: "spine" });
+  if (spineNode) {
+    spineNode.removeSpineChild(query);
+  }
+  return this;
+}
+/**
+ * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+ * @param {object} query - attributes
+ * @property {string} id 
+ * @property {string} idref 
+ * @property {string} linear "yes" or "no"
+ * @property {string} properties 
+ * @returns 
+ */
+ePubFile.prototype.removeSpineChildren = function(query) {
+  const spineNode = this.findNode({ tag: "spine" });
+  if (spineNode) {
+    spineNode.removeSpineChildren(query);
   }
   return this;
 }

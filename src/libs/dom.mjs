@@ -95,7 +95,7 @@ function parseTag(str) {
   for (let i = 1; i < arr.length; i++) {
     let [key, value] = arr[i].split("=");
     if (key.length > 0) {
-      if (typeof value === "string" && value.length > 0) {
+      if (typeof value === "string") {
         result.attributes[key] = decodeStr(value);
       } else {
         result.attributes[key] = true;
