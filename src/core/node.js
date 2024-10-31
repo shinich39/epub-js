@@ -121,7 +121,7 @@ ePubNode.prototype.getAbsolutePath = function() {
 }
 /**
  * 
- * @param {ePubFile|string} from 
+ * @param {ePubFile|ePubNode|string} from 
  * @returns {string|undefined}
  */
 ePubNode.prototype.getRelativePath = function(from) {
@@ -130,6 +130,8 @@ ePubNode.prototype.getRelativePath = function(from) {
     return;
   } 
   if (from instanceof ePubFile) {
+    from = from.getAbsolutePath();
+  } else if (from instanceof ePubNode) {
     from = from.getAbsolutePath();
   }
   return getRelativePath(getDirectoryPath(from), absPath);
@@ -154,7 +156,7 @@ ePubNode.prototype.toSpineChild = function(attributes) {
   if (!isObject(attributes)) {
     attributes = {};
   }
-  return {
+  return this.createNode({
     tag: "itemref",
     closer: " /",
     attributes: Object.assign(
@@ -163,7 +165,7 @@ ePubNode.prototype.toSpineChild = function(attributes) {
       },
       attributes,
     ),
-  }
+  });
 }
 
 ePubNode.prototype.toString = function() {
@@ -183,9 +185,6 @@ ePubNode.prototype.toObject = function() {
 ePubNode.prototype.update = ePubDoc.prototype.update;
 ePubNode.prototype.createFile = ePubDoc.prototype.createFile;
 ePubNode.prototype.createNode = ePubDoc.prototype.createNode;
-
-ePubNode.prototype.getAbsolutePath = ePubFile.prototype.getAbsolutePath;
-ePubNode.prototype.getRelativePath = ePubFile.prototype.getRelativePath;
 
 ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
 ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;

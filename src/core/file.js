@@ -130,11 +130,13 @@ ePubFile.prototype.getAbsolutePath = function() {
 }
 /**
  * 
- * @param {ePubFile|string} from 
+ * @param {ePubFile|ePubNode|string} from 
  * @returns {string}
  */
 ePubFile.prototype.getRelativePath = function(from) {
   if (from instanceof ePubFile) {
+    from = from.getAbsolutePath();
+  } else if (from instanceof ePubNode) {
     from = from.getAbsolutePath();
   }
   return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
