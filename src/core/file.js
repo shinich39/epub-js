@@ -89,9 +89,14 @@ ePubFile.prototype.init = function() {
 
   // Find head, body nodes
   if (isDOM(this.mimetype)) {
-    const htmlNode = this.findChild({ tag: "html" });
-    this.head = htmlNode.findChild({ tag: "head" });
-    this.body = htmlNode.findChild({ tag: "body" });
+    const html = this.findChild({ tag: "html" });
+    if (html) {
+      this.head = html.findChild({ tag: "head" });
+      this.body = html.findChild({ tag: "body" });
+    } else {
+      delete this.head;
+      delete this.body;
+    }
   } else {
     delete this.head;
     delete this.body;

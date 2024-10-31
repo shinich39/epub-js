@@ -150,7 +150,7 @@ ePubNode.prototype.remove = function() {
  * @param {object} attributes 
  * @returns 
  */
-ePubFile.prototype.toSpineChild = function(attributes) {
+ePubNode.prototype.toSpineChild = function(attributes) {
   if (!isObject(attributes)) {
     attributes = {};
   }

@@ -206,9 +206,12 @@ ePubDoc.prototype.createFiles = function(arr) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createText = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -218,9 +221,12 @@ ePubDoc.prototype.createText = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createStyle = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -230,9 +236,12 @@ ePubDoc.prototype.createStyle = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createScript = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -244,6 +253,9 @@ ePubDoc.prototype.createScript = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createPage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     children: [{
@@ -286,7 +298,7 @@ ePubDoc.prototype.createPage = function(obj) {
         tag: "body",
       }],
     }],
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -296,9 +308,12 @@ ePubDoc.prototype.createPage = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createImage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "base64",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -308,9 +323,12 @@ ePubDoc.prototype.createImage = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createAudio = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "base64",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -320,9 +338,12 @@ ePubDoc.prototype.createAudio = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createVideo = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "base64",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -332,9 +353,12 @@ ePubDoc.prototype.createVideo = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createFont = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "base64",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -342,11 +366,14 @@ ePubDoc.prototype.createFont = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createMimetype = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     path: "mimetype",
     data: "application/epub+zip",
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -354,6 +381,9 @@ ePubDoc.prototype.createMimetype = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createContainer = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     path: "META-INF/container.xml",
@@ -382,7 +412,7 @@ ePubDoc.prototype.createContainer = function(obj) {
         }]
       }]
     }],
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -390,6 +420,9 @@ ePubDoc.prototype.createContainer = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createPackage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     path: "EPUB/package.opf",
@@ -484,7 +517,7 @@ ePubDoc.prototype.createPackage = function(obj) {
         },
       }],
     }],
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -492,6 +525,9 @@ ePubDoc.prototype.createPackage = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createNav = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     path: "EPUB/nav.xhtml",
@@ -571,7 +607,7 @@ ePubDoc.prototype.createNav = function(obj) {
         }],
       }],
     }],
-  }, isObject(obj) ? obj : {}));
+  }, obj));
 }
 /**
  * 
@@ -579,6 +615,9 @@ ePubDoc.prototype.createNav = function(obj) {
  * @returns {ePubFile}
  */
 ePubDoc.prototype.createNCX = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
   return this.createFile(Object.assign({
     encoding: "utf8",
     path: "EPUB/toc.ncx",
@@ -640,17 +679,15 @@ ePubDoc.prototype.createNCX = function(obj) {
         tag: "navMap",
       }],
     }]
-  }, isObject(obj) ? obj : {}), idx);
+  }, obj));
 }
 
 ePubDoc.prototype.findFile = function(query) {
-  const file = this.files.find(item => queryObject(item, query));
-  return file;
+  return this.files.find(item => queryObject(item, query));
 }
 
 ePubDoc.prototype.findFiles = function(query) {
-  const file = this.files.filter(item => queryObject(item, query));
-  return file;
+  return this.files.filter(item => queryObject(item, query));
 }
 
 ePubDoc.prototype.updateFile = function(query, updates) {

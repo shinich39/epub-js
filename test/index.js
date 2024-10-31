@@ -136,22 +136,18 @@ spineNode.update({
 // ### Add cover file
 
 // Create a cover file
-const coverImage = doc.appendChild({
+const coverImage = doc.createImage({
   encoding: "base64",
   path: "EPUB/images/cover.png",
   data: fs.readFileSync(COVER_PATH, { encoding: "base64" }),
-});
+})
+
+// Add cover file to document
+doc.appendChild(coverImage);
 
 // Add coverImage to manifest
-manifestNode.appendChild({
-  tag: "item",
-  closer: " /",
-  attributes: {
-    "id": coverImage._id,
-    "href": coverImage.getRelativePath(packageFile.getAbsolutePath()),
-    "media-type": coverImage.mimetype,
-    "properties": "cover-image",
-  },
+manifestNode.appendChild(coverImage.toManifestChild(packageFile), {
+  properties: "cover-image",
 });
 
 // Add metadata for ePub 2.0 compatibility
@@ -167,30 +163,35 @@ metadataNode.appendChild({
 // ### Add navigation file
 
 // Create a navigation file
-const navFile = doc.appendNav();
+const navFile = doc.createNav();
+
+// Append nav file to document
+doc.appendChild(navFile);
 
 // Add nav to manifest
-packageFile.appendManifestChild(navFile, {
+manifestNode.appendChild(navFile.toManifestChild(packageFile, {
   properties: "nav",
-});
+}));
 
 // Add nav to spine
-packageFile.appendSpineChild(navFile, {
-  linear: "yes",
+const navManifest = manifestNode.findNode({
+  "attributes.properties": "nav"
 });
+
+spineNode.appendChild(navManifest.toSpineChild({
+  linear: "yes",
+}));
 
 // Create a NCX file
-const ncxPage = doc.appendNCX();
+const ncxPage = doc.createNCX();
+
+// Append ncx file to document
+doc.appendChild(ncxPage);
 
 // Add ncx to manifest
-packageFile.appendManifestChild(ncxPage, {
+manifestNode.appendChild(ncxPage.toManifestChild(packageFile, {
   properties: "ncx",
-});
-
-// Add ncx to spine
-packageFile.appendSpineChild(ncxPage, {
-  linear: "yes",
-});
+}));
 
 // Set EPUB2 compatibility for using NCX file
 // <spine ... toc="ncx">...</spine>
@@ -243,7 +244,7 @@ const docTitleIndex = ncxPage.findNode({
 
 ncxPage.findNode({
   tag: "ncx"
-}).appendNodes(
+}).insertChildren(
   packageFile.findNodes({
     tag: "dc:creator"
   }).map(item => {
@@ -256,26 +257,28 @@ ncxPage.findNode({
         }]
       }]
     }
-  }), docTitleIndex + 1);
+  }
+), docTitleIndex + 1);
 
 // ### Add page file
 
 // Create a text page
-const textPage = doc.appendPage({
+const textPage = doc.createPage({
   path: "EPUB/texts/page-01.xhtml",
 });
 
+// Append text page to document
+doc.appendChild(textPage);
+
 // Add new page to manifest
-packageFile.appendManifestChild(textPage);
+manifestNode.appendChild(textPage.toManifestChild(packageFile));
 
 // Add new page to spine
-packageFile.appendSpineChild(textPage);
+spineNode.appendChild(textPage.toManifestChild(packageFile).toSpineChild());
 
 // Add <h1> to <body>
 // <h1 id="heading" class="heading" style="font-size 1rem;">Text page</h1>
-textPage.findNode({
-  tag: "body",
-}).appendNode({
+textPage.body.appendChild({
   tag: "h1",
   attributes: {
     id: "heading",
@@ -288,9 +291,7 @@ textPage.findNode({
 });
 
 // Add multiple texts to <body>
-textPage.findNode({
-  tag: "body",
-}).appendNodes([{
+textPage.body.appendChildren([{
   tag: "br",
   closer: " /",
 }, {
@@ -321,9 +322,12 @@ textPage.findNode({
 }]);
 
 // Create an image page
-const imagePage = doc.appendPage({
+const imagePage = doc.createPage({
   path: "EPUB/texts/page-02.xhtml",
 });
+
+// Append image page to document
+doc.appendChild(imagePage);
 
 // Add new page to manifest
 packageFile.appendManifestChild(imagePage);
@@ -333,9 +337,7 @@ packageFile.appendSpineChild(imagePage);
 
 // Add <img> to <body>
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
-const imageNode = imagePage.findNode({
-  tag: "body",
-}).appendNode({
+const imageNode = imagePage.body.appendChild({
   tag: "img",
   closer: " /",
   attributes: {
@@ -416,31 +418,6 @@ tocNode.appendNode({
     }]
   }],
 });
-
-// Find page files
-const pageFiles = doc.findFiles({
-  extension: ".xhtml",
-});
-
-// Remove page files from manifest
-packageFile.removeManifestChildren({
-  id: {
-    $in: pageFiles.map(item => item._id)
-  }
-});
-
-// Remove page files from spine
-packageFile.removeSpineChildren({
-  idref: {
-    $in: pageFiles.map(item => item._id)
-  }
-});
-
-// Add mutiple files to manifest
-packageFile.appendManifestChildren(pageFiles);
-
-// Add mutiple files to spine
-packageFile.appendSpineChildren(pageFiles);
 
 // Set text direction to all pages
 // doc.updateNodes({
