@@ -145,10 +145,18 @@ const coverImage = doc.createImage({
 // Add cover file to document
 doc.appendChild(coverImage);
 
-// Add coverImage to manifest
-manifestNode.appendChild(coverImage.toManifestChild(packageFile), {
-  properties: "cover-image",
+// Create manifest child and spine child
+const [coverManifest, coverSpine] = coverImage.createAnchors(packageFile);
+
+// Set manifest child attributes
+coverManifest.update({
+  $set: {
+    "attributes.properties": "cover-image"
+  }
 });
+
+// Add manifest child to <manifest>
+manifestNode.appendChild(coverManifest);
 
 // Add metadata for ePub 2.0 compatibility
 metadataNode.appendChild({
@@ -168,19 +176,30 @@ const navFile = doc.createNav();
 // Append nav file to document
 doc.appendChild(navFile);
 
-// Add nav to manifest
-manifestNode.appendChild(navFile.toManifestChild(packageFile, {
-  properties: "nav",
-}));
+// Create manifest child and spine child
+const [navManifest, navSpine] = navFile.createAnchors(packageFile);
 
-// Add nav to spine
-const navManifest = manifestNode.findNode({
-  "attributes.properties": "nav"
+// Set manifest child attributes
+navManifest.update({
+  $set: {
+    "attributes.properties": "nav"
+  }
 });
 
-spineNode.appendChild(navManifest.toSpineChild({
-  linear: "yes",
-}));
+// Add manifest child to <manifest>
+manifestNode.appendChild(navManifest);
+
+// Set spine child attributes
+navSpine.update({
+  $set: {
+    "attributes.linear": "yes"
+  }
+});
+
+// Add nav to spine
+spineNode.appendChild(navSpine);
+
+// ### Add NCX file
 
 // Create a NCX file
 const ncxPage = doc.createNCX();
@@ -188,10 +207,18 @@ const ncxPage = doc.createNCX();
 // Append ncx file to document
 doc.appendChild(ncxPage);
 
+// Create manifest child and spine child
+const [ncxManifest, ncxSpine] = ncxPage.createAnchors(packageFile);
+
+// Set manifest child attributes
+ncxManifest.update({
+  $set: {
+    "attributes.properties": "ncx",
+  }
+});
+
 // Add ncx to manifest
-manifestNode.appendChild(ncxPage.toManifestChild(packageFile, {
-  properties: "ncx",
-}));
+manifestNode.appendChild(ncxManifest);
 
 // Set EPUB2 compatibility for using NCX file
 // <spine ... toc="ncx">...</spine>
@@ -203,7 +230,17 @@ doc.updateNode({
   }
 });
 
-// Initialize NCX file
+// Get ID from package.opf
+const documentId = packageFile.findNode({
+  tag: "dc:identifier"
+}).getContent();
+
+// Get Title from package.opf
+const documentTitle = packageFile.findNode({
+  tag: "dc:title"
+}).getContent();
+
+// Set NCX uid
 ncxPage.updateNode({
   tag: "meta",
   attributes: {
@@ -211,13 +248,11 @@ ncxPage.updateNode({
   }
 }, {
   $set: {
-    "attributes.content": packageFile.findNode({
-        tag: "dc:identifier"
-      }).getContent(),
+    "attributes.content": documentId
   }
 });
 
-// Set <docTitle><text>... content value
+// Set content in <docTitle><text>...</text></docTitle> 
 // <docTitle><text>New Title</text></docTitle>
 ncxPage.updateNode({
   tag: "docTitle"
@@ -226,9 +261,7 @@ ncxPage.updateNode({
     children: [{
       tag: "text",
       children: [{
-        content: packageFile.findNode({
-          tag: "dc:title"
-        }).getContent(),
+        content: documentTitle,
       }]
     }]
   }
@@ -238,6 +271,8 @@ ncxPage.updateNode({
 // <docAuthor><text>Bob</text></docAuthor>
 // <docAuthor><text>Mike</text></docAuthor>
 // <docAuthor><text>John</text></docAuthor>
+
+// Get index of <docTitle> node
 const docTitleIndex = ncxPage.findNode({
   tag: "docTitle"
 }).getIndex();
@@ -270,56 +305,62 @@ const textPage = doc.createPage({
 // Append text page to document
 doc.appendChild(textPage);
 
+const [textManifest, textSpine] = textPage.createAnchors(packageFile);
+
 // Add new page to manifest
-manifestNode.appendChild(textPage.toManifestChild(packageFile));
+manifestNode.appendChild(textManifest);
 
 // Add new page to spine
-spineNode.appendChild(textPage.toManifestChild(packageFile).toSpineChild());
+spineNode.appendChild(textSpine);
 
 // Add <h1> to <body>
 // <h1 id="heading" class="heading" style="font-size 1rem;">Text page</h1>
-textPage.body.appendChild({
-  tag: "h1",
-  attributes: {
-    id: "heading",
-    class: "heading",
-    style: "font-size: 1rem;"
-  },
-  children: [{
-    content: "Text page",
-  }]
-});
+textPage
+  .findNode({ tag: "body" })
+  .appendChild({
+    tag: "h1",
+    attributes: {
+      id: "heading",
+      class: "heading",
+      style: "font-size: 1rem;"
+    },
+    children: [{
+      content: "Text page",
+    }]
+  });
 
 // Add multiple texts to <body>
-textPage.body.appendChildren([{
-  tag: "br",
-  closer: " /",
-}, {
-  tag: "div",
-  children: [{
-    content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut vel fermentum leo. Phasellus tempor mauris eu elit eleifend dictum. Donec gravida lobortis nunc. Integer hendrerit ex sapien, sit amet consectetur massa lacinia ac. Pellentesque venenatis nec velit vitae viverra. Suspendisse mauris purus, ultricies vitae porttitor in, sodales eget turpis. Vivamus blandit massa tellus, molestie egestas ligula elementum vel. Donec rhoncus, risus ac rhoncus consectetur, mi lacus lobortis nibh, sed tincidunt enim nunc a turpis. Praesent dapibus et erat ac porttitor.`
-  }]
-}, {
-  tag: "div",
-  children: [{
-    content: `Suspendisse eleifend augue sit amet lectus pulvinar imperdiet. Cras nibh nulla, ullamcorper ac est vel, pretium condimentum est. Ut a ligula blandit, semper dolor non, malesuada magna. Quisque non lacus purus. Quisque malesuada elit lacus, vel consequat ex mollis at. Nullam orci augue, sagittis auctor pharetra in, ultrices eget velit. Quisque euismod, ante at venenatis consequat, libero metus sagittis eros, non vulputate mi lorem ut neque. Proin arcu justo, feugiat tincidunt malesuada a, pellentesque vulputate nunc. Ut rhoncus finibus nunc non volutpat. Etiam sit amet lorem a turpis fringilla malesuada non ut felis. Pellentesque gravida quam at quam dapibus imperdiet quis non leo. Phasellus eu justo lacus.`
-  }]
-}, {
-  tag: "div",
-  children: [{
-    content: `Aenean volutpat nunc sed arcu blandit venenatis. Curabitur lacinia, lacus id posuere iaculis, felis leo dictum sem, sed ultricies velit ex a urna. Suspendisse quis est urna. Vestibulum maximus nunc nec dictum posuere. Nullam posuere eleifend vehicula. Sed elementum ut tortor a ornare. Phasellus rutrum nunc nulla, id sollicitudin urna dictum ut. Donec pulvinar justo ut hendrerit mattis. Aenean et purus nec lectus iaculis euismod ac eu odio. Ut molestie in libero in gravida. Mauris nec nulla sagittis, dapibus ex et, aliquet diam.`,
-  }]
-}, {
-  tag: "div",
-  children: [{
-    content: `Nunc a libero dapibus, lobortis nisi ut, iaculis nisl. Proin mattis nunc augue. Donec sit amet est tempus, euismod dolor vitae, scelerisque orci. Integer viverra dignissim erat, nec dictum lorem aliquam tincidunt. Donec vitae leo eget enim dapibus tincidunt. Curabitur in ante placerat, molestie leo eget, tincidunt enim. Vestibulum iaculis velit ut iaculis eleifend. Ut turpis quam, pulvinar sed elit vel, molestie gravida lorem. Donec pretium justo id quam fermentum porta. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;`,
-  }]
-}, {
-  tag: "div",
-  children: [{
-    content: `Nunc faucibus felis turpis, id sollicitudin sapien posuere quis. Mauris auctor quam et ipsum condimentum, feugiat volutpat metus feugiat. Phasellus arcu enim, iaculis ac libero a, blandit lobortis elit. Aliquam sed ligula lacus. Nullam a venenatis risus. Integer porta pulvinar risus id tincidunt. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Aenean quis sapien elementum, malesuada risus sit amet, placerat ligula. Proin lobortis placerat risus, a scelerisque odio pellentesque quis. Phasellus vel commodo diam, a lacinia sem.`,
-  }]
-}]);
+textPage
+  .findNode({ tag: "body" })
+  .appendChildren([{
+    tag: "br",
+    closer: " /",
+  }, {
+    tag: "div",
+    children: [{
+      content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut vel fermentum leo. Phasellus tempor mauris eu elit eleifend dictum. Donec gravida lobortis nunc. Integer hendrerit ex sapien, sit amet consectetur massa lacinia ac. Pellentesque venenatis nec velit vitae viverra. Suspendisse mauris purus, ultricies vitae porttitor in, sodales eget turpis. Vivamus blandit massa tellus, molestie egestas ligula elementum vel. Donec rhoncus, risus ac rhoncus consectetur, mi lacus lobortis nibh, sed tincidunt enim nunc a turpis. Praesent dapibus et erat ac porttitor.`
+    }]
+  }, {
+    tag: "div",
+    children: [{
+      content: `Suspendisse eleifend augue sit amet lectus pulvinar imperdiet. Cras nibh nulla, ullamcorper ac est vel, pretium condimentum est. Ut a ligula blandit, semper dolor non, malesuada magna. Quisque non lacus purus. Quisque malesuada elit lacus, vel consequat ex mollis at. Nullam orci augue, sagittis auctor pharetra in, ultrices eget velit. Quisque euismod, ante at venenatis consequat, libero metus sagittis eros, non vulputate mi lorem ut neque. Proin arcu justo, feugiat tincidunt malesuada a, pellentesque vulputate nunc. Ut rhoncus finibus nunc non volutpat. Etiam sit amet lorem a turpis fringilla malesuada non ut felis. Pellentesque gravida quam at quam dapibus imperdiet quis non leo. Phasellus eu justo lacus.`
+    }]
+  }, {
+    tag: "div",
+    children: [{
+      content: `Aenean volutpat nunc sed arcu blandit venenatis. Curabitur lacinia, lacus id posuere iaculis, felis leo dictum sem, sed ultricies velit ex a urna. Suspendisse quis est urna. Vestibulum maximus nunc nec dictum posuere. Nullam posuere eleifend vehicula. Sed elementum ut tortor a ornare. Phasellus rutrum nunc nulla, id sollicitudin urna dictum ut. Donec pulvinar justo ut hendrerit mattis. Aenean et purus nec lectus iaculis euismod ac eu odio. Ut molestie in libero in gravida. Mauris nec nulla sagittis, dapibus ex et, aliquet diam.`,
+    }]
+  }, {
+    tag: "div",
+    children: [{
+      content: `Nunc a libero dapibus, lobortis nisi ut, iaculis nisl. Proin mattis nunc augue. Donec sit amet est tempus, euismod dolor vitae, scelerisque orci. Integer viverra dignissim erat, nec dictum lorem aliquam tincidunt. Donec vitae leo eget enim dapibus tincidunt. Curabitur in ante placerat, molestie leo eget, tincidunt enim. Vestibulum iaculis velit ut iaculis eleifend. Ut turpis quam, pulvinar sed elit vel, molestie gravida lorem. Donec pretium justo id quam fermentum porta. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;`,
+    }]
+  }, {
+    tag: "div",
+    children: [{
+      content: `Nunc faucibus felis turpis, id sollicitudin sapien posuere quis. Mauris auctor quam et ipsum condimentum, feugiat volutpat metus feugiat. Phasellus arcu enim, iaculis ac libero a, blandit lobortis elit. Aliquam sed ligula lacus. Nullam a venenatis risus. Integer porta pulvinar risus id tincidunt. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Aenean quis sapien elementum, malesuada risus sit amet, placerat ligula. Proin lobortis placerat risus, a scelerisque odio pellentesque quis. Phasellus vel commodo diam, a lacinia sem.`,
+    }]
+  }]);
 
 // Create an image page
 const imagePage = doc.createPage({
@@ -329,24 +370,29 @@ const imagePage = doc.createPage({
 // Append image page to document
 doc.appendChild(imagePage);
 
+const [imageManifest, imageSpine] = imagePage.createAnchors(packageFile);
+
+
 // Add new page to manifest
-packageFile.appendManifestChild(imagePage);
+manifestNode.appendChild(imageManifest);
 
 // Add new page to spine
-packageFile.appendSpineChild(imagePage);
+spineNode.appendChild(imageSpine);
 
 // Add <img> to <body>
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
-const imageNode = imagePage.body.appendChild({
-  tag: "img",
-  closer: " /",
-  attributes: {
-    id: "cover-image",
-    style: "width: 100%;",
-    src: coverImage.getRelativePath(imagePage),
-    alt: "Cover image",
-  }
-});
+const imageNode = imagePage
+  .findNode({ tag: "body" })
+  .appendChild({
+    tag: "img",
+    closer: " /",
+    attributes: {
+      id: "cover-image",
+      style: "width: 100%;",
+      src: coverImage.getRelativePath(imagePage),
+      alt: "Cover image",
+    }
+  });
 
 // ### Set TOC items
 
@@ -445,14 +491,17 @@ doc.updateNode({
 // ### Get metadata
 
 const id = doc.findNode({ tag: "dc:identifier" }).getContent();
-// 
+// "urn:uuid:1e812363-9604-4f33-aad0-e0064ccb5a60"
+
 const title = doc.findNode({ tag: "dc:title" }).getContent();
-// New Title
+// "New Title"
+
 const authors = doc.findNodes({ tag: "dc:creator" })
   .map(item => item.getContent());
 // [ 'Bob', 'Mike' ]
+
 const language = doc.findNode({ tag: "dc:language" }).getContent();
-// ko
+// "ko"
 
 console.log("ID:", id);
 console.log("Title:", title);

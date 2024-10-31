@@ -7,9 +7,7 @@ import { normalizeIndex } from "../libs/utilities.js";
 class ePubNode {
   constructor(obj) {
     // Reference properties
-    this.parentNode = null;
-
-    // Object properties
+    this.parentNode = undefined;
 
     // Common properties
     this._id = generateUUID();
@@ -152,7 +150,7 @@ ePubNode.prototype.remove = function() {
  * @param {object} attributes 
  * @returns 
  */
-ePubNode.prototype.toSpineChild = function(attributes) {
+ePubNode.prototype.createSpineChild = function(attributes) {
   if (!isObject(attributes)) {
     attributes = {};
   }

@@ -9,9 +9,7 @@ class ePubFile {
   constructor(obj) {
     // Reference properties
     this.document = undefined;
-    this.head = undefined;
-    this.body = undefined;
-    
+ 
     // Common properties
     this._id = generateUUID();
     this.path = null; // Required
@@ -25,7 +23,6 @@ class ePubFile {
     this.attributes = {};
 
     // DOM properties
-
     this.tag = null;
     this.closer = null;
     this.content = null;
@@ -63,13 +60,6 @@ ePubFile.prototype.init = function() {
     this.data = null;
   }
 
-  // Remove base64 prefix
-  if (this.encoding === "base64") {
-    if (isString(this.data)) {
-      this.data = normalizeBase64(this.data);
-    }
-  }
-
   // Convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
@@ -85,21 +75,6 @@ ePubFile.prototype.init = function() {
       this.children[i].parentNode = this;
       this.children[i].init();
     }
-  }
-
-  // Find head, body nodes
-  if (isDOM(this.mimetype)) {
-    const html = this.findChild({ tag: "html" });
-    if (html) {
-      this.head = html.findChild({ tag: "head" });
-      this.body = html.findChild({ tag: "body" });
-    } else {
-      delete this.head;
-      delete this.body;
-    }
-  } else {
-    delete this.head;
-    delete this.body;
   }
 
   return this;
@@ -391,60 +366,12 @@ ePubFile.prototype.removeChildren = function(query) {
   return this;
 }
 /**
- * https://www.w3.org/TR/epub-33/#sec-item-elem
- * @param {ePubFile} file 
- * @param {object|undefined} attributes - attributes of item node
- * @property {string} id
- * @property {string} href
- * @property {string} media-overlay
- * @property {string} media-type
- * @property {string} properties
- * @property {string} fallback
- * @returns {ePubNode}
- */
-ePubFile.prototype.appendManifestChild = function(file, attributes) {
-  return this.createNode({
-    tag: "item",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "id": file._id,
-        "href": file.getRelativePath(this.getAbsolutePath()),
-        "media-type": file.mimetype,
-      }, 
-      (isObject(attributes) ? attributes : {}),
-    ),
-  });
-}
-/**
- * https://www.w3.org/TR/epub-33/#sec-itemref-elem
- * @param {ePubFile} file
- * @param {object|undefined} attributes - attributes of itemref node
- * @property {string} id 
- * @property {string} idref 
- * @property {string} linear "yes" or "no"
- * @property {string} properties 
- * @returns {ePubNode}
- */
-ePubFile.prototype.appendSpineChild = function(file, attributes) {
-  return this.createNode({
-    tag: "itemref",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "idref": file._id,
-      },
-      (isObject(attributes) ? attributes : {}),
-    ),
-  });
-}
-/**
  * 
  * @param {ePubFile} packageFile 
  * @param {object} attributes 
  * @returns 
  */
-ePubFile.prototype.toManifestChild = function(packageFile, attributes) {
+ePubFile.prototype.createManifestChild = function(packageFile, attributes) {
   if (!isObject(attributes)) {
     attributes = {};
   }
@@ -461,11 +388,28 @@ ePubFile.prototype.toManifestChild = function(packageFile, attributes) {
     ),
   });
 }
+/**
+ * 
+ * @param {ePubFile} packageFile 
+ * @returns {[ePubFile, ePubFile]} [manifestChild, spineChild]
+ */
+ePubFile.prototype.createAnchors = function(packageFile) {
+  const manifestChild = this.createManifestChild(packageFile);
+  const spineChild = manifestChild.createSpineChild();
+  return [manifestChild, spineChild];
+}
 
 ePubFile.prototype.toString = function() {
-  return isDOM(this.mimetype) ? 
-    beautifyHTML(toStr(this)) : 
-    this.data;
+  if (this.encoding === "base64") {
+    // Remove base64 prefix
+    return normalizeBase64(this.data);
+  } else if (isDOM(this.mimetype)) {
+    // Beautify DOM
+    return beautifyHTML(toStr(this));
+  } else {
+    // Text
+    return this.data;
+  }
 }
 
 ePubFile.prototype.toObject = function() {
@@ -474,8 +418,6 @@ ePubFile.prototype.toObject = function() {
   });
 
   delete obj.document;
-  delete obj.head;
-  delete obj.body;
 
   return copyObject(obj);
 }
