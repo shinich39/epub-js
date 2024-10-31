@@ -203,6 +203,25 @@
         });
       }
 
+      function getImageSize(base64) {
+        return new Promise(function(resolve, reject) {
+          const img = new Image();
+          
+          img.onload = function () {
+            resolve({
+              width: image.width,
+              height: image.height,
+            });
+          };
+
+          img.onerror = function() {
+            reject(new Error("Error occurred"));
+          }
+
+          img.src = base64;
+        });
+      }
+
       async function initDoc() {
         if (inProgress) {
           console.error("Already in progress");
@@ -212,71 +231,43 @@
         inProgress = true;
         let docObj;
 
+        // Import JSON file
         const file = document.getElementById("import-file").files[0];
         if (file && /\/json$/.test(file.type)) {
           docObj = JSON.parse(await toText(file));
-        }
+        } else if (file && file.type === "application/epub+zip") {
+          let bin = await toBinary(file);
+          bin = await JSZip.loadAsync(b);
 
-        doc = new ePubDoc(docObj);
-
-        if (file && file.type === "application/epub+zip") {
-          // Clear
-          doc.removeFiles({});
-
-          let b = await toBinary(file);
-          b = await JSZip.loadAsync(b);
-
-          let fs = [];
+          let files = [];
           for (const f of Object.values(b.files)) {
             if (f.dir) {
               continue;
             }
-            fs.push(f);
+            files.push(f);
           }
 
-          // fs = fs.sort(function(a, b) {
+          // files = files.sort(function(a, b) {
           //   return utils.compareObject(
           //     a.unsafeOriginalName, 
           //     b.unsafeOriginalName
           //   );
           // });
 
-          for (const f of fs) {
+          docObj = { files: [] }
+
+          for (const f of files) {
             let path = f.unsafeOriginalName;
             let ext = "."+path.split(".").pop();
             switch(ext) {
               case ".mimetype":
-                doc.appendText({
-                  manifest: null,
-                  spine: null,
-                  path: path,
-                  data: await f.async("string"),
-                });
-                break;
               case ".css":
-                doc.appendStyle({
-                  path: path,
-                  data: await f.async("string"),
-                });
-                break;
               case ".js":
-                doc.appendScript({
-                  path: path,
-                  data: await f.async("string"),
-                });
-                break;
               case ".xml":
               case ".opf":
-                doc.appendPage({
-                  manifest: null,
-                  spine: null,
-                  path: path,
-                  data: await f.async("string"),
-                });
-                break;
               case ".xhtml":
               case ".html":
-                doc.appendPage({
+                docObj.files.push({
                   path: path,
                   data: await f.async("string"),
                 });
@@ -286,19 +277,9 @@
               case ".png":
               case ".webp":
               case ".gif":
-                doc.appendImage({
-                  path: path,
-                  data: await f.async("base64"),
-                });
-                break;
               case ".mp3":
-                doc.appendAudio({
-                  path: path,
-                  data: await f.async("base64"),
-                });
-                break;
               case ".mp4":
-                doc.appendVideo({
+                docObj.files.push({
                   path: path,
                   data: await f.async("base64"),
                 });
@@ -307,6 +288,25 @@
                 console.error(`${path} has not been supported type`);
             }
           }
+        } else if (file && (
+          file.type === "application/x-zip-compressed"||
+          file.type === "application/zip"
+        )) {
+
+        }
+
+        doc = new ePubDoc(docObj);
+
+        // Import EPUB file
+        if (file && file.type === "application/epub+zip") {
+          // Clear
+          doc.removeFiles({});
+
+
+
+
+
+
         }
 
         packageFile = doc.findFile({ extension: ".opf" });
@@ -348,9 +348,6 @@
           if (toc) {
             navFile = f;
             navFile.toc = true;
-            navFile.manifest = {
-              properties: "nav"
-            }
             tocNode = toc;
             break;
           }
@@ -362,10 +359,12 @@
           });
 
           // append manifest
-          packageFile.appendManifestChild(navFile);
+          packageFile.appendManifestChild(navFile, {
+            properties: "nav",
+          });
 
           // append spine
-          packageFile.appendSpineChild(navFile);
+          packageFile.appendSpineChild(navFile, null, 0);
 
           tocNode = navFile.findNode({
             tag: "nav",
@@ -434,7 +433,6 @@
               case ".xml":
               case ".opf":
                 doc.appendPage({
-                  spine: null,
                   path: path,
                   data: await f.async("string"),
                 });
@@ -539,22 +537,23 @@
             tag: "style",
             children: [{
               content: `
-                .image,
-                .video{
-                  max-width: 100%;
-                  max-height: 100%;
-                  text-align: center;
-                  page-break-before: always !important;
-                  page-break-inside: avoid !important;
-                  page-break-after: always !important;
-                }
-
                 img,
                 video{
                   display: inline-block;
                   max-width: 100%;
                   max-height: 100%;
                   margin: 0 auto;
+                  page-break-before: always !important;
+                  page-break-inside: avoid !important;
+                  page-break-after: always !important;
+                }
+                .landscape{
+                  width: 100%;
+                  height: auto;
+                }
+                .portrait{
+                  width: auto;
+                  height: 100%;
                 }
               `,
               // content: `
@@ -727,12 +726,14 @@
 
         const filePath = "cover."+file.type.split("/").pop();
 
-        coverFile = doc.appendCover({
+        coverFile = doc.appendImage({
           path: filePath,
           data: await toBase64(file),
         });
 
-        packageFile.appendManifestChild(coverFile);
+        packageFile.appendManifestChild(coverFile, {
+          properties: "cover-image",
+        });
       }
 
       async function setCoverHandler() {
@@ -788,8 +789,8 @@
             });
           }
 
+          // Set metadata
           if (page) {
-            // Set metadata
             initPage(page);
           }
         }

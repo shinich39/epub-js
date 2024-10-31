@@ -2,7 +2,7 @@
 
 import beautify from "js-beautify";
 import mime from 'mime';
-import { parseTemplate } from "./utils.mjs";
+import { parseTemplate, isNumber } from "./utils.mjs";
 
 function isDOM(str) {
   return /[/+](xml|html)$/.test(str);
@@ -10,6 +10,16 @@ function isDOM(str) {
 
 function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
+}
+
+function normalizeIndex(max, idx) {
+  if (!isNumber(idx)) {
+    idx = -1;
+  }
+  if (idx < 0) {
+    idx += max + 1;
+  }
+  return Math.floor(idx);
 }
 
 function normalizeBase64(str) {
@@ -110,6 +120,7 @@ function beautifyJS(str) {
 export {
   isDOM,
   dateToISOString,
+  normalizeIndex,
   normalizeBase64,
   normalizePath,
   toKebabCase,

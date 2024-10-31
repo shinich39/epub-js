@@ -51,9 +51,9 @@ metadataNode.updateNode({
   }
 });
 
-// Add author
+// Create <dc:creator> node
 // <dc:creator id="author-1">Bob</dc:creator>
-metadataNode.appendNode({
+const author1 = doc.createNode({
   tag: "dc:creator",
   attributes: {
     id: "author-1"
@@ -63,10 +63,13 @@ metadataNode.appendNode({
   }]
 });
 
-// Add multiple authors
+// Append <dc:creator node to <metadata> node
+metadataNode.appendChild(author1);
+
+// Append multiple authors with Creation
 // <dc:creator id="author-2">Mike</dc:creator>
 // <dc:creator id="author-3">John</dc:creator>
-metadataNode.appendNodes([{
+metadataNode.appendChildren([{
   tag: "dc:creator",
   attributes: {
     id: "author-2"
@@ -88,7 +91,7 @@ metadataNode.appendNodes([{
 // <meta property="rendition:layout">pre-paginated</meta>
 // <meta property="rendition:orientation">landscape</meta>
 // <meta property="rendition:spread">auto</meta>
-metadataNode.appendNodes([{
+metadataNode.appendChildren([{
   tag: "meta",
   attributes: {
     property: "rendition:layout",
@@ -133,18 +136,26 @@ spineNode.update({
 // ### Add cover file
 
 // Create a cover file
-const coverImage = doc.appendImage({
+const coverImage = doc.appendChild({
+  encoding: "base64",
   path: "EPUB/images/cover.png",
   data: fs.readFileSync(COVER_PATH, { encoding: "base64" }),
 });
 
 // Add coverImage to manifest
-packageFile.appendManifestChild(coverImage, {
-  properties: "cover-image",
+manifestNode.appendChild({
+  tag: "item",
+  closer: " /",
+  attributes: {
+    "id": coverImage._id,
+    "href": coverImage.getRelativePath(packageFile.getAbsolutePath()),
+    "media-type": coverImage.mimetype,
+    "properties": "cover-image",
+  },
 });
 
 // Add metadata for ePub 2.0 compatibility
-metadataNode.appendNode({
+metadataNode.appendChild({
   tag: "meta",
   closer: " /",
   attributes: {
