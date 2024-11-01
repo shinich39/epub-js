@@ -144,7 +144,7 @@
     <script src="./test/jszip-utils.min.js"></script>
     <script src="./src/libs/utils.js"></script>
     <script>
-      const { ePubDoc } = epub;
+      const { ePubDoc, ePubFile } = epub;
 
       document.getElementById("set-cover").addEventListener("change", setCoverHandler);
       document.getElementById("add-files").addEventListener("change", addFilesHandler);
@@ -231,33 +231,46 @@
         inProgress = true;
         let docObj;
 
+        const importedFile = document.getElementById("import-file").files[0];
         // Import JSON file
-        const file = document.getElementById("import-file").files[0];
-        if (file && /\/json$/.test(file.type)) {
-          docObj = JSON.parse(await toText(file));
-        } else if (file && file.type === "application/epub+zip") {
-          let bin = await toBinary(file);
+        if (importedFile && /\/json$/.test(importedFile.type)) {
+          docObj = JSON.parse(await toText(importedFile));
+        } // Import EPUB, ZIP files
+        else if (
+          importedFile && 
+          (
+            importedFile.type === "application/epub+zip" ||
+            importedFile.type === "application/x-zip-compressed"||
+            importedFile.type === "application/zip"
+          )
+        ) {
+          docObj = { files: [] };
+
+          let bin = await toBinary(importedFile);
           bin = await JSZip.loadAsync(b);
 
           let files = [];
-          for (const f of Object.values(b.files)) {
-            if (f.dir) {
+          for (const file of Object.values(b.files)) {
+            if (file.dir) {
               continue;
             }
-            files.push(f);
+            files.push(file);
           }
 
-          // files = files.sort(function(a, b) {
-          //   return utils.compareObject(
-          //     a.unsafeOriginalName, 
-          //     b.unsafeOriginalName
-          //   );
-          // });
+          if (importedFile.type !== "application/epub+zip") {
+            files = files.sort(function(a, b) {
+              return utils.compareObject(
+                a.unsafeOriginalName, 
+                b.unsafeOriginalName
+              );
+            });
+          }
 
-          docObj = { files: [] }
-
-          for (const f of files) {
-            let path = f.unsafeOriginalName;
+          for (const file of files) {
+            let path = file.unsafeOriginalName;
+            if (!importedFile.type !== "application/epub+zip") {
+              path = ("EPUB/" + path.replace(/^\.?[\\\/]/, "")).replace(/[\\\/]+/g, "/");
+            }
             let ext = "."+path.split(".").pop();
             switch(ext) {
               case ".mimetype":
@@ -267,10 +280,11 @@
               case ".opf":
               case ".xhtml":
               case ".html":
-                docObj.files.push({
+              case ".txt":
+                docObj.files.push(doc.createText({
                   path: path,
-                  data: await f.async("string"),
-                });
+                  data: await file.async("string"),
+                }));
                 break;
               case ".jpg":
               case ".jpeg":
@@ -279,35 +293,18 @@
               case ".gif":
               case ".mp3":
               case ".mp4":
-                docObj.files.push({
+                docObj.files.push(doc.createFile({
                   path: path,
-                  data: await f.async("base64"),
-                });
+                  data: await file.async("base64"),
+                }));
                 break;
               default:
                 console.error(`${path} has not been supported type`);
             }
           }
-        } else if (file && (
-          file.type === "application/x-zip-compressed"||
-          file.type === "application/zip"
-        )) {
-
-        }
-
+        } 
+        
         doc = new ePubDoc(docObj);
-
-        // Import EPUB file
-        if (file && file.type === "application/epub+zip") {
-          // Clear
-          doc.removeFiles({});
-
-
-
-
-
-
-        }
 
         packageFile = doc.findFile({ extension: ".opf" });
         packageNode = packageFile.findNode({ tag: "package" });
@@ -337,6 +334,33 @@
           }]
         });
 
+        styleFile = doc.createStyle({
+          path: "EPUB/default-style.css",
+          data: `
+            img,
+            video{
+              display: inline-block;
+              max-width: 100%;
+              max-height: 100%;
+              margin: 0 auto;
+              page-break-before: always !important;
+              page-break-inside: avoid !important;
+              page-break-after: always !important;
+            }
+            .landscape{
+              width: 100%;
+              height: auto;
+            }
+            .portrait{
+              width: auto;
+              height: 100%;
+            }
+          `
+        });
+
+        doc.appendChild(styleFile);
+        manifestNode.appendChild(styleFile.toManifestChild(packageFile));
+
         // Find nav file
         navFile = null; // reset
         tocNode = null;
@@ -354,17 +378,23 @@
         }
 
         if (!navFile) {
-          navFile = doc.appendNav({
+          navFile = doc.createNav({
             toc: true,
           });
 
-          // append manifest
-          packageFile.appendManifestChild(navFile, {
+          doc.appendChild(navFile);
+
+          const manifestChild = navFile.toManifestChild(packageFile, {
             properties: "nav",
           });
 
+          const spineChild = manifestChild.toSpineChild();
+
+          // append manifest
+          manifestNode.appendChild(manifestChild);
+
           // append spine
-          packageFile.appendSpineChild(navFile, null, 0);
+          spineNode.appendChild(spineChild);
 
           tocNode = navFile.findNode({
             tag: "nav",
@@ -373,14 +403,14 @@
         }
 
         if (tocNode.children.length < 1) {
-          tocNode.appendNode({
+          tocNode.appendChild({
             tag: "h1",
             children: [{
               content: "Table of Contents",
             }],
           });
 
-          listNode = tocNode.appendNode({
+          listNode = tocNode.appendChild({
             tag: "ol"
           });
         } else {
@@ -391,97 +421,42 @@
           });
         }
 
-        if (file && (
-          file.type === "application/x-zip-compressed"||
-          file.type === "application/zip"
-        )) {
-          let b = await toBinary(file);
-          b = await JSZip.loadAsync(b);
-
-          let fs = [];
-          for (const f of Object.values(b.files)) {
-            if (f.dir) {
-              continue;
-            }
-            fs.push(f);
-          }
-
-          fs = fs.sort(function(a, b) {
-            return utils.compareObject(
-              a.unsafeOriginalName, 
-              b.unsafeOriginalName
-            );
-          });
-
-          let _f, _p;
-          for (const f of fs) {
-            let path = f.unsafeOriginalName;
-            let ext = "."+path.split(".").pop();
+        // Initialize manifest and spine
+        if (importedFile && (importedFile.type === "application/x-zip-compressed"||
+          importedFile.type === "application/zip")
+        ) {
+          for (const file of doc.files) {
+            const ext = file.extension;
             switch(ext) {
               case ".css":
-                doc.appendStyle({
-                  path: path,
-                  data: await f.async("string"),
-                });
-                break;
               case ".js":
-                doc.appendScript({
-                  path: path,
-                  data: await f.async("string"),
-                });
+                manifestNode.appendChild(file.toManifestChild(packageFile));
                 break;
               case ".xml":
               case ".opf":
-                doc.appendPage({
-                  path: path,
-                  data: await f.async("string"),
-                });
                 break;
               case ".xhtml":
               case ".html":
-                _p = doc.appendPage({
-                  path: path,
-                  data: await f.async("string"),
-                });
+                appendHTMLPage(file);
                 break;
               case ".txt":
-                [_f, _p] = appendText(
-                  "EPUB/"+path, 
-                  "EPUB/"+path.replace(/\.[a-zA-Z0-9]+$/, ".xhtml"),
-                  await f.async("string"),
-                )
+                appendTextPage(file);
                 break;
               case ".jpg":
               case ".jpeg":
               case ".png":
               case ".webp":
               case ".gif":
-                [_f, _p] = appendImage(
-                  "EPUB/"+path, 
-                  "EPUB/"+path.replace(/\.[a-zA-Z0-9]+$/, ".xhtml"),
-                  await f.async("base64"),
-                );
+                appendImagePage(file);
                 break;
               case ".mp3":
-                [_f, _p] = appendAudio(
-                  "EPUB/"+path, 
-                  "EPUB/"+path.replace(/\.[a-zA-Z0-9]+$/, ".xhtml"),
-                  await f.async("base64"),
-                );
+                appendAudioPage(file);
                 break;
               case ".mp4":
-                [_f, _p] = appendVideo(
-                  "EPUB/"+path, 
-                  "EPUB/"+path.replace(/\.[a-zA-Z0-9]+$/, ".xhtml"),
-                  await f.async("base64"),
-                );
+                appendVideoPage(file);
                 break;
               default:
                 console.error(`${path} has not been supported type`);
-            }
-
-            if (_p) {
-              initPage(_p);
             }
           }
         }
@@ -713,10 +688,11 @@
           doc.findNode({
             tag: "manifest",
           }).removeNode({
-            "attributes.id": coverFile._id
+            "attributes.properties": "cover-image"
           });
 
           coverFile.remove();
+          coverFile = null;
         }
 
         const file = document.getElementById("set-cover").files[0];
@@ -731,9 +707,9 @@
           data: await toBase64(file),
         });
 
-        packageFile.appendManifestChild(coverFile, {
+        manifestNode.appendChild(coverFile.toManifestChild(packageFile, {
           properties: "cover-image",
-        });
+        }))
       }
 
       async function setCoverHandler() {
@@ -846,168 +822,218 @@
         });
       }
 
-      function appendText(filePath, pagePath, data) {
-        let page = doc.appendPage({
+      function appendTextPage(file) {
+        let p = doc.createPage({
           toc: false,
-          path: pagePath,
+          path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
-        let toggle = false;
+        p
+          .findNode({ tag: "head" })
+          .appendChild({
+            tag: "link",
+            closer: "/",
+            attributes: {
+              rel: "stylesheet",
+              href: styleFile.getRelativePath(p),
+            }
+          });
 
-        page.findNode({
-          tag: "body"
-        }).appendNodes(
-          data
-            .replace(/\r\n/g, "\n")
-            .replace(/\n\s*\n/g, "\n\n")
-            .trim()
-            .split(/\n/)
-            .map(item => {
-              if (item) {
-                if (!toggle) {
-                  toggle = true;
-                  return {
-                    tag: "h1",
-                    children: [{
-                      content: item,
-                    }]
+        let toggle = false;
+        p
+          .findNode({ tag: "body" })
+          .appendChildren(
+            data
+              .replace(/\r\n/g, "\n")
+              .replace(/\n\s*\n/g, "\n\n")
+              .trim()
+              .split(/\n/)
+              .map(item => {
+                if (item) {
+                  if (!toggle) {
+                    toggle = true;
+                    return {
+                      tag: "h1",
+                      children: [{
+                        content: item,
+                      }]
+                    }
+                  } else {
+                    return {
+                      tag: "div",
+                      children: [{
+                        content: item,
+                      }]
+                    }
                   }
                 } else {
                   return {
-                    tag: "div",
-                    children: [{
-                      content: item,
-                    }]
+                    tag: "br",
+                    closer: " /",
                   }
                 }
-              } else {
-                return {
-                  tag: "br",
-                  closer: " /",
-                }
-              }
-            })
-        );
-        
-        // append manifest
-        packageFile.appendManifestChild(page);
+              })
+          )
 
-        // append spine
-        packageFile.appendSpineChild(page);
+        let m = p.toManifestChild(packageFile);
+        let s = p.toSpineChild();
 
-        return [null, page];
+        doc.insertChild(p, file.getIndex());
+        manifestNode.appendChild(m);
+        spineNode.appendChild(s);
+        file.remove();
       }
 
-      function appendImage(filePath, pagePath, data) {
-        let file = doc.appendImage({
-          path: filePath,
-          data: data,
-        });
-
-        let page = doc.appendPage({
+      function appendHTMLPage(file) {
+        let p = doc.createPage({
           toc: false,
-          path: pagePath,
+          path: file.dirname + "/" + file.filename + ".xhtml",
+          data: file.toString(),
         });
 
-        page.findNode({
-          tag: "body"
-        }).appendNode({
-          tag: "div",
-          attributes: {
-            class: "image"
-          },
-          children: [{
+        p
+          .findNode({ tag: "head" })
+          .appendChild({
+            tag: "link",
+            closer: "/",
+            attributes: {
+              rel: "stylesheet",
+              href: styleFile.getRelativePath(p),
+            }
+          });
+
+        let m = p.toManifestChild(packageFile);
+        let s = p.toSpineChild();
+
+        doc.insertChild(p, file.getIndex());
+        manifestNode.appendChild(m);
+        spineNode.appendChild(s);
+        file.remove();
+      }
+
+      function appendImagePage(file) {
+        let p = doc.createPage({
+          toc: false,
+          path: file.dirname + "/" + file.filename + ".xhtml",
+        });
+
+        p
+          .findNode({ tag: "head" })
+          .appendChild({
+            tag: "link",
+            closer: "/",
+            attributes: {
+              rel: "stylesheet",
+              href: styleFile.getRelativePath(p),
+            }
+          });
+
+        p
+          .findNode({ tag: "body" })
+          .appendChild({
             tag: "img",
             closer: " /",
             attributes: {
               src: file.getRelativePath(page),
-              alt: filePath,
+              alt: "Embedded image",
             }
-          }]
-        });
+          })
 
-        // append manifest
-        packageFile.appendManifestChildren([file, page]);
+        let m = p.toManifestChild(packageFile);
+        let s = p.toSpineChild();
 
-        // append spine
-        packageFile.appendSpineChild(page);
-
-        return [file, page];
+        doc.appendChild(p);
+        manifestNode.appendChild(file.toManifestChild(packageFile));
+        manifestNode.appendChild(m);
+        spineNode.appendChild(s);
       }
 
-      function appendVideo(filePath, pagePath, data) {
-        let file = doc.appendVideo({
-          path: filePath,
-          data: data,
-        });
-
-        let page = doc.appendPage({
+      function appendAudioPage(file) {
+        let p = doc.createPage({
           toc: false,
-          path: pagePath,
+          path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
-        page.findNode({
-          tag: "body"
-        }).appendNode({
-          tag: "video",
-          attributes: {
-            controls: "",
-          },
-          children: [{
-            tag: "source",
-            closer: " /",
+        p
+          .findNode({ tag: "head" })
+          .appendChild({
+            tag: "link",
+            closer: "/",
             attributes: {
-              src: file.getRelativePath(page),
-              type: file.mimetype,
+              rel: "stylesheet",
+              href: styleFile.getRelativePath(p),
             }
-          }]
-        });
+          });
 
-        // append manifest
-        packageFile.appendManifestChildren([file, page]);
+        p
+          .findNode({ tag: "body" })
+          .appendChild({
+            tag: "audio",
+            attributes: {
+              controls: "",
+            },
+            children: [{
+              tag: "source",
+              closer: " /",
+              attributes: {
+                src: file.getRelativePath(page),
+                type: file.mimetype,
+              }
+            }]
+          })
 
-        // append spine
-        packageFile.appendSpineChild(page);
+        let m = p.toManifestChild(packageFile);
+        let s = p.toSpineChild();
 
-        return [file, page];
+        doc.appendChild(p);
+        manifestNode.appendChild(file.toManifestChild(packageFile));
+        manifestNode.appendChild(m);
+        spineNode.appendChild(s);
       }
 
-      function appendAudio(filePath, pagePath, data) {
-        let file = doc.appendAudio({
-          path: filePath,
-          data: data,
-        });
-
-        let page = doc.appendPage({
+      function appendVideoPage(file) {
+        let p = doc.createPage({
           toc: false,
-          path: pagePath,
+          path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
-        page.findNode({
-          tag: "body"
-        }).appendNode({
-          tag: "audio",
-          attributes: {
-            controls: "",
-          },
-          children: [{
-            tag: "source",
-            closer: " /",
+        p
+          .findNode({ tag: "head" })
+          .appendChild({
+            tag: "link",
+            closer: "/",
             attributes: {
-              src: file.getRelativePath(page),
-              type: file.mimetype,
+              rel: "stylesheet",
+              href: styleFile.getRelativePath(p),
             }
-          }]
-        });
+          });
 
-        // append manifest
-        packageFile.appendManifestChildren([file, page]);
+        p
+          .findNode({ tag: "body" })
+          .appendChild({
+            tag: "video",
+            attributes: {
+              controls: "",
+            },
+            children: [{
+              tag: "source",
+              closer: " /",
+              attributes: {
+                src: file.getRelativePath(page),
+                type: file.mimetype,
+              }
+            }]
+          })
 
-        // append spine
-        packageFile.appendSpineChild(page);
+        let m = p.toManifestChild(packageFile);
+        let s = p.toSpineChild();
 
-        return [file, page];
+        doc.appendChild(p);
+        manifestNode.appendChild(file.toManifestChild(packageFile));
+        manifestNode.appendChild(m);
+        spineNode.appendChild(s);
       }
+
 
       function getRadioValue(name) {
         let result;
@@ -1123,6 +1149,7 @@
           doc, 
           packageFile,
           packageNode,
+          styleFile,
           metadataNode, 
           idNode,
           titleNode,

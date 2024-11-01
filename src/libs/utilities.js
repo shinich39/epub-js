@@ -2,10 +2,29 @@
 
 import beautify from "js-beautify";
 import mime from 'mime';
-import { parseTemplate, isNumber } from "./utils.mjs";
+import { parseTemplate, isNumber, isObject, isNull } from "./utils.mjs";
+import { ePubDoc, ePubFile, ePubNode } from "../index.js";
 
 function isDOM(str) {
   return /[/+](xml|html)$/.test(str);
+}
+
+function isInstance(obj) {
+  return obj instanceof ePubDoc || 
+    obj instanceof ePubFile ||
+    obj instanceof ePubNode;
+}
+
+function isDoc(obj) {
+  return obj instanceof ePubDoc;
+}
+
+function isFile(obj) {
+  return obj instanceof ePubFile;
+}
+
+function isNode(obj) {
+  return obj instanceof ePubNode;
 }
 
 function dateToISOString(v) {
@@ -117,8 +136,87 @@ function beautifyJS(str) {
   });
 }
 
+function updateObject(obj, updates) {
+  for (const operator of Object.keys(updates)) {
+    for (let [keys, value] of Object.entries(updates[operator])) {
+      keys = keys.split(".");
+
+      let target = obj,
+          key = keys.pop();
+
+      while(isObject(target) && keys.length > 0) {
+        target = target[keys.shift()];
+      }
+
+      if (!isObject(target)) {
+        continue;
+      }
+
+      if (operator === "$set") {
+        if (target[key] !== value) {
+          target[key] = value;
+        }
+      } else if (operator === "$unset") {
+        if (!!value) {
+          delete target[key];
+        }
+      } else if (operator === "$push") {
+        target[key].push(value);
+      } else if (operator === "$pushAll") {
+        target[key].concat(value);
+      } else if (operator === "$pull") {
+        for (let i = target[key].length; i >= 0; i--) {
+          if (target[key][i] === value) {
+            target[key].splice(i, 1);
+            break;
+          }
+        }
+      } else if (operator === "$pullAll") {
+        target[key] = target[key].filter(item => value.indexOf(item) === -1);
+      } else if (operator === "$addToSet") {
+        if (target[key].indexOf(value) === -1) {
+          target[key].push(value);
+        }
+      } else if (operator === "$addToSetAll") {
+        for (const v of value) {
+          if (target[key].indexOf(v) === -1) {
+            target[key].push(v);
+          }
+        }
+      } 
+    }
+  }
+}
+
+function deepcopy(obj, keepInstances) {
+  let result;
+  if (Array.isArray(obj)) {
+    result = [];
+  } else {
+    result = {};
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (isInstance(value)) {
+      if (keepInstances) {
+        result[key] = value;
+      } else {
+        result[key] = null;
+      }
+    } else if (isObject(value) && !isNull(value)) {
+      result[key] = deepcopy(value, keepInstances);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export {
   isDOM,
+  isInstance,
+  isDoc,
+  isFile,
+  isNode,
   dateToISOString,
   normalizeIndex,
   normalizeBase64,
@@ -133,4 +231,6 @@ export {
   beautifyHTML,
   beautifyCSS,
   beautifyJS,
+  updateObject,
+  deepcopy,
 }

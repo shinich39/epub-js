@@ -146,13 +146,8 @@ const coverImage = doc.createImage({
 doc.appendChild(coverImage);
 
 // Create manifest child and spine child
-const [coverManifest, coverSpine] = coverImage.createAnchors(packageFile);
-
-// Set manifest child attributes
-coverManifest.update({
-  $set: {
-    "attributes.properties": "cover-image"
-  }
+const coverManifest = coverImage.toManifestChild({
+  properties: "cover-image"
 });
 
 // Add manifest child to <manifest>
@@ -177,7 +172,10 @@ const navFile = doc.createNav();
 doc.appendChild(navFile);
 
 // Create manifest child and spine child
-const [navManifest, navSpine] = navFile.createAnchors(packageFile);
+const navManifest = navFile.toManifestChild({
+  properties: "nav"
+});
+const navSpine = navManifest.toSpineChild();
 
 // Set manifest child attributes
 navManifest.update({
@@ -208,13 +206,8 @@ const ncxPage = doc.createNCX();
 doc.appendChild(ncxPage);
 
 // Create manifest child and spine child
-const [ncxManifest, ncxSpine] = ncxPage.createAnchors(packageFile);
-
-// Set manifest child attributes
-ncxManifest.update({
-  $set: {
-    "attributes.properties": "ncx",
-  }
+const ncxManifest = ncxPage.toManifestChild({
+  properties: "ncx"
 });
 
 // Add ncx to manifest
@@ -305,7 +298,9 @@ const textPage = doc.createPage({
 // Append text page to document
 doc.appendChild(textPage);
 
-const [textManifest, textSpine] = textPage.createAnchors(packageFile);
+// Create manifest child and spine child
+const textManifest = textPage.toManifestChild();
+const textSpine = textManifest.toSpineChild();
 
 // Add new page to manifest
 manifestNode.appendChild(textManifest);
@@ -370,8 +365,9 @@ const imagePage = doc.createPage({
 // Append image page to document
 doc.appendChild(imagePage);
 
-const [imageManifest, imageSpine] = imagePage.createAnchors(packageFile);
-
+// Create manifest child and spine child
+const imageManifest = textPage.toManifestChild();
+const imageSpine = imageManifest.toSpineChild();
 
 // Add new page to manifest
 manifestNode.appendChild(imageManifest);
@@ -379,20 +375,24 @@ manifestNode.appendChild(imageManifest);
 // Add new page to spine
 spineNode.appendChild(imageSpine);
 
-// Add <img> to <body>
+// Create <img /> node
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
-const imageNode = imagePage
+const imageNode = doc.createNode({
+  tag: "img",
+  closer: " /",
+  attributes: {
+    id: "cover-image",
+    style: "width: 100%;",
+    // src: coverImage.getRelativePath(imagePage),
+    src: coverImage,
+    alt: "Cover image",
+  }
+});
+
+// Add <img> to <body>
+imagePage
   .findNode({ tag: "body" })
-  .appendChild({
-    tag: "img",
-    closer: " /",
-    attributes: {
-      id: "cover-image",
-      style: "width: 100%;",
-      src: coverImage.getRelativePath(imagePage),
-      alt: "Cover image",
-    }
-  });
+  .appendChild(imageNode);
 
 // ### Set TOC items
 
@@ -420,7 +420,8 @@ tocNode.appendNode({
     children: [{
       tag: "a",
       attributes: {
-        href: navFile.getRelativePath(navFile),
+        // href: navFile.getRelativePath(navFile),
+        href: navFile,
       },
       children: [{
         content: "Navigation"
@@ -431,7 +432,8 @@ tocNode.appendNode({
     children: [{
       tag: "a",
       attributes: {
-        href: textPage.getRelativePath(navFile),
+        // href: textPage.getRelativePath(navFile),
+        href: textPage,
       },
       children: [{
         content: "Page 1"
@@ -442,7 +444,8 @@ tocNode.appendNode({
     children: [{
       tag: "a",
       attributes: {
-        href: imagePage.getRelativePath(navFile),
+        // href: imagePage.getRelativePath(navFile),
+        href: imagePage,
       },
       children: [{
         content: "Page 2"
@@ -454,7 +457,8 @@ tocNode.appendNode({
         children: [{
           tag: "a",
           attributes: {
-            href: imageNode.getRelativePath(navFile),
+            // href: imageNode.getRelativePath(navFile),
+            href: imageNode,
           },
           children: [{
             content: "Image",

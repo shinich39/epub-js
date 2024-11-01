@@ -1,8 +1,8 @@
 "use strict";
 
-import { copyObject, generateUUID, isArray, isBoolean, isNull, isNumber, isObject, isObjectArray, isString, isStringArray, queryObject } from "../libs/utils.mjs";
+import { generateUUID, isArray, isBoolean, isNull, isNumber, isObject, isObjectArray, isString, isStringArray, queryObject } from "../libs/utils.mjs";
 import { ePubFile, ePubNode } from "../index.js";
-import { normalizeIndex } from "../libs/utilities.js";
+import { deepcopy, isFile, normalizeIndex, updateObject } from "../libs/utilities.js";
 
 class ePubDoc {
   constructor(obj) {
@@ -14,7 +14,7 @@ class ePubDoc {
 
     // Import data
     if (isObject(obj)) {
-      Object.assign(this, copyObject(obj));
+      Object.assign(this, deepcopy(obj, true));
     }
 
     this.init();
@@ -28,13 +28,24 @@ ePubDoc.prototype.init = function() {
   // Convert files to ePubFile
   if (isArray(this.files)) {
     for (let i = 0; i < this.files.length; i++) {
-      if (this.files[i] instanceof ePubFile) {
-        // ...
+      if (isFile(this.files[i])) {
+        if (
+          !this.files[i].document ||
+          this.files[i].document != this
+        ) {
+          this.files[i].remove();
+          this.files[i].document = this;
+          this.files[i].init();
+        }
       } else if (isObject(this.files[i])) {
-        this.files[i] = this.createFile(this.files[i]);
+        this.files[i] = this.createFile(
+          Object.assign(
+            {}, 
+            this.files[i], 
+            { document: this },
+          )
+        );
       }
-      this.files[i].document = this;
-      this.files[i].init();
     }
   }
 
@@ -47,55 +58,7 @@ ePubDoc.prototype.init = function() {
  */
 ePubDoc.prototype.update = function(updates) {
   if (isObject(updates)) {
-    for (const operator of Object.keys(updates)) {
-      for (let [keys, value] of Object.entries(updates[operator])) {
-        keys = keys.split(".");
-  
-        let target = this,
-            key = keys.pop();
-  
-        while(isObject(target) && keys.length > 0) {
-          target = target[keys.shift()];
-        }
-  
-        if (!isObject(target)) {
-          continue;
-        }
-  
-        if (operator === "$set") {
-          if (target[key] !== value) {
-            target[key] = value;
-          }
-        } else if (operator === "$unset") {
-          if (!!value) {
-            delete target[key];
-          }
-        } else if (operator === "$push") {
-          target[key].push(value);
-        } else if (operator === "$pushAll") {
-          target[key].concat(value);
-        } else if (operator === "$pull") {
-          for (let i = target[key].length; i >= 0; i--) {
-            if (target[key][i] === value) {
-              target[key].splice(i, 1);
-              break;
-            }
-          }
-        } else if (operator === "$pullAll") {
-          target[key] = target[key].filter(item => value.indexOf(item) === -1);
-        } else if (operator === "$addToSet") {
-          if (target[key].indexOf(value) === -1) {
-            target[key].push(value);
-          }
-        } else if (operator === "$addToSetAll") {
-          for (const v of value) {
-            if (target[key].indexOf(v) === -1) {
-              target[key].push(v);
-            }
-          }
-        } 
-      }
-    }
+    updateObject(this, updates);
   }
   
   this.init();
@@ -771,10 +734,9 @@ ePubDoc.prototype.removeChildren = function(query) {
   }
   return this;
 }
-
 /**
  * 
- * @param {object} obj
+ * @param {object} obj 
  * @property {string} _id - Default value is UUID
  * @property {string|null} tag - Required
  * @property {string|null} closer - "/"
@@ -842,7 +804,7 @@ ePubDoc.prototype.toObject = function() {
     files: this.files.map(item => item.toObject()),
   });
 
-  return copyObject(obj);
+  return deepcopy(obj);
 }
 
 ePubDoc.prototype.toFiles = function() {

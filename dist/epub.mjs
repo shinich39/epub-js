@@ -4560,9 +4560,6 @@ function normalizeIndex(max, idx) {
   }
   return Math.floor(idx);
 }
-function normalizeBase64(str) {
-  return str.replace(/^data\:.*?\,/, "");
-}
 function normalizePath(str) {
   return str.replace(/[\\\/]/, "/").replace(/^\.?\//, "");
 }
@@ -4597,7 +4594,6 @@ ePubDoc.prototype.init = function() {
         this.files[i] = this.createFile(this.files[i]);
       }
       this.files[i].document = this;
-      this.files[i].init();
     }
   }
   return this;
@@ -5472,7 +5468,7 @@ var ePubFile = class {
     this.extension = null;
     this.mimetype = null;
     this.data = null;
-    this.encoding = "base64";
+    this.encoding = null;
     this.attributes = {};
     this.tag = null;
     this.closer = null;
@@ -5494,11 +5490,8 @@ ePubFile.prototype.init = function() {
   this.dirname = getDirectoryPath(this.path);
   this.extension = getExtension(this.path);
   this.mimetype = extToMime(this.path);
-  if (isDOM(this.mimetype)) {
-    if (isString(this.data)) {
-      Object.assign(this, strToObj(this.data));
-    }
-    this.encoding = "utf8";
+  if (isDOM(this.mimetype) && isString(this.data)) {
+    Object.assign(this, strToObj(this.data));
     this.data = null;
   }
   if (isArray(this.children)) {
@@ -5512,7 +5505,6 @@ ePubFile.prototype.init = function() {
         this.children[i] = this.createNode({ content: "" + this.children[i] });
       }
       this.children[i].parentNode = this;
-      this.children[i].init();
     }
   }
   return this;
@@ -5541,6 +5533,7 @@ ePubFile.prototype.remove = function() {
   const currentIndex = this.getIndex();
   if (currentIndex > -1) {
     this.document.files.splice(currentIndex, 1);
+    this.document.init();
   }
   delete this.document;
   return this;
@@ -5715,7 +5708,10 @@ ePubFile.prototype.removeChildren = function(query) {
   }
   return this;
 };
-ePubFile.prototype.createManifestChild = function(packageFile, attributes) {
+ePubFile.prototype.toManifestChild = function(packagePath, attributes) {
+  if (packagePath instanceof ePubFile) {
+    packagePath = packagePath.getAbsolutePath();
+  }
   if (!isObject(attributes)) {
     attributes = {};
   }
@@ -5725,22 +5721,15 @@ ePubFile.prototype.createManifestChild = function(packageFile, attributes) {
     attributes: Object.assign(
       {
         "id": this._id,
-        "href": this.getRelativePath(packageFile.getAbsolutePath()),
+        "href": this.getRelativePath(packagePath),
         "media-type": this.mimetype
       },
       attributes
     )
   });
 };
-ePubFile.prototype.createAnchors = function(packageFile) {
-  const manifestChild = this.createManifestChild(packageFile);
-  const spineChild = manifestChild.createSpineChild();
-  return [manifestChild, spineChild];
-};
 ePubFile.prototype.toString = function() {
-  if (this.encoding === "base64") {
-    return normalizeBase64(this.data);
-  } else if (isDOM(this.mimetype)) {
+  if (isDOM(this.mimetype)) {
     return beautifyHTML2(objToStr(this));
   } else {
     return this.data;
@@ -5820,15 +5809,7 @@ ePubNode.prototype.init = function() {
         this.children[i] = this.createNode({ content: "" + this.children[i] });
       }
       this.children[i].parentNode = this;
-      this.children[i].init();
     }
-  }
-  const rootNode = this.getRootNode();
-  const nodeId = this.getAttribute("id");
-  if (rootNode && nodeId) {
-    this.path = rootNode.getAbsolutePath() + "#" + nodeId;
-  } else {
-    this.path = null;
   }
   return this;
 };
@@ -5875,10 +5856,10 @@ ePubNode.prototype.remove = function() {
   if (currentIndex > -1) {
     this.parentNode.children.splice(currentIndex, 1);
   }
-  this.parentNode = null;
+  delete this.parentNode;
   return this;
 };
-ePubNode.prototype.createSpineChild = function(attributes) {
+ePubNode.prototype.toSpineChild = function(attributes) {
   if (!isObject(attributes)) {
     attributes = {};
   }

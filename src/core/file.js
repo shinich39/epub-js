@@ -1,14 +1,14 @@
 "use strict";
 
 import { toStr, toObj } from "../libs/dom.mjs";
-import { extToMime, normalizeBase64, normalizeIndex, beautifyHTML, normalizePath, isDOM, } from "../libs/utilities.js";
-import { copyObject, generateUUID, getDirectoryPath, getExtension, getFilename, getRelativePath, isArray, isNumber, isObject, isString, queryObject } from "../libs/utils.mjs";
+import { extToMime, normalizeBase64, normalizeIndex, beautifyHTML, normalizePath, isDOM, deepcopy, isFile, isNode, isDoc, } from "../libs/utilities.js";
+import { generateUUID, getDirectoryPath, getExtension, getFilename, getRelativePath, isArray, isNumber, isObject, isString, queryObject } from "../libs/utils.mjs";
 import { ePubDoc, ePubNode } from "../index.js";
 
 class ePubFile {
   constructor(obj) {
     // Reference properties
-    this.document = undefined;
+    this.document = null;
  
     // Common properties
     this._id = generateUUID();
@@ -19,18 +19,18 @@ class ePubFile {
     this.extension = null;
     this.mimetype = null;
     this.data = null;
-    this.encoding = "base64";
-    this.attributes = {};
+    this.encoding = null; // "utf8", "base64"
 
     // DOM properties
     this.tag = null;
     this.closer = null;
     this.content = null;
+    this.attributes = {};
     this.children = [];
 
     // Import data
     if (isObject(obj)) {
-      Object.assign(this, copyObject(obj));
+      Object.assign(this, deepcopy(obj, true));
     }
 
     this.init();
@@ -52,28 +52,51 @@ ePubFile.prototype.init = function() {
   this.mimetype = extToMime(this.path);
 
   // Parse imported by string DOM
-  if (isDOM(this.mimetype)) {
-    if (isString(this.data)) {
-      Object.assign(this, toObj(this.data));
-    }
-    this.encoding = "utf8";
+  if (isDOM(this.mimetype) && isString(this.data)) {
+    Object.assign(this, toObj(this.data));
     this.data = null;
+  }
+
+  // Parse attributes when a file is appended
+  if (isDoc(this.document) && isObject(this.attributes)) {
+    for (const [key, value] of Object.entries(this.attributes)) {
+      if (isFile(value) || isNode(value)) {
+        this.attributes[key] = value.getRelativePath(this);
+      }
+    }
   }
 
   // Convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
-      if (this.children[i] instanceof ePubNode) {
-        // ...
+      if (isNode(this.children[i])) {
+        if (
+          !this.children[i].parentNode ||
+          this.children[i].parentNode._id !== this._id
+        ) {
+          this.children[i].remove();
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        }
       } else if (isObject(this.children[i])) {
-        this.children[i] = this.createNode(this.children[i]);
+        this.children[i] = this.createNode(
+          Object.assign(
+            {},
+            this.children[i],
+            { parentNode: this },
+          )
+        );
       } else if (isString(this.children[i])) {
-        this.children[i] = this.createNode({ content: this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: this.children[i],
+        });
       } else if (isNumber(this.children[i])) {
-        this.children[i] = this.createNode({ content: "" + this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: "" + this.children[i],
+        });
       }
-      this.children[i].parentNode = this;
-      this.children[i].init();
     }
   }
 
@@ -81,17 +104,10 @@ ePubFile.prototype.init = function() {
 }
 /**
  * 
- * @returns {boolean}
- */
-ePubFile.prototype.isAppended = function() {
-  return this.document instanceof ePubDoc;
-}
-/**
- * 
  * @returns {number}
  */
 ePubFile.prototype.getIndex = function() {
-  if (!this.isAppended()) {
+  if (!this.document) {
     return -1;
   }
   return this.document.files.findIndex(item => item._id == this._id);
@@ -109,9 +125,7 @@ ePubFile.prototype.getAbsolutePath = function() {
  * @returns {string}
  */
 ePubFile.prototype.getRelativePath = function(from) {
-  if (from instanceof ePubFile) {
-    from = from.getAbsolutePath();
-  } else if (from instanceof ePubNode) {
+  if (isFile(from) || isNode(from)) {
     from = from.getAbsolutePath();
   }
   return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
@@ -195,7 +209,7 @@ ePubFile.prototype.setAttribute = function(key, value) {
 }
 /**
  * 
- * @param {ePubNode|object} node
+ * @param {ePubNode|object|string} node
  * @returns 
  */
 ePubFile.prototype.appendChild = function(node) {
@@ -205,7 +219,7 @@ ePubFile.prototype.appendChild = function(node) {
 }
 /**
  * 
- * @param {ePubNode[]|object[]} nodes
+ * @param {ePubNode[]|object[]|string[]} nodes
  * @returns 
  */
 ePubFile.prototype.appendChildren = function(nodes) {
@@ -366,14 +380,19 @@ ePubFile.prototype.removeChildren = function(query) {
   return this;
 }
 /**
- * 
- * @param {ePubFile} packageFile 
- * @param {object} attributes 
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {object} obj - Attributes of manifest node
+ * @property {string} id
+ * @property {string} href - Path of file
+ * @property {string} media-overlay
+ * @property {string} media-type 
+ * @property {string} properties "cover-image"|"nav"|"ncx"|...
+ * @property {string} fallback
  * @returns 
  */
-ePubFile.prototype.createManifestChild = function(packageFile, attributes) {
-  if (!isObject(attributes)) {
-    attributes = {};
+ePubFile.prototype.toManifestChild = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
   }
   return this.createNode({
     tag: "item",
@@ -381,33 +400,21 @@ ePubFile.prototype.createManifestChild = function(packageFile, attributes) {
     attributes: Object.assign(
       {
         "id": this._id,
-        "href": this.getRelativePath(packageFile.getAbsolutePath()),
+        // "href": this.getRelativePath(""),
+        // "href": this.getRelativePath(packagePath),
+        "href": this,
         "media-type": this.mimetype,
       }, 
-      attributes,
+      obj,
     ),
   });
 }
-/**
- * 
- * @param {ePubFile} packageFile 
- * @returns {[ePubFile, ePubFile]} [manifestChild, spineChild]
- */
-ePubFile.prototype.createAnchors = function(packageFile) {
-  const manifestChild = this.createManifestChild(packageFile);
-  const spineChild = manifestChild.createSpineChild();
-  return [manifestChild, spineChild];
-}
 
 ePubFile.prototype.toString = function() {
-  if (this.encoding === "base64") {
-    // Remove base64 prefix
-    return normalizeBase64(this.data);
-  } else if (isDOM(this.mimetype)) {
+  if (isDOM(this.mimetype)) {
     // Beautify DOM
     return beautifyHTML(toStr(this));
   } else {
-    // Text
     return this.data;
   }
 }
@@ -419,7 +426,7 @@ ePubFile.prototype.toObject = function() {
 
   delete obj.document;
 
-  return copyObject(obj);
+  return deepcopy(obj);
 }
 
 ePubFile.prototype.toFile = function() {
