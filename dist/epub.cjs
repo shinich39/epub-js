@@ -4324,22 +4324,6 @@ function generateUUID() {
     return v.toString(16);
   });
 }
-function copyObject(obj) {
-  let result;
-  if (isArray(obj)) {
-    result = [];
-  } else {
-    result = {};
-  }
-  for (const [key, value] of Object.entries(obj)) {
-    if (isObject(value) && !isNull(value)) {
-      result[key] = copyObject(value);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
 function queryObject(obj, qry) {
   const QUERY_OPERATORS = {
     and: ["$and"],
@@ -4566,6 +4550,18 @@ var src_default = new Mime_default(standard_default, other_default)._freeze();
 function isDOM(str) {
   return /[/+](xml|html)$/.test(str);
 }
+function isInstance(obj) {
+  return obj instanceof ePubDoc || obj instanceof ePubFile || obj instanceof ePubNode;
+}
+function isDoc(obj) {
+  return obj instanceof ePubDoc;
+}
+function isFile(obj) {
+  return obj instanceof ePubFile;
+}
+function isNode(obj) {
+  return obj instanceof ePubNode;
+}
 function normalizeIndex(max, idx) {
   if (!isNumber(idx)) {
     idx = -1;
@@ -4586,6 +4582,74 @@ function beautifyHTML2(str) {
     indent_size: 2
   });
 }
+function updateObject(obj, updates) {
+  for (const operator of Object.keys(updates)) {
+    for (let [keys, value] of Object.entries(updates[operator])) {
+      keys = keys.split(".");
+      let target = obj, key = keys.pop();
+      while (isObject(target) && keys.length > 0) {
+        target = target[keys.shift()];
+      }
+      if (!isObject(target)) {
+        continue;
+      }
+      if (operator === "$set") {
+        if (target[key] !== value) {
+          target[key] = value;
+        }
+      } else if (operator === "$unset") {
+        if (!!value) {
+          delete target[key];
+        }
+      } else if (operator === "$push") {
+        target[key].push(value);
+      } else if (operator === "$pushAll") {
+        target[key].concat(value);
+      } else if (operator === "$pull") {
+        for (let i = target[key].length; i >= 0; i--) {
+          if (target[key][i] === value) {
+            target[key].splice(i, 1);
+            break;
+          }
+        }
+      } else if (operator === "$pullAll") {
+        target[key] = target[key].filter((item) => value.indexOf(item) === -1);
+      } else if (operator === "$addToSet") {
+        if (target[key].indexOf(value) === -1) {
+          target[key].push(value);
+        }
+      } else if (operator === "$addToSetAll") {
+        for (const v of value) {
+          if (target[key].indexOf(v) === -1) {
+            target[key].push(v);
+          }
+        }
+      }
+    }
+  }
+}
+function deepcopy(obj, keepInstances) {
+  let result;
+  if (Array.isArray(obj)) {
+    result = [];
+  } else {
+    result = {};
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (isInstance(value)) {
+      if (keepInstances) {
+        result[key] = value;
+      } else {
+        result[key] = null;
+      }
+    } else if (isObject(value) && !isNull(value)) {
+      result[key] = deepcopy(value, keepInstances);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
 
 // src/core/doc.js
 var ePubDoc = class {
@@ -4596,7 +4660,7 @@ var ePubDoc = class {
       this.createPackage()
     ];
     if (isObject(obj)) {
-      Object.assign(this, copyObject(obj));
+      Object.assign(this, deepcopy(obj, true));
     }
     this.init();
   }
@@ -4604,61 +4668,28 @@ var ePubDoc = class {
 ePubDoc.prototype.init = function() {
   if (isArray(this.files)) {
     for (let i = 0; i < this.files.length; i++) {
-      if (this.files[i] instanceof ePubFile) {
+      if (isFile(this.files[i])) {
+        if (!this.files[i].document || this.files[i].document != this) {
+          this.files[i].remove();
+          this.files[i].document = this;
+          this.files[i].init();
+        }
       } else if (isObject(this.files[i])) {
-        this.files[i] = this.createFile(this.files[i]);
+        this.files[i] = this.createFile(
+          Object.assign(
+            {},
+            this.files[i],
+            { document: this }
+          )
+        );
       }
-      this.files[i].document = this;
     }
   }
   return this;
 };
 ePubDoc.prototype.update = function(updates) {
   if (isObject(updates)) {
-    for (const operator of Object.keys(updates)) {
-      for (let [keys, value] of Object.entries(updates[operator])) {
-        keys = keys.split(".");
-        let target = this, key = keys.pop();
-        while (isObject(target) && keys.length > 0) {
-          target = target[keys.shift()];
-        }
-        if (!isObject(target)) {
-          continue;
-        }
-        if (operator === "$set") {
-          if (target[key] !== value) {
-            target[key] = value;
-          }
-        } else if (operator === "$unset") {
-          if (!!value) {
-            delete target[key];
-          }
-        } else if (operator === "$push") {
-          target[key].push(value);
-        } else if (operator === "$pushAll") {
-          target[key].concat(value);
-        } else if (operator === "$pull") {
-          for (let i = target[key].length; i >= 0; i--) {
-            if (target[key][i] === value) {
-              target[key].splice(i, 1);
-              break;
-            }
-          }
-        } else if (operator === "$pullAll") {
-          target[key] = target[key].filter((item) => value.indexOf(item) === -1);
-        } else if (operator === "$addToSet") {
-          if (target[key].indexOf(value) === -1) {
-            target[key].push(value);
-          }
-        } else if (operator === "$addToSetAll") {
-          for (const v of value) {
-            if (target[key].indexOf(v) === -1) {
-              target[key].push(v);
-            }
-          }
-        }
-      }
-    }
+    updateObject(this, updates);
   }
   this.init();
   return this;
@@ -5238,7 +5269,7 @@ ePubDoc.prototype.toObject = function() {
   const obj = Object.assign({}, this, {
     files: this.files.map((item) => item.toObject())
   });
-  return copyObject(obj);
+  return deepcopy(obj);
 };
 ePubDoc.prototype.toFiles = function() {
   const files = this.files.map((item) => item.toFile());
@@ -5474,7 +5505,7 @@ function objToStr(obj) {
 // src/core/file.js
 var ePubFile = class {
   constructor(obj) {
-    this.document = void 0;
+    this.document = null;
     this._id = generateUUID();
     this.path = null;
     this.basename = null;
@@ -5484,13 +5515,13 @@ var ePubFile = class {
     this.mimetype = null;
     this.data = null;
     this.encoding = null;
-    this.attributes = {};
     this.tag = null;
     this.closer = null;
     this.content = null;
+    this.attributes = {};
     this.children = [];
     if (isObject(obj)) {
-      Object.assign(this, copyObject(obj));
+      Object.assign(this, deepcopy(obj, true));
     }
     this.init();
   }
@@ -5509,26 +5540,46 @@ ePubFile.prototype.init = function() {
     Object.assign(this, strToObj(this.data));
     this.data = null;
   }
+  if (isDoc(this.document) && isObject(this.attributes)) {
+    for (const [key, value] of Object.entries(this.attributes)) {
+      if (isFile(value) || isNode(value)) {
+        this.attributes[key] = value.getRelativePath(this);
+      }
+    }
+  }
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
-      if (this.children[i] instanceof ePubNode) {
+      if (isNode(this.children[i])) {
+        if (!this.children[i].parentNode || this.children[i].parentNode._id !== this._id) {
+          this.children[i].remove();
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        }
       } else if (isObject(this.children[i])) {
-        this.children[i] = this.createNode(this.children[i]);
+        this.children[i] = this.createNode(
+          Object.assign(
+            {},
+            this.children[i],
+            { parentNode: this }
+          )
+        );
       } else if (isString(this.children[i])) {
-        this.children[i] = this.createNode({ content: this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: this.children[i]
+        });
       } else if (isNumber(this.children[i])) {
-        this.children[i] = this.createNode({ content: "" + this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: "" + this.children[i]
+        });
       }
-      this.children[i].parentNode = this;
     }
   }
   return this;
 };
-ePubFile.prototype.isAppended = function() {
-  return this.document instanceof ePubDoc;
-};
 ePubFile.prototype.getIndex = function() {
-  if (!this.isAppended()) {
+  if (!this.document) {
     return -1;
   }
   return this.document.files.findIndex((item) => item._id == this._id);
@@ -5537,9 +5588,7 @@ ePubFile.prototype.getAbsolutePath = function() {
   return this.path;
 };
 ePubFile.prototype.getRelativePath = function(from) {
-  if (from instanceof ePubFile) {
-    from = from.getAbsolutePath();
-  } else if (from instanceof ePubNode) {
+  if (isFile(from) || isNode(from)) {
     from = from.getAbsolutePath();
   }
   return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
@@ -5548,7 +5597,6 @@ ePubFile.prototype.remove = function() {
   const currentIndex = this.getIndex();
   if (currentIndex > -1) {
     this.document.files.splice(currentIndex, 1);
-    this.document.init();
   }
   delete this.document;
   return this;
@@ -5723,12 +5771,9 @@ ePubFile.prototype.removeChildren = function(query) {
   }
   return this;
 };
-ePubFile.prototype.toManifestChild = function(packagePath, attributes) {
-  if (packagePath instanceof ePubFile) {
-    packagePath = packagePath.getAbsolutePath();
-  }
-  if (!isObject(attributes)) {
-    attributes = {};
+ePubFile.prototype.toManifestChild = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
   }
   return this.createNode({
     tag: "item",
@@ -5736,11 +5781,29 @@ ePubFile.prototype.toManifestChild = function(packagePath, attributes) {
     attributes: Object.assign(
       {
         "id": this._id,
-        "href": this.getRelativePath(packagePath),
+        // "href": this.getRelativePath(packagePath),
+        "href": this,
         "media-type": this.mimetype
       },
-      attributes
+      obj
     )
+  });
+};
+ePubFile.prototype.toAnchorNode = function(content, attributes) {
+  if (!isString(content)) {
+    content = "";
+  }
+  if (!isObject(attributes)) {
+    attributes = {};
+  }
+  return this.createNode({
+    tag: "a",
+    attributes: Object.assign({
+      "href": this
+    }, attributes),
+    children: [{
+      content
+    }]
   });
 };
 ePubFile.prototype.toString = function() {
@@ -5755,7 +5818,7 @@ ePubFile.prototype.toObject = function() {
     children: (this.children || []).map((item) => item.toObject())
   });
   delete obj.document;
-  return copyObject(obj);
+  return deepcopy(obj);
 };
 ePubFile.prototype.toFile = function() {
   return {
@@ -5777,7 +5840,7 @@ ePubFile.prototype.insertNodes = ePubFile.prototype.insertChildren;
 // src/core/node.js
 var ePubNode = class {
   constructor(obj) {
-    this.parentNode = void 0;
+    this.parentNode = null;
     this._id = generateUUID();
     this.tag = null;
     this.closer = null;
@@ -5786,7 +5849,7 @@ var ePubNode = class {
     this.data = null;
     this.children = [];
     if (isObject(obj)) {
-      Object.assign(this, copyObject(obj));
+      Object.assign(this, deepcopy(obj, true));
     }
     this.init();
   }
@@ -5804,7 +5867,7 @@ var ePubNode = class {
 };
 ePubNode.prototype.init = function() {
   if (isString(this.data)) {
-    this.children = toObj(this.data).children;
+    this.children = strToObj(this.data).children;
     this.data = null;
   }
   if (isString(this.tag)) {
@@ -5813,33 +5876,60 @@ ePubNode.prototype.init = function() {
     this.tag = null;
     this.closer = null;
   }
+  if (isNode(this.parentNode) && isObject(this.attributes)) {
+    for (const [key, value] of Object.entries(this.attributes)) {
+      if (isFile(value) || isNode(value)) {
+        this.attributes[key] = value.getRelativePath(this);
+      }
+    }
+  }
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
-      if (this.children[i] instanceof ePubNode) {
+      if (isNode(this.children[i])) {
+        if (!this.children[i].parentNode || this.children[i].parentNode._id !== this._id) {
+          this.children[i].remove();
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        }
       } else if (isObject(this.children[i])) {
-        this.children[i] = this.createNode(this.children[i]);
+        this.children[i] = this.createNode(
+          Object.assign(
+            {},
+            this.children[i],
+            { parentNode: this }
+          )
+        );
       } else if (isString(this.children[i])) {
-        this.children[i] = this.createNode({ content: this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: this.children[i]
+        });
       } else if (isNumber(this.children[i])) {
-        this.children[i] = this.createNode({ content: "" + this.children[i] });
+        this.children[i] = this.createNode({
+          parentNode: this,
+          content: "" + this.children[i]
+        });
       }
-      this.children[i].parentNode = this;
     }
   }
   return this;
 };
-ePubNode.prototype.isAppended = function() {
-  return this.parentNode instanceof ePubNode;
+ePubNode.prototype.getDocument = function() {
+  const rootNode = this.getRootNode();
+  if (rootNode) {
+    return rootNode.document;
+  }
+  return;
 };
 ePubNode.prototype.getRootNode = function() {
   let parentNode = this.parentNode;
-  while (parentNode instanceof ePubNode) {
+  while (isNode(parentNode)) {
     parentNode = parentNode.parentNode;
   }
   return parentNode;
 };
 ePubNode.prototype.getIndex = function() {
-  if (!this.isAppended()) {
+  if (!this.parentNode) {
     return -1;
   }
   return this.parentNode.children.findIndex((item) => item._id == this._id);
@@ -5847,7 +5937,7 @@ ePubNode.prototype.getIndex = function() {
 ePubNode.prototype.getAbsolutePath = function() {
   const rootNode = this.getRootNode();
   if (!rootNode) {
-    return;
+    return "";
   } else if (this.getAttribute("id")) {
     return rootNode.getAbsolutePath() + "#" + this.getAttribute("id");
   } else {
@@ -5855,16 +5945,10 @@ ePubNode.prototype.getAbsolutePath = function() {
   }
 };
 ePubNode.prototype.getRelativePath = function(from) {
-  const absPath = this.getAbsolutePath();
-  if (!absPath) {
-    return;
-  }
-  if (from instanceof ePubFile) {
-    from = from.getAbsolutePath();
-  } else if (from instanceof ePubNode) {
+  if (isFile(from) || isNode(from)) {
     from = from.getAbsolutePath();
   }
-  return getRelativePath(getDirectoryPath(from), absPath);
+  return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
 };
 ePubNode.prototype.remove = function() {
   const currentIndex = this.getIndex();
@@ -5874,9 +5958,9 @@ ePubNode.prototype.remove = function() {
   delete this.parentNode;
   return this;
 };
-ePubNode.prototype.toSpineChild = function(attributes) {
-  if (!isObject(attributes)) {
-    attributes = {};
+ePubNode.prototype.toSpineChild = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
   }
   return this.createNode({
     tag: "itemref",
@@ -5885,7 +5969,7 @@ ePubNode.prototype.toSpineChild = function(attributes) {
       {
         "idref": this.getAttribute("id")
       },
-      attributes
+      obj
     )
   });
 };
@@ -5897,7 +5981,7 @@ ePubNode.prototype.toObject = function() {
     children: (this.children || []).map((item) => item.toObject())
   });
   delete obj.parentNode;
-  return copyObject(obj);
+  return deepcopy(obj);
 };
 ePubNode.prototype.update = ePubDoc.prototype.update;
 ePubNode.prototype.createFile = ePubDoc.prototype.createFile;
@@ -5930,6 +6014,7 @@ ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
 ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
 ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
 ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
+ePubNode.prototype.toAnchorNode = ePubFile.prototype.toAnchorNode;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   ePubDoc,

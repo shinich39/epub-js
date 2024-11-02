@@ -551,7 +551,19 @@ const zip = new JSZip();
 for (const file of exportedFiles) {
   try {
     console.log(`> Write ${file.path}`);
-    zip.file(file.path, file.data, { base64: file.encoding === "base64" });
+    
+    const p = file.path;
+
+    const data = file.encoding === "base64" ?
+      // Remove prefix of base64
+      file.data.split(",").pop() :
+      file.data;
+
+    const options = {
+      base64: file.encoding === "base64"
+    };
+    
+    zip.file(p, data, options);
   } catch(err) {
     console.error(err);
   }

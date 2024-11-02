@@ -400,13 +400,39 @@ ePubFile.prototype.toManifestChild = function(obj) {
     attributes: Object.assign(
       {
         "id": this._id,
-        // "href": this.getRelativePath(""),
         // "href": this.getRelativePath(packagePath),
         "href": this,
         "media-type": this.mimetype,
       }, 
       obj,
     ),
+  });
+}
+/**
+ * 
+ * @param {string} content - Attributes of a tag 
+ * @param {object} attributes - Attributes of a tag 
+ * @property {string} id
+ * @property {string} class
+ * @property {string} style
+ * @property {string} href - Path of file
+ * @returns 
+ */
+ePubFile.prototype.toAnchorNode = function(content, attributes) {
+  if (!isString(content)) {
+    content = "";
+  }
+  if (!isObject(attributes)) {
+    attributes = {};
+  }
+  return this.createNode({
+    tag: "a",
+    attributes: Object.assign({
+      "href": this,
+    }, attributes),
+    children: [{
+      content: content,
+    }],
   });
 }
 

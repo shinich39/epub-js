@@ -235,4 +235,7 @@ ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
 ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
 ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
 
+ePubNode.prototype.toAnchorNode = ePubFile.prototype.toAnchorNode;
+
+
 export { ePubNode }
