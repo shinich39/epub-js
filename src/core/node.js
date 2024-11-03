@@ -49,20 +49,25 @@ ePubNode.prototype.init = function() {
     this.data = null;
   }
   
-  // Convert content to text node
+  // Parse node properties
   if (isString(this.tag)) {
     if (isString(this.content)) {
       this.children = [{
         content: this.content,
       }];
     }
+
     this.content = null;
   } else {
+    if (!isString(this.content)) {
+      this.content = "";
+    }
+
     this.tag = null;
     this.closer = null;
   }
 
-  // Parse attributes when a node is appended
+  // Parse instance of attributes when a node is appended
   if (isNode(this.parentNode) && isObject(this.attributes)) {
     for (const [key, value] of Object.entries(this.attributes)) {
       if (isFile(value) || isNode(value)) {

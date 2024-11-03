@@ -20,9 +20,7 @@ class ePubDoc {
     this.init();
   }
 }
-/**
- * 
- */
+
 ePubDoc.prototype.defaults = {
   text: {
     encoding: "utf8",
@@ -751,65 +749,36 @@ ePubDoc.prototype.createNCX = function(obj) {
     )
   );
 }
-
-ePubDoc.prototype.findFile = function(query) {
+/**
+ * 
+ * @param {object} query 
+ * @returns 
+ */
+ePubDoc.prototype.findChild = function(query) {
   return this.files.find(item => queryObject(item, query));
 }
-
-ePubDoc.prototype.findFiles = function(query) {
+/**
+ * 
+ * @param {object} query 
+ * @returns 
+ */
+ePubDoc.prototype.findChildren = function(query) {
   return this.files.filter(item => queryObject(item, query));
 }
-
-ePubDoc.prototype.updateFile = function(query, updates) {
-  const file = this.findFile(query);
-  if (file) {
-    file.update(updates);
-  }
-  return this;
-}
-
-ePubDoc.prototype.updateFiles = function(query, updates) {
-  const files = this.findFiles(query);
-  for (const file of files) {
-    file.update(updates);
-  }
-  return this;
-}
-
-ePubDoc.prototype.removeFile = function(query) {
-  const file = this.findFile(query);
-  if (file) {
-    file.remove();
-  }
-  return this;
-}
-
-ePubDoc.prototype.removeFiles = function(query) {
-  const files = this.findFiles(query);
-  for (const file of files) {
-    file.remove();
-  }
-  return this;
-}
-
-ePubDoc.prototype.findChild = function(query) {
-  for (const file of this.files) {
-    const child = file.findChild(query);
-    if (child) {
-      return child;
-    }
-  }
-}
-
-ePubDoc.prototype.findChildren = function(query) {
-  let result = [];
-  for (const file of this.files) {
-    const children = file.findChildren(query);
-    result = result.concat(children);
-  }
-  return result;
-}
-
+/**
+ * 
+ * @param {object} query 
+ * @param {object} updates 
+ * @property {object} $set
+ * @property {object} $unset
+ * @property {object} $push
+ * @property {object} $pushAll
+ * @property {object} $pull
+ * @property {object} $pullAll
+ * @property {object} $addToSet
+ * @property {object} $addToSetAll
+ * @returns 
+ */
 ePubDoc.prototype.updateChild = function(query, updates) {
   const child = this.findChild(query);
   if (child) {
@@ -817,7 +786,20 @@ ePubDoc.prototype.updateChild = function(query, updates) {
   }
   return this;
 }
-
+/**
+ * 
+ * @param {object} query 
+ * @param {object} updates 
+ * @property {object} $set
+ * @property {object} $unset
+ * @property {object} $push
+ * @property {object} $pushAll
+ * @property {object} $pull
+ * @property {object} $pullAll
+ * @property {object} $addToSet
+ * @property {object} $addToSetAll
+ * @returns 
+ */
 ePubDoc.prototype.updateChildren = function(query, updates) {
   const children = this.findChildren(query);
   for (const child of children) {
@@ -825,7 +807,11 @@ ePubDoc.prototype.updateChildren = function(query, updates) {
   }
   return this;
 }
-
+/**
+ * 
+ * @param {object} query 
+ * @returns 
+ */
 ePubDoc.prototype.removeChild = function(query) {
   const child = this.findChild(query);
   if (child) {
@@ -833,7 +819,11 @@ ePubDoc.prototype.removeChild = function(query) {
   }
   return this;
 }
-
+/**
+ * 
+ * @param {object} query 
+ * @returns 
+ */
 ePubDoc.prototype.removeChildren = function(query) {
   const children = this.findChildren(query);
   for (const child of children) {
@@ -841,6 +831,7 @@ ePubDoc.prototype.removeChildren = function(query) {
   }
   return this;
 }
+
 /**
  * 
  * @param {object} obj 
@@ -916,9 +907,16 @@ ePubDoc.prototype.toObject = function() {
 
 ePubDoc.prototype.toFiles = function() {
   const files = this.files.map(item => item.toFile());
+  
   return files;
 }
 
+ePubDoc.prototype.findFile = ePubDoc.prototype.findChild;
+ePubDoc.prototype.findFiles = ePubDoc.prototype.findChildren;
+ePubDoc.prototype.updateFile = ePubDoc.prototype.updateChild;
+ePubDoc.prototype.updateFiles = ePubDoc.prototype.updateChildren;
+ePubDoc.prototype.removeFile = ePubDoc.prototype.removeChild;
+ePubDoc.prototype.removeFiles = ePubDoc.prototype.removeChildren;
 ePubDoc.prototype.appendFile = ePubDoc.prototype.appendChild;
 ePubDoc.prototype.appendFiles = ePubDoc.prototype.appendChildren;
 ePubDoc.prototype.prependFile = ePubDoc.prototype.prependChild;

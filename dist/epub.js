@@ -5243,55 +5243,11 @@ var epub = (() => {
       )
     );
   };
-  ePubDoc.prototype.findFile = function(query) {
+  ePubDoc.prototype.findChild = function(query) {
     return this.files.find((item) => queryObject(item, query));
   };
-  ePubDoc.prototype.findFiles = function(query) {
-    return this.files.filter((item) => queryObject(item, query));
-  };
-  ePubDoc.prototype.updateFile = function(query, updates) {
-    const file = this.findFile(query);
-    if (file) {
-      file.update(updates);
-    }
-    return this;
-  };
-  ePubDoc.prototype.updateFiles = function(query, updates) {
-    const files = this.findFiles(query);
-    for (const file of files) {
-      file.update(updates);
-    }
-    return this;
-  };
-  ePubDoc.prototype.removeFile = function(query) {
-    const file = this.findFile(query);
-    if (file) {
-      file.remove();
-    }
-    return this;
-  };
-  ePubDoc.prototype.removeFiles = function(query) {
-    const files = this.findFiles(query);
-    for (const file of files) {
-      file.remove();
-    }
-    return this;
-  };
-  ePubDoc.prototype.findChild = function(query) {
-    for (const file of this.files) {
-      const child = file.findChild(query);
-      if (child) {
-        return child;
-      }
-    }
-  };
   ePubDoc.prototype.findChildren = function(query) {
-    let result = [];
-    for (const file of this.files) {
-      const children = file.findChildren(query);
-      result = result.concat(children);
-    }
-    return result;
+    return this.files.filter((item) => queryObject(item, query));
   };
   ePubDoc.prototype.updateChild = function(query, updates) {
     const child = this.findChild(query);
@@ -5378,6 +5334,12 @@ var epub = (() => {
     const files = this.files.map((item) => item.toFile());
     return files;
   };
+  ePubDoc.prototype.findFile = ePubDoc.prototype.findChild;
+  ePubDoc.prototype.findFiles = ePubDoc.prototype.findChildren;
+  ePubDoc.prototype.updateFile = ePubDoc.prototype.updateChild;
+  ePubDoc.prototype.updateFiles = ePubDoc.prototype.updateChildren;
+  ePubDoc.prototype.removeFile = ePubDoc.prototype.removeChild;
+  ePubDoc.prototype.removeFiles = ePubDoc.prototype.removeChildren;
   ePubDoc.prototype.appendFile = ePubDoc.prototype.appendChild;
   ePubDoc.prototype.appendFiles = ePubDoc.prototype.appendChildren;
   ePubDoc.prototype.prependFile = ePubDoc.prototype.prependChild;
@@ -5633,14 +5595,16 @@ var epub = (() => {
     this.tag = null;
     this.closer = null;
     this.content = null;
-    this.path = normalizePath(this.path);
-    this.basename = getFilename(this.path);
-    this.filename = getFilename(this.path, getExtension(this.path));
-    this.dirname = getDirectoryPath(this.path);
-    this.extension = getExtension(this.path);
-    this.mimetype = extToMime(this.path);
+    if (isString(this.path)) {
+      this.path = normalizePath(this.path);
+      this.basename = getFilename(this.path);
+      this.filename = getFilename(this.path, getExtension(this.path));
+      this.dirname = getDirectoryPath(this.path);
+      this.extension = getExtension(this.path);
+      this.mimetype = extToMime(this.path);
+    }
     if (isDOM(this.mimetype) && isString(this.data)) {
-      Object.assign(this, strToObj(this.data));
+      this.children = strToObj(this.data).children;
       this.data = null;
     }
     if (isDoc(this.document) && isObject(this.attributes)) {
@@ -5706,7 +5670,6 @@ var epub = (() => {
   };
   ePubFile.prototype.getContent = function() {
     const query = {
-      closer: null,
       content: {
         $exists: true
       }
@@ -5778,6 +5741,50 @@ var epub = (() => {
     this.init();
     return this;
   };
+  ePubFile.prototype.findChild = function(query) {
+    for (const child of this.children) {
+      if (queryObject(child, query)) {
+        return child;
+      }
+    }
+  };
+  ePubFile.prototype.findChildren = function(query) {
+    let result = [];
+    for (const child of this.children) {
+      if (queryObject(child, query)) {
+        result.push(child);
+      }
+    }
+    return result;
+  };
+  ePubFile.prototype.updateChild = function(query, updates) {
+    const child = this.findChild(query);
+    if (child) {
+      child.update(updates);
+    }
+    return this;
+  };
+  ePubFile.prototype.updateChildren = function(query, updates) {
+    const children = this.findChildren(query);
+    for (const child of children) {
+      child.update(updates);
+    }
+    return this;
+  };
+  ePubFile.prototype.removeChild = function(query) {
+    const child = this.findChild(query);
+    if (child) {
+      child.remove();
+    }
+    return this;
+  };
+  ePubFile.prototype.removeChildren = function(query) {
+    const children = this.findChildren(query);
+    for (const child of children) {
+      child.remove();
+    }
+    return this;
+  };
   ePubFile.prototype.findNode = function(query) {
     for (const child of this.children) {
       if (queryObject(child, query)) {
@@ -5827,50 +5834,6 @@ var epub = (() => {
     const nodes = this.findNodes(query);
     for (const node of nodes) {
       node.remove();
-    }
-    return this;
-  };
-  ePubFile.prototype.findChild = function(query) {
-    for (const child of this.children) {
-      if (queryObject(child, query)) {
-        return child;
-      }
-    }
-  };
-  ePubFile.prototype.findChildren = function(query) {
-    let result = [];
-    for (const child of this.children) {
-      if (queryObject(child, query)) {
-        result.push(child);
-      }
-    }
-    return result;
-  };
-  ePubFile.prototype.updateChild = function(query, updates) {
-    const child = this.findChild(query);
-    if (child) {
-      child.update(updates);
-    }
-    return this;
-  };
-  ePubFile.prototype.updateChildren = function(query, updates) {
-    const children = this.findChildren(query);
-    for (const child of children) {
-      child.update(updates);
-    }
-    return this;
-  };
-  ePubFile.prototype.removeChild = function(query) {
-    const child = this.findChild(query);
-    if (child) {
-      child.remove();
-    }
-    return this;
-  };
-  ePubFile.prototype.removeChildren = function(query) {
-    const children = this.findChildren(query);
-    for (const child of children) {
-      child.remove();
     }
     return this;
   };
@@ -5981,6 +5944,9 @@ var epub = (() => {
       }
       this.content = null;
     } else {
+      if (!isString(this.content)) {
+        this.content = "";
+      }
       this.tag = null;
       this.closer = null;
     }
