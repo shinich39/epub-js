@@ -4665,106 +4665,17 @@ var ePubDoc = class {
     this.init();
   }
 };
-ePubDoc.prototype.init = function() {
-  if (isArray(this.files)) {
-    for (let i = 0; i < this.files.length; i++) {
-      if (isFile(this.files[i])) {
-        if (!this.files[i].document || this.files[i].document != this) {
-          this.files[i].remove();
-          this.files[i].document = this;
-          this.files[i].init();
-        }
-      } else if (isObject(this.files[i])) {
-        this.files[i] = this.createFile(
-          Object.assign(
-            {},
-            this.files[i],
-            { document: this }
-          )
-        );
-      }
-    }
-  }
-  return this;
-};
-ePubDoc.prototype.update = function(updates) {
-  if (isObject(updates)) {
-    updateObject(this, updates);
-  }
-  this.init();
-  return this;
-};
-ePubDoc.prototype.appendChild = function(file) {
-  this.files.push(file);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.appendChildren = function(files) {
-  this.files = this.files.concat(files);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.prependChild = function(file) {
-  this.files.unshift(file);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.prependChildren = function(files) {
-  this.files = [].concat(files, this.files);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.insertChild = function(file, idx) {
-  idx = normalizeIndex(this.files.length, idx);
-  this.files.splice(idx, 0, file);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.insertChildren = function(files, idx) {
-  idx = normalizeIndex(this.files.length, idx);
-  this.files.splice(idx, 0, ...files);
-  this.init();
-  return this;
-};
-ePubDoc.prototype.createFile = function(obj) {
-  return new ePubFile(obj);
-};
-ePubDoc.prototype.createFiles = function(arr) {
-  let result = [];
-  for (const obj of arr) {
-    result.push(new ePubFile(obj));
-  }
-  return result;
-};
-ePubDoc.prototype.createText = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+ePubDoc.prototype.defaults = {
+  text: {
     encoding: "utf8"
-  }, obj));
-};
-ePubDoc.prototype.createStyle = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  style: {
     encoding: "utf8"
-  }, obj));
-};
-ePubDoc.prototype.createScript = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  script: {
     encoding: "utf8"
-  }, obj));
-};
-ePubDoc.prototype.createPage = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  page: {
     encoding: "utf8",
     children: [{
       tag: "?xml",
@@ -4806,55 +4717,25 @@ ePubDoc.prototype.createPage = function(obj) {
         tag: "body"
       }]
     }]
-  }, obj));
-};
-ePubDoc.prototype.createImage = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  image: {
     encoding: "base64"
-  }, obj));
-};
-ePubDoc.prototype.createAudio = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  audio: {
     encoding: "base64"
-  }, obj));
-};
-ePubDoc.prototype.createVideo = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  video: {
     encoding: "base64"
-  }, obj));
-};
-ePubDoc.prototype.createFont = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  font: {
     encoding: "base64"
-  }, obj));
-};
-ePubDoc.prototype.createMimetype = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  mimetype: {
     encoding: "utf8",
     path: "mimetype",
     data: "application/epub+zip"
-  }, obj));
-};
-ePubDoc.prototype.createContainer = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  container: {
     encoding: "utf8",
     path: "META-INF/container.xml",
     children: [{
@@ -4882,13 +4763,8 @@ ePubDoc.prototype.createContainer = function(obj) {
         }]
       }]
     }]
-  }, obj));
-};
-ePubDoc.prototype.createPackage = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  package: {
     encoding: "utf8",
     path: "EPUB/package.opf",
     children: [{
@@ -4920,10 +4796,11 @@ ePubDoc.prototype.createPackage = function(obj) {
             tag: "dc:identifier",
             attributes: {
               "id": "bookid"
-            },
-            children: [{
-              content: "urn:uuid:" + generateUUID()
-            }]
+            }
+            // Update after create a package file
+            // children: [{
+            //   content: "urn:uuid:"+generateUUID(),
+            // }],
           },
           {
             tag: "dc:language",
@@ -4986,13 +4863,8 @@ ePubDoc.prototype.createPackage = function(obj) {
         }
       }]
     }]
-  }, obj));
-};
-ePubDoc.prototype.createNav = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  nav: {
     encoding: "utf8",
     path: "EPUB/nav.xhtml",
     children: [{
@@ -5071,13 +4943,8 @@ ePubDoc.prototype.createNav = function(obj) {
         }]
       }]
     }]
-  }, obj));
-};
-ePubDoc.prototype.createNCX = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createFile(Object.assign({
+  },
+  ncx: {
     encoding: "utf8",
     path: "EPUB/toc.ncx",
     children: [{
@@ -5102,6 +4969,7 @@ ePubDoc.prototype.createNCX = function(obj) {
           closer: " /",
           attributes: {
             "name": "dtb:uid",
+            // Update after create a ncx page
             "content": ""
           }
         }, {
@@ -5138,7 +5006,242 @@ ePubDoc.prototype.createNCX = function(obj) {
         tag: "navMap"
       }]
     }]
-  }, obj));
+  }
+};
+ePubDoc.prototype.init = function() {
+  if (isArray(this.files)) {
+    for (let i = 0; i < this.files.length; i++) {
+      if (isFile(this.files[i])) {
+        if (!this.files[i].document || this.files[i].document != this) {
+          this.files[i].remove();
+          this.files[i].document = this;
+          this.files[i].init();
+        }
+      } else if (isObject(this.files[i])) {
+        this.files[i] = this.createFile(
+          Object.assign(
+            {},
+            this.files[i],
+            { document: this }
+          )
+        );
+      }
+    }
+  }
+  return this;
+};
+ePubDoc.prototype.update = function(updates) {
+  if (isObject(updates)) {
+    updateObject(this, updates);
+  }
+  this.init();
+  return this;
+};
+ePubDoc.prototype.appendChild = function(file) {
+  this.files.push(file);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.appendChildren = function(files) {
+  this.files = this.files.concat(files);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.prependChild = function(file) {
+  this.files.unshift(file);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.prependChildren = function(files) {
+  this.files = [].concat(files, this.files);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.insertChild = function(file, idx) {
+  idx = normalizeIndex(this.files.length, idx);
+  this.files.splice(idx, 0, file);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.insertChildren = function(files, idx) {
+  idx = normalizeIndex(this.files.length, idx);
+  this.files.splice(idx, 0, ...files);
+  this.init();
+  return this;
+};
+ePubDoc.prototype.createFile = function(obj) {
+  return new ePubFile(obj);
+};
+ePubDoc.prototype.createFiles = function(arr) {
+  let result = [];
+  for (const obj of arr) {
+    result.push(new ePubFile(obj));
+  }
+  return result;
+};
+ePubDoc.prototype.createText = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.text,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createStyle = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.style,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createScript = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.script,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createPage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.page,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createImage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.image,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createAudio = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.audio,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createVideo = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.video,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createFont = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.font,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createMimetype = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.mimetype,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createContainer = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.container,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createPackage = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.package,
+      obj
+    )
+  ).updateNode({
+    tag: "dc:identifier"
+  }, {
+    $set: {
+      children: [{
+        content: "urn:uuid:" + generateUUID()
+      }]
+    }
+  });
+};
+ePubDoc.prototype.createNav = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.nav,
+      obj
+    )
+  );
+};
+ePubDoc.prototype.createNCX = function(obj) {
+  if (!isObject(obj)) {
+    obj = {};
+  }
+  return this.createFile(
+    Object.assign(
+      {},
+      this.defaults.ncx,
+      obj
+    )
+  );
 };
 ePubDoc.prototype.findFile = function(query) {
   return this.files.find((item) => queryObject(item, query));
@@ -5871,8 +5974,13 @@ ePubNode.prototype.init = function() {
     this.data = null;
   }
   if (isString(this.tag)) {
+    if (isString(this.content)) {
+      this.children = [{
+        content: this.content
+      }];
+    }
     this.content = null;
-  } else if (isString(this.content)) {
+  } else {
     this.tag = null;
     this.closer = null;
   }

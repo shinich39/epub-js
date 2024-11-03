@@ -49,10 +49,15 @@ ePubNode.prototype.init = function() {
     this.data = null;
   }
   
-  // Convert text node
+  // Convert content to text node
   if (isString(this.tag)) {
+    if (isString(this.content)) {
+      this.children = [{
+        content: this.content,
+      }];
+    }
     this.content = null;
-  } else if (isString(this.content)) {
+  } else {
     this.tag = null;
     this.closer = null;
   }

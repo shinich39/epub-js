@@ -9,14 +9,15 @@
         font-family: monospace;
       }
       body{
-        margin: 2rem;
+        margin: 4rem;
+        line-height: 1.6;
       }
     </style>
   </head>
 
   <body>
     <h1>epub-js</h1>
-    <p>This page has been developed for test browser compatibility.</p>
+    <p>This page has been developed for browser compatibility testing.</p>
 
     <h2>Import</h2>
     <p>Create a ePub doucment from JSON, EPUB and ZIP files.</p>
@@ -124,9 +125,9 @@
     <input id="add-files" type="file" multiple>
     <br />
     <h2>File List</h2>
-    <p>Check the box to add it to TOC.</p>
     <p>Add all files to manifest.</p>
     <p>Add .xhtml files to spine.</p>
+    <p>Check the box to add it to TOC.</p>
     <ol id="file-list"></ol>
     <h2>Download</h2>
     <button id="download-file">ePub</button>
@@ -244,6 +245,32 @@
             encoding: encoding,
             data: data,
           });
+        }
+
+        // Remove root dir
+        let hasRootDir = true;
+        while (hasRootDir) {
+          let rootPaths = files.map(item => item.path.split(/[\\\/]+/)[0]);
+          let rootPath = rootPaths.shift();
+          if (!rootPath) {
+            hasRootDir = false;
+            break;
+          }
+
+          for (const p of rootPaths) {
+            if (rootPath != p) {
+              hasRootDir = false;
+              break;
+            }
+          }
+
+          if (hasRootDir) {
+            console.log("Remove root dir:", rootPath);
+
+            files.forEach(item => {
+              item.path = item.path.split(/[\\\/]+/).slice(1).join("/");
+            });
+          }
         }
 
         // Sort files
@@ -1013,7 +1040,7 @@
               tag: "source",
               closer: " /",
               attributes: {
-                src: file.getRelativePath(page),
+                src: file,
                 type: file.mimetype,
               }
             }]
@@ -1050,7 +1077,7 @@
               tag: "source",
               closer: " /",
               attributes: {
-                src: file.getRelativePath(page),
+                src: file,
                 type: file.mimetype,
               }
             }]

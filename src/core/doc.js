@@ -22,6 +22,348 @@ class ePubDoc {
 }
 /**
  * 
+ */
+ePubDoc.prototype.defaults = {
+  text: {
+    encoding: "utf8",
+  },
+  style: {
+    encoding: "utf8",
+  },
+  script: {
+    encoding: "utf8",
+  },
+  page: {
+    encoding: "utf8",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "!DOCTYPE",
+      closer: "",
+      attributes: {
+        "html": true,
+      },
+    }, {
+      tag: "html",
+      attributes: {
+        "xmlns": "http://www.w3.org/1999/xhtml",
+        "xmlns:epub": "http://www.idpf.org/2007/ops",
+        "xml:lang": null,
+        "lang": null,
+        "dir": null,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "title",
+          children: [{
+            content: "",
+          }]
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "charset": "utf-8",
+          }
+        }],
+      }, {
+        tag: "body",
+      }],
+    }],
+  },
+  image: {
+    encoding: "base64",
+  },
+  audio: {
+    encoding: "base64",
+  },
+  video: {
+    encoding: "base64",
+  },
+  font: {
+    encoding: "base64",
+  },
+  mimetype: {
+    encoding: "utf8",
+    path: "mimetype",
+    data: "application/epub+zip",
+  },
+  container: {
+    encoding: "utf8",
+    path: "META-INF/container.xml",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "container",
+      attributes: {
+        "version": "1.0",
+        "xmlns": "urn:oasis:names:tc:opendocument:xmlns:container",
+      },
+      children: [{
+        tag: "rootfiles",
+        children: [{
+          tag: "rootfile",
+          closer: " /",
+          attributes: {
+            "full-path": "EPUB/package.opf",
+            "media-type": "application/oebps-package+xml",
+          },
+        }]
+      }]
+    }],
+  },
+  package: {
+    encoding: "utf8",
+    path: "EPUB/package.opf",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "package",
+      attributes: {
+        "xmlns": "http://www.idpf.org/2007/opf",
+        "version": "3.0",
+        "unique-identifier": "bookid",
+        "xml:lang": null,
+        // https://www.w3.org/TR/epub-33/#attrdef-dir
+        "dir": null,
+      },
+      children: [{
+        tag: "metadata",
+        attributes: {
+          "xmlns:opf": "http://www.idpf.org/2007/opf",
+          "xmlns:dc": "http://purl.org/dc/elements/1.1/",
+          "xmlns:dcterms": "http://purl.org/dc/terms/",
+        },
+        children: [{
+          tag: "dc:identifier",
+          attributes: {
+            "id": "bookid",
+          },
+          // Update after create a package file
+          // children: [{
+          //   content: "urn:uuid:"+generateUUID(),
+          // }],
+        }, {
+          tag: "dc:language",
+          children: [{
+            content: "en",
+          }],
+        }, {
+          tag: "dc:title",
+          attributes: {
+            "id": "title",
+          },
+          children: [{
+            content: "Untitled",
+          }],
+        }, {
+          tag: "meta",
+          attributes: {
+            "property": "dcterms:modified",
+          },
+          children: [{
+            content: new Date().toISOString(),
+          }],
+        },
+        // Example
+        // {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:layout",
+        //   },
+        //   children: [{
+        //     content: "pre-paginated"|"reflowable"
+        //   }]
+        // }, {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:orientation",
+        //   },
+        //   children: [{
+        //     content: "auto"|"landscape"|"portrait"
+        //   }]
+        // }, {
+        //   tag: "meta",
+        //   attributes: {
+        //     property: "rendition:spread",
+        //   },
+        //   children: [{
+        //     content: "auto"|"both"|"landscape"|"none"
+        //   }]
+        // }
+        ],
+      }, {
+        tag: "manifest",
+      }, {
+        tag: "spine",
+        attributes: {
+          // https://www.w3.org/TR/epub-33/#attrdef-spine-page-progression-direction
+          "page-progression-direction": null,
+        },
+      }],
+    }],
+  },
+  nav: {
+    encoding: "utf8",
+    path: "EPUB/nav.xhtml",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "!DOCTYPE",
+      closer: "",
+      attributes: {
+        "html": true,
+      },
+    }, {
+      tag: "html",
+      attributes: {
+        "xmlns": "http://www.w3.org/1999/xhtml",
+        "xmlns:epub": "http://www.idpf.org/2007/ops",
+        "xml:lang": null,
+        "lang": null,
+        "dir": null,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "title",
+          children: [{
+            content: "Untitled",
+          }]
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "charset": "utf-8",
+          }
+        }],
+      }, {
+        tag: "body",
+        children: [{
+          tag: "nav",
+          attributes: {
+            "epub:type": "toc",
+            "id": "toc",
+            "role": "doc-toc",
+          }
+        }, {
+          tag: "nav",
+          attributes: {
+            "epub:type": "landmarks",
+            "id": "landmarks",
+            "hidden": "",
+          },
+          children: [{
+            tag: "h2",
+            children: [{
+              content: "Landmarks"
+            }]
+          }, {
+            tag: "ol",
+            children: [{
+              tag: "li",
+              children: [{
+                tag: "a",
+                attributes: {
+                  "epub:type": "toc",
+                  "href": "#toc",
+                },
+                children: [{
+                  content: "Table of Contents",
+                }]
+              }]
+            }]
+          }]
+        }],
+      }],
+    }],
+  },
+  ncx: {
+    encoding: "utf8",
+    path: "EPUB/toc.ncx",
+    children: [{
+      tag: "?xml",
+      closer: "?",
+      attributes: {
+        "version": "1.0",
+        "encoding": "utf-8",
+      },
+    }, {
+      tag: "ncx",
+      attributes: {
+        "xmlns:m": "http://www.w3.org/1998/Math/MathML",
+        "xmlns": "http://www.daisy.org/z3986/2005/ncx/",
+        "version": "2005-1",
+        "xml:lang": null,
+      },
+      children: [{
+        tag: "head",
+        children: [{
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:uid",
+            // Update after create a ncx page
+            "content": "",
+          },
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:depth",
+            "content": "1",
+          },
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:totalPageCount",
+            "content": "0",
+          },
+        }, {
+          tag: "meta",
+          closer: " /",
+          attributes: {
+            "name": "dtb:maxPageNumber",
+            "content": "0",
+          },
+        }]
+      }, {
+        tag: "docTitle",
+        children: [{
+          tag: "text",
+          children: [{
+            "content": "Untitled",
+          }]
+        }],
+      }, {
+        tag: "navMap",
+      }],
+    }]
+  },
+}
+/**
+ * 
  * @returns 
  */
 ePubDoc.prototype.init = function() {
@@ -172,9 +514,13 @@ ePubDoc.prototype.createText = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.text, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -187,9 +533,13 @@ ePubDoc.prototype.createStyle = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.style, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -202,9 +552,13 @@ ePubDoc.prototype.createScript = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.script, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -219,49 +573,13 @@ ePubDoc.prototype.createPage = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    children: [{
-      tag: "?xml",
-      closer: "?",
-      attributes: {
-        "version": "1.0",
-        "encoding": "utf-8",
-      },
-    }, {
-      tag: "!DOCTYPE",
-      closer: "",
-      attributes: {
-        "html": true,
-      },
-    }, {
-      tag: "html",
-      attributes: {
-        "xmlns": "http://www.w3.org/1999/xhtml",
-        "xmlns:epub": "http://www.idpf.org/2007/ops",
-        "xml:lang": null,
-        "lang": null,
-        "dir": null,
-      },
-      children: [{
-        tag: "head",
-        children: [{
-          tag: "title",
-          children: [{
-            content: "",
-          }]
-        }, {
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "charset": "utf-8",
-          }
-        }],
-      }, {
-        tag: "body",
-      }],
-    }],
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.page, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -274,9 +592,13 @@ ePubDoc.prototype.createImage = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "base64",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.image, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -289,9 +611,13 @@ ePubDoc.prototype.createAudio = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "base64",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.audio, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -304,9 +630,13 @@ ePubDoc.prototype.createVideo = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "base64",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.video, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -319,9 +649,13 @@ ePubDoc.prototype.createFont = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "base64",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.font, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -332,11 +666,13 @@ ePubDoc.prototype.createMimetype = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    path: "mimetype",
-    data: "application/epub+zip",
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.mimetype, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -347,35 +683,13 @@ ePubDoc.prototype.createContainer = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    path: "META-INF/container.xml",
-    children: [{
-      tag: "?xml",
-      closer: "?",
-      attributes: {
-        "version": "1.0",
-        "encoding": "utf-8",
-      },
-    }, {
-      tag: "container",
-      attributes: {
-        "version": "1.0",
-        "xmlns": "urn:oasis:names:tc:opendocument:xmlns:container",
-      },
-      children: [{
-        tag: "rootfiles",
-        children: [{
-          tag: "rootfile",
-          closer: " /",
-          attributes: {
-            "full-path": "EPUB/package.opf",
-            "media-type": "application/oebps-package+xml",
-          },
-        }]
-      }]
-    }],
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.container, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -386,101 +700,22 @@ ePubDoc.prototype.createPackage = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    path: "EPUB/package.opf",
-    children: [{
-      tag: "?xml",
-      closer: "?",
-      attributes: {
-        "version": "1.0",
-        "encoding": "utf-8",
-      },
-    }, {
-      tag: "package",
-      attributes: {
-        "xmlns": "http://www.idpf.org/2007/opf",
-        "version": "3.0",
-        "unique-identifier": "bookid",
-        "xml:lang": null,
-        // https://www.w3.org/TR/epub-33/#attrdef-dir
-        "dir": null,
-      },
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.package, 
+      obj,
+    )
+  ) // Generate BookID
+  .updateNode({
+    tag: "dc:identifier",
+  }, {
+    $set: {
       children: [{
-        tag: "metadata",
-        attributes: {
-          "xmlns:opf": "http://www.idpf.org/2007/opf",
-          "xmlns:dc": "http://purl.org/dc/elements/1.1/",
-          "xmlns:dcterms": "http://purl.org/dc/terms/",
-        },
-        children: [{
-          tag: "dc:identifier",
-          attributes: {
-            "id": "bookid",
-          },
-          children: [{
-            content: "urn:uuid:"+generateUUID(),
-          }],
-        }, {
-          tag: "dc:language",
-          children: [{
-            content: "en",
-          }],
-        }, {
-          tag: "dc:title",
-          attributes: {
-            "id": "title",
-          },
-          children: [{
-            content: "Untitled",
-          }],
-        }, {
-          tag: "meta",
-          attributes: {
-            "property": "dcterms:modified",
-          },
-          children: [{
-            content: new Date().toISOString(),
-          }],
-        },
-        // Example
-        // {
-        //   tag: "meta",
-        //   attributes: {
-        //     property: "rendition:layout",
-        //   },
-        //   children: [{
-        //     content: "pre-paginated"|"reflowable"
-        //   }]
-        // }, {
-        //   tag: "meta",
-        //   attributes: {
-        //     property: "rendition:orientation",
-        //   },
-        //   children: [{
-        //     content: "auto"|"landscape"|"portrait"
-        //   }]
-        // }, {
-        //   tag: "meta",
-        //   attributes: {
-        //     property: "rendition:spread",
-        //   },
-        //   children: [{
-        //     content: "auto"|"both"|"landscape"|"none"
-        //   }]
-        // }
-        ],
-      }, {
-        tag: "manifest",
-      }, {
-        tag: "spine",
-        attributes: {
-          // https://www.w3.org/TR/epub-33/#attrdef-spine-page-progression-direction
-          "page-progression-direction": null,
-        },
-      }],
-    }],
-  }, obj));
+        content: "urn:uuid:"+generateUUID(),
+      }]
+    }
+  });
 }
 /**
  * 
@@ -491,86 +726,13 @@ ePubDoc.prototype.createNav = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    path: "EPUB/nav.xhtml",
-    children: [{
-      tag: "?xml",
-      closer: "?",
-      attributes: {
-        "version": "1.0",
-        "encoding": "utf-8",
-      },
-    }, {
-      tag: "!DOCTYPE",
-      closer: "",
-      attributes: {
-        "html": true,
-      },
-    }, {
-      tag: "html",
-      attributes: {
-        "xmlns": "http://www.w3.org/1999/xhtml",
-        "xmlns:epub": "http://www.idpf.org/2007/ops",
-        "xml:lang": null,
-        "lang": null,
-        "dir": null,
-      },
-      children: [{
-        tag: "head",
-        children: [{
-          tag: "title",
-          children: [{
-            content: "Untitled",
-          }]
-        }, {
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "charset": "utf-8",
-          }
-        }],
-      }, {
-        tag: "body",
-        children: [{
-          tag: "nav",
-          attributes: {
-            "epub:type": "toc",
-            "id": "toc",
-            "role": "doc-toc",
-          }
-        }, {
-          tag: "nav",
-          attributes: {
-            "epub:type": "landmarks",
-            "id": "landmarks",
-            "hidden": "",
-          },
-          children: [{
-            tag: "h2",
-            children: [{
-              content: "Landmarks"
-            }]
-          }, {
-            tag: "ol",
-            children: [{
-              tag: "li",
-              children: [{
-                tag: "a",
-                attributes: {
-                  "epub:type": "toc",
-                  "href": "#toc",
-                },
-                children: [{
-                  content: "Table of Contents",
-                }]
-              }]
-            }]
-          }]
-        }],
-      }],
-    }],
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.nav, 
+      obj,
+    )
+  );
 }
 /**
  * 
@@ -581,68 +743,13 @@ ePubDoc.prototype.createNCX = function(obj) {
   if (!isObject(obj)) {
     obj = {};
   }
-  return this.createFile(Object.assign({
-    encoding: "utf8",
-    path: "EPUB/toc.ncx",
-    children: [{
-      tag: "?xml",
-      closer: "?",
-      attributes: {
-        "version": "1.0",
-        "encoding": "utf-8",
-      },
-    }, {
-      tag: "ncx",
-      attributes: {
-        "xmlns:m": "http://www.w3.org/1998/Math/MathML",
-        "xmlns": "http://www.daisy.org/z3986/2005/ncx/",
-        "version": "2005-1",
-        "xml:lang": null,
-      },
-      children: [{
-        tag: "head",
-        children: [{
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "name": "dtb:uid",
-            "content": "",
-          },
-        }, {
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "name": "dtb:depth",
-            "content": "1",
-          },
-        }, {
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "name": "dtb:totalPageCount",
-            "content": "0",
-          },
-        }, {
-          tag: "meta",
-          closer: " /",
-          attributes: {
-            "name": "dtb:maxPageNumber",
-            "content": "0",
-          },
-        }]
-      }, {
-        tag: "docTitle",
-        children: [{
-          tag: "text",
-          children: [{
-            "content": "Untitled",
-          }]
-        }],
-      }, {
-        tag: "navMap",
-      }],
-    }]
-  }, obj));
+  return this.createFile(
+    Object.assign(
+      {}, 
+      this.defaults.ncx, 
+      obj,
+    )
+  );
 }
 
 ePubDoc.prototype.findFile = function(query) {

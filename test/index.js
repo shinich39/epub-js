@@ -366,7 +366,7 @@ const imagePage = doc.createPage({
 doc.appendChild(imagePage);
 
 // Create manifest child and spine child
-const imageManifest = textPage.toManifestChild();
+const imageManifest = imagePage.toManifestChild();
 const imageSpine = imageManifest.toSpineChild();
 
 // Add new page to manifest
@@ -382,7 +382,7 @@ const imageNode = doc.createNode({
   closer: " /",
   attributes: {
     id: "cover-image",
-    style: "width: 100%;",
+    style: "display: block; width: auto; height: 100%; margin: 0 auto;",
     // src: coverImage.getRelativePath(imagePage),
     src: coverImage,
     alt: "Cover image",
@@ -436,8 +436,9 @@ tocNode.appendNode({
         href: textPage,
       },
       children: [{
-        content: "Page 1"
-      }]
+        data: "<strong>Page 1</strong>"
+      }],
+      // content: "<SPage 1",
     }]
   }, {
     tag: "li",
@@ -447,9 +448,10 @@ tocNode.appendNode({
         // href: imagePage.getRelativePath(navFile),
         href: imagePage,
       },
-      children: [{
-        content: "Page 2"
-      }]
+      // children: [{
+      //   content: "Page 2"
+      // }],
+      content: "Page 2",
     }, {
       tag: "ol",
       children: [{
@@ -551,7 +553,7 @@ const zip = new JSZip();
 for (const file of exportedFiles) {
   try {
     console.log(`> Write ${file.path}`);
-    
+
     const p = file.path;
 
     const data = file.encoding === "base64" ?
