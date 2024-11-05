@@ -2,7 +2,6 @@ import { ePubDoc } from "../index.js";
 import path from "node:path";
 import fs from "node:fs";
 import JSZip from "./jszip.min.mjs";
-import { getDirectoryPath, getRelativePath } from "../src/libs/utils.mjs";
 
 const INPUT_PATH = path.join(process.cwd(), "input");
 const OUTPUT_PATH = path.join(process.cwd(), "output");
@@ -140,7 +139,7 @@ const coverImage = doc.createImage({
   encoding: "base64",
   path: "EPUB/images/cover.png",
   data: fs.readFileSync(COVER_PATH, { encoding: "base64" }),
-})
+});
 
 // Add cover file to document
 doc.appendChild(coverImage);
@@ -435,10 +434,11 @@ tocNode.appendNode({
         // href: textPage.getRelativePath(navFile),
         href: textPage,
       },
-      children: [{
-        data: "<strong>Page 1</strong>"
-      }],
-      // content: "<SPage 1",
+      data: "<strong>Page 1</strong>",
+      // children: [{
+      //   tag: "string",
+      //   content: "Page 1",
+      // }]
     }]
   }, {
     tag: "li",
@@ -456,16 +456,9 @@ tocNode.appendNode({
       tag: "ol",
       children: [{
         tag: "li",
-        children: [{
-          tag: "a",
-          attributes: {
-            // href: imageNode.getRelativePath(navFile),
-            href: imageNode,
-          },
-          children: [{
-            content: "Image",
-          }]
-        }]
+        children: [
+          imageNode.toAnchorNode("toAnchorNode()"),
+        ]
       }]
     }]
   }],

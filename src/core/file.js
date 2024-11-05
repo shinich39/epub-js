@@ -162,11 +162,11 @@ ePubFile.prototype.getContent = function() {
   }
 
   let result = [];
-  for (const child of this.children) {
-    if (queryObject(child, query)) {
-      result.push(child.content);
+  for (const node of this.children) {
+    if (queryObject(node, query)) {
+      result.push(node.content);
     }
-    const nodes = child.findNodes(query);
+    const nodes = node.findNodes(query);
     for (const node of nodes) {
       result.push(node.content);
     }
@@ -217,7 +217,7 @@ ePubFile.prototype.setAttribute = function(key, value) {
  * @param {ePubNode|object|string} node
  * @returns 
  */
-ePubFile.prototype.appendChild = function(node) {
+ePubFile.prototype.appendNode = function(node) {
   this.children.push(node);
   this.init();
   return this;
@@ -227,7 +227,7 @@ ePubFile.prototype.appendChild = function(node) {
  * @param {ePubNode[]|object[]|string[]} nodes
  * @returns 
  */
-ePubFile.prototype.appendChildren = function(nodes) {
+ePubFile.prototype.appendNodes = function(nodes) {
   this.children = this.children.concat(nodes);
   this.init();
   return this;
@@ -237,7 +237,7 @@ ePubFile.prototype.appendChildren = function(nodes) {
  * @param {ePubNode|object} node
  * @returns 
  */
-ePubFile.prototype.prependChild = function(node) {
+ePubFile.prototype.prependNode = function(node) {
   this.children.unshift(node);
   this.init();
   return this;
@@ -247,7 +247,7 @@ ePubFile.prototype.prependChild = function(node) {
  * @param {ePubNode[]|object[]} nodes
  * @returns 
  */
-ePubFile.prototype.prependChildren = function(nodes) {
+ePubFile.prototype.prependNodes = function(nodes) {
   this.children = [].concat(nodes, this.children);
   this.init();
   return this;
@@ -258,7 +258,7 @@ ePubFile.prototype.prependChildren = function(nodes) {
  * @param {number} idx - Default value is -1
  * @returns 
  */
-ePubFile.prototype.insertChild = function(node, idx) {
+ePubFile.prototype.insertNode = function(node, idx) {
   idx = normalizeIndex(this.children.length, idx);
   this.children.splice(idx, 0, node);
   this.init();
@@ -270,7 +270,7 @@ ePubFile.prototype.insertChild = function(node, idx) {
  * @param {number} idx - Default value is -1
  * @returns 
  */
-ePubFile.prototype.insertChildren = function(nodes, idx) {
+ePubFile.prototype.insertNodes = function(nodes, idx) {
   idx = normalizeIndex(this.children.length, idx);
   this.children.splice(idx, 0, ...nodes);
   this.init();
@@ -281,106 +281,14 @@ ePubFile.prototype.insertChildren = function(nodes, idx) {
  * @param {object} query 
  * @returns 
  */
-ePubFile.prototype.findChild = function(query) {
-  for (const child of this.children) {
-    if (queryObject(child, query)) {
-      return child;
-    }
-  }
-}
-/**
- * 
- * @param {object} query 
- * @returns 
- */
-ePubFile.prototype.findChildren = function(query) {
-  let result = [];
-  for (const child of this.children) {
-    if (queryObject(child, query)) {
-      result.push(child);
-    }
-  }
-  return result;
-}
-/**
- * 
- * @param {object} query 
- * @param {object} updates 
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
- * @returns 
- */
-ePubFile.prototype.updateChild = function(query, updates) {
-  const child = this.findChild(query);
-  if (child) {
-    child.update(updates);
-  }
-  return this;
-}
-/**
- * 
- * @param {object} query 
- * @param {object} updates 
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
- * @returns 
- */
-ePubFile.prototype.updateChildren = function(query, updates) {
-  const children = this.findChildren(query);
-  for (const child of children) {
-    child.update(updates);
-  }
-  return this;
-}
-/**
- * 
- * @param {object} query 
- * @returns 
- */
-ePubFile.prototype.removeChild = function(query) {
-  const child = this.findChild(query);
-  if (child) {
-    child.remove();
-  }
-  return this;
-}
-/**
- * 
- * @param {object} query 
- * @returns 
- */
-ePubFile.prototype.removeChildren = function(query) {
-  const children = this.findChildren(query);
-  for (const child of children) {
-    child.remove();
-  }
-  return this;
-}
-/**
- * 
- * @param {object} query 
- * @returns 
- */
 ePubFile.prototype.findNode = function(query) {
-  for (const child of this.children) {
-    if (queryObject(child, query)) {
-      return child;
-    }
-    const node = child.findNode(query);
-    if (node) {
+  for (const node of this.children) {
+    if (queryObject(node, query)) {
       return node;
+    }
+    const _node = node.findNode(query);
+    if (_node) {
+      return _node;
     }
   }
 }
@@ -391,13 +299,13 @@ ePubFile.prototype.findNode = function(query) {
  */
 ePubFile.prototype.findNodes = function(query) {
   let result = [];
-  for (const child of this.children) {
-    if (queryObject(child, query)) {
-      result.push(child);
-    }
-    const nodes = child.findNodes(query);
-    for (const node of nodes) {
+  for (const node of this.children) {
+    if (queryObject(node, query)) {
       result.push(node);
+    }
+    const nodes = node.findNodes(query);
+    for (const _node of nodes) {
+      result.push(_node);
     }
   }
   return result;
@@ -556,11 +464,17 @@ ePubFile.prototype.update = ePubDoc.prototype.update;
 ePubFile.prototype.createFile = ePubDoc.prototype.createFile;
 ePubFile.prototype.createNode = ePubDoc.prototype.createNode;
 
-ePubFile.prototype.appendNode = ePubFile.prototype.appendChild;
-ePubFile.prototype.appendNodes = ePubFile.prototype.appendChildren;
-ePubFile.prototype.prependNode = ePubFile.prototype.prependChild;
-ePubFile.prototype.prependNodes = ePubFile.prototype.prependChildren;
-ePubFile.prototype.insertNode = ePubFile.prototype.insertChild;
-ePubFile.prototype.insertNodes = ePubFile.prototype.insertChildren;
+ePubFile.prototype.appendChild = ePubFile.prototype.appendNode;
+ePubFile.prototype.appendChildren = ePubFile.prototype.appendNodes;
+ePubFile.prototype.prependChild = ePubFile.prototype.prependNode;
+ePubFile.prototype.prependChildren = ePubFile.prototype.prependNodes;
+ePubFile.prototype.insertChild = ePubFile.prototype.insertNode;
+ePubFile.prototype.insertChildren = ePubFile.prototype.insertNodes;
+ePubFile.prototype.findChild = ePubFile.prototype.findNode;
+ePubFile.prototype.findChildren = ePubFile.prototype.findNodes;
+ePubFile.prototype.updateChild = ePubFile.prototype.updateNode;
+ePubFile.prototype.updateChildren = ePubFile.prototype.updateNodes;
+ePubFile.prototype.removeChild = ePubFile.prototype.removeNode;
+ePubFile.prototype.removeChildren = ePubFile.prototype.removeNodes;
 
 export { ePubFile }

@@ -2,8 +2,8 @@
 
 import { generateUUID, getRelativePath, getDirectoryPath, isArray, isNumber, isObject, isString } from "../libs/utils.mjs";
 import { ePubDoc, ePubFile } from "../index.js";
-import { deepcopy, isFile, isNode, normalizeIndex } from "../libs/utilities.js";
-import { toObj } from "../libs/dom.mjs";
+import { beautifyHTML, deepcopy, isFile, isNode, normalizeIndex } from "../libs/utilities.js";
+import { toObj, toStr } from "../libs/dom.mjs";
 
 class ePubNode {
   constructor(obj) {
@@ -214,19 +214,19 @@ ePubNode.prototype.update = ePubDoc.prototype.update;
 ePubNode.prototype.createFile = ePubDoc.prototype.createFile;
 ePubNode.prototype.createNode = ePubDoc.prototype.createNode;
 
-ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
-ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;
-ePubNode.prototype.prependChild = ePubFile.prototype.prependChild;
-ePubNode.prototype.prependChildren = ePubFile.prototype.prependChildren;
-ePubNode.prototype.insertChild = ePubFile.prototype.insertChild;
-ePubNode.prototype.insertChildren = ePubFile.prototype.insertChildren;
-
 ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
 ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
 ePubNode.prototype.prependNode = ePubFile.prototype.prependNode;
 ePubNode.prototype.prependNodes = ePubFile.prototype.prependNodes;
 ePubNode.prototype.insertNode = ePubFile.prototype.insertNode;
 ePubNode.prototype.insertNodes = ePubFile.prototype.insertNodes;
+
+ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
+ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;
+ePubNode.prototype.prependChild = ePubFile.prototype.prependChild;
+ePubNode.prototype.prependChildren = ePubFile.prototype.prependChildren;
+ePubNode.prototype.insertChild = ePubFile.prototype.insertChild;
+ePubNode.prototype.insertChildren = ePubFile.prototype.insertChildren;
 
 ePubNode.prototype.getContent = ePubFile.prototype.getContent;
 ePubNode.prototype.setContent = ePubFile.prototype.setContent;

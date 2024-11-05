@@ -410,7 +410,7 @@ ePubDoc.prototype.update = function(updates) {
  * @param {ePubFile|object} file
  * @returns 
  */
-ePubDoc.prototype.appendChild = function(file) {
+ePubDoc.prototype.appendFile = function(file) {
   this.files.push(file);
   this.init();
   return this;
@@ -420,7 +420,7 @@ ePubDoc.prototype.appendChild = function(file) {
  * @param {ePubFile[]|object[]} files 
  * @returns 
  */
-ePubDoc.prototype.appendChildren = function(files) {
+ePubDoc.prototype.appendFiles = function(files) {
   this.files = this.files.concat(files);
   this.init();
   return this;
@@ -430,7 +430,7 @@ ePubDoc.prototype.appendChildren = function(files) {
  * @param {ePubFile|object} file
  * @returns 
  */
-ePubDoc.prototype.prependChild = function(file) {
+ePubDoc.prototype.prependFile = function(file) {
   this.files.unshift(file);
   this.init();
   return this;
@@ -440,7 +440,7 @@ ePubDoc.prototype.prependChild = function(file) {
  * @param {ePubFile[]|object[]} files
  * @returns 
  */
-ePubDoc.prototype.prependChildren = function(files) {
+ePubDoc.prototype.prependFiles = function(files) {
   this.files = [].concat(files, this.files);
   this.init();
   return this;
@@ -451,7 +451,7 @@ ePubDoc.prototype.prependChildren = function(files) {
  * @param {number} idx - Default value is -1
  * @returns 
  */
-ePubDoc.prototype.insertChild = function(file, idx) {
+ePubDoc.prototype.insertFile = function(file, idx) {
   idx = normalizeIndex(this.files.length, idx);
   this.files.splice(idx, 0, file);
   this.init();
@@ -463,7 +463,7 @@ ePubDoc.prototype.insertChild = function(file, idx) {
  * @param {number} idx - Default value is -1
  * @returns 
  */
-ePubDoc.prototype.insertChildren = function(files, idx) {
+ePubDoc.prototype.insertFiles = function(files, idx) {
   idx = normalizeIndex(this.files.length, idx);
   this.files.splice(idx, 0, ...files);
   this.init();
@@ -754,7 +754,7 @@ ePubDoc.prototype.createNCX = function(obj) {
  * @param {object} query 
  * @returns 
  */
-ePubDoc.prototype.findChild = function(query) {
+ePubDoc.prototype.findFile = function(query) {
   return this.files.find(item => queryObject(item, query));
 }
 /**
@@ -762,7 +762,7 @@ ePubDoc.prototype.findChild = function(query) {
  * @param {object} query 
  * @returns 
  */
-ePubDoc.prototype.findChildren = function(query) {
+ePubDoc.prototype.findFiles = function(query) {
   return this.files.filter(item => queryObject(item, query));
 }
 /**
@@ -779,10 +779,10 @@ ePubDoc.prototype.findChildren = function(query) {
  * @property {object} $addToSetAll
  * @returns 
  */
-ePubDoc.prototype.updateChild = function(query, updates) {
-  const child = this.findChild(query);
-  if (child) {
-    child.update(updates);
+ePubDoc.prototype.updateFile = function(query, updates) {
+  const file = this.findFile(query);
+  if (file) {
+    file.update(updates);
   }
   return this;
 }
@@ -800,10 +800,10 @@ ePubDoc.prototype.updateChild = function(query, updates) {
  * @property {object} $addToSetAll
  * @returns 
  */
-ePubDoc.prototype.updateChildren = function(query, updates) {
-  const children = this.findChildren(query);
-  for (const child of children) {
-    child.update(updates);
+ePubDoc.prototype.updateFiles = function(query, updates) {
+  const files = this.findFiles(query);
+  for (const file of files) {
+    file.update(updates);
   }
   return this;
 }
@@ -812,10 +812,10 @@ ePubDoc.prototype.updateChildren = function(query, updates) {
  * @param {object} query 
  * @returns 
  */
-ePubDoc.prototype.removeChild = function(query) {
-  const child = this.findChild(query);
-  if (child) {
-    child.remove();
+ePubDoc.prototype.removeFile = function(query) {
+  const file = this.findFile(query);
+  if (file) {
+    file.remove();
   }
   return this;
 }
@@ -824,14 +824,13 @@ ePubDoc.prototype.removeChild = function(query) {
  * @param {object} query 
  * @returns 
  */
-ePubDoc.prototype.removeChildren = function(query) {
-  const children = this.findChildren(query);
-  for (const child of children) {
-    child.remove();
+ePubDoc.prototype.removeFiles = function(query) {
+  const files = this.findFiles(query);
+  for (const file of files) {
+    file.remove();
   }
   return this;
 }
-
 /**
  * 
  * @param {object} obj 
@@ -907,21 +906,21 @@ ePubDoc.prototype.toObject = function() {
 
 ePubDoc.prototype.toFiles = function() {
   const files = this.files.map(item => item.toFile());
-  
+
   return files;
 }
 
-ePubDoc.prototype.findFile = ePubDoc.prototype.findChild;
-ePubDoc.prototype.findFiles = ePubDoc.prototype.findChildren;
-ePubDoc.prototype.updateFile = ePubDoc.prototype.updateChild;
-ePubDoc.prototype.updateFiles = ePubDoc.prototype.updateChildren;
-ePubDoc.prototype.removeFile = ePubDoc.prototype.removeChild;
-ePubDoc.prototype.removeFiles = ePubDoc.prototype.removeChildren;
-ePubDoc.prototype.appendFile = ePubDoc.prototype.appendChild;
-ePubDoc.prototype.appendFiles = ePubDoc.prototype.appendChildren;
-ePubDoc.prototype.prependFile = ePubDoc.prototype.prependChild;
-ePubDoc.prototype.prependFiles = ePubDoc.prototype.prependChildren;
-ePubDoc.prototype.insertFile = ePubDoc.prototype.insertChild;
-ePubDoc.prototype.insertFiles = ePubDoc.prototype.insertChildren;
+ePubDoc.prototype.findChild = ePubDoc.prototype.findFile;
+ePubDoc.prototype.findChildren = ePubDoc.prototype.findFiles;
+ePubDoc.prototype.updateChild = ePubDoc.prototype.updateFile;
+ePubDoc.prototype.updateChildren = ePubDoc.prototype.updateFiles;
+ePubDoc.prototype.removeChild = ePubDoc.prototype.removeFile;
+ePubDoc.prototype.removeChildren = ePubDoc.prototype.removeFiles;
+ePubDoc.prototype.appendChild = ePubDoc.prototype.appendFile;
+ePubDoc.prototype.appendChildren = ePubDoc.prototype.appendFiles;
+ePubDoc.prototype.prependChild = ePubDoc.prototype.prependFile;
+ePubDoc.prototype.prependChildren = ePubDoc.prototype.prependFiles;
+ePubDoc.prototype.insertChild = ePubDoc.prototype.insertFile;
+ePubDoc.prototype.insertChildren = ePubDoc.prototype.insertFiles;
 
 export { ePubDoc }

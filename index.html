@@ -561,7 +561,7 @@
           }
         });
 
-        // Set default style
+        // Set default viewport
         page.findNode({
           tag: "head",
         })?.appendNodes([
@@ -1092,7 +1092,6 @@
         manifestNode.appendChild(m);
         spineNode.appendChild(s);
       }
-
 
       function getRadioValue(name) {
         let result;
