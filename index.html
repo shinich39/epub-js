@@ -431,7 +431,6 @@
         if (!navFile) {
           navFile = doc.createNav({
             toc: true,
-            isPage: true,
           });
 
           doc.appendChild(navFile);
@@ -882,7 +881,6 @@
       function appendTextFile(file) {
         let p = doc.createPage({
           toc: false,
-          isPage: true,
           path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
@@ -973,7 +971,6 @@
       function appendHTMLFile(file) {
         let p = doc.createPage({
           toc: false,
-          isPage: true,
           path: file.dirname + "/" + file.filename + ".xhtml",
           data: file.toString(),
         });
@@ -990,7 +987,6 @@
       function appendImageFile(file) {
         let p = doc.createPage({
           toc: false,
-          isPage: true,
           path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
@@ -1022,7 +1018,6 @@
       function appendAudioFile(file) {
         let p = doc.createPage({
           toc: false,
-          isPage: true,
           path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
@@ -1059,7 +1054,6 @@
       function appendVideoFile(file) {
         let p = doc.createPage({
           toc: false,
-          isPage: true,
           path: file.dirname + "/" + file.filename + ".xhtml",
         });
 
@@ -1137,7 +1131,7 @@
           const tocBox = document.createElement("input");
           tocBox.type = "checkbox";
           tocBox.checked = file.toc;
-          tocBox.disabled = !file.isPage;
+          tocBox.disabled = file.extension !== "xhtml";
           tocBox.addEventListener("change", function(e) {
             file.toc = e.target.checked;
           });

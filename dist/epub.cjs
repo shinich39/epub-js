@@ -4604,7 +4604,9 @@ function updateObject(obj, updates) {
       } else if (operator === "$push") {
         target[key].push(value);
       } else if (operator === "$pushAll") {
-        target[key] = target[key].concat(value);
+        for (const v of value) {
+          target[key].push(v);
+        }
       } else if (operator === "$pull") {
         for (let i = target[key].length; i >= 0; i--) {
           if (target[key][i] === value) {
@@ -4613,7 +4615,13 @@ function updateObject(obj, updates) {
           }
         }
       } else if (operator === "$pullAll") {
-        target[key] = target[key].filter((item) => value.indexOf(item) === -1);
+        const prev = target[key];
+        target[key] = [];
+        for (const v of prev) {
+          if (value.indexOf(v) === -1) {
+            target[key].push(v);
+          }
+        }
       } else if (operator === "$addToSet") {
         if (target[key].indexOf(value) === -1) {
           target[key].push(value);
