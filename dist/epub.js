@@ -4604,7 +4604,7 @@ var epub = (() => {
         } else if (operator === "$push") {
           target[key].push(value);
         } else if (operator === "$pushAll") {
-          target[key].concat(value);
+          target[key] = target[key].concat(value);
         } else if (operator === "$pull") {
           for (let i = target[key].length; i >= 0; i--) {
             if (target[key][i] === value) {
