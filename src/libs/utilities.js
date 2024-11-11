@@ -46,7 +46,7 @@ function normalizeBase64(str) {
 }
 
 function normalizePath(str) {
-  return str.replace(/[\\\/]/, "\/")
+  return str.replace(/[\\\/]+/g, "/")
     .replace(/^\.?\//, "");
 }
 

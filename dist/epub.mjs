@@ -4557,7 +4557,7 @@ function normalizeIndex(max, idx) {
   return Math.floor(idx);
 }
 function normalizePath(str) {
-  return str.replace(/[\\\/]/, "/").replace(/^\.?\//, "");
+  return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
 }
 function extToMime(ext) {
   return src_default.getType(ext);
