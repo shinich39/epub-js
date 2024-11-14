@@ -41,7 +41,6 @@ class ePubFile {
  * @returns 
  */
 ePubFile.prototype.init = function() {
-  // File is root node
   // tag, closer, and content values must be null
   this.tag = null;
   this.closer = null;
@@ -50,11 +49,11 @@ ePubFile.prototype.init = function() {
   // Parse path
   if (isString(this.path)) {
     this.path = normalizePath(this.path);
-    this.basename = getFilename(this.path);
-    this.filename = getFilename(this.path, getExtension(this.path));
-    this.dirname = getDirectoryPath(this.path);
-    this.extension = getExtension(this.path);
-    this.mimetype = extToMime(this.path);
+    this.basename = this.getBasename();
+    this.filename = this.getFilename();
+    this.dirname = this.getDirname();
+    this.extname = this.getExtname();
+    this.mimetype = this.getMimetype();
   }
 
   // Parse imported by string DOM
@@ -63,23 +62,14 @@ ePubFile.prototype.init = function() {
     this.data = null;
   }
 
-  // Parse attributes when a file is appended
-  if (isDoc(this.document) && isObject(this.attributes)) {
-    for (const [key, value] of Object.entries(this.attributes)) {
-      if (isFile(value) || isNode(value)) {
-        this.attributes[key] = value.getRelativePath(this);
-      }
-    }
-  }
-
   // Convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
       if (isNode(this.children[i])) {
-        if (
-          !this.children[i].parentNode ||
-          this.children[i].parentNode._id !== this._id
-        ) {
+        if (!this.children[i].parentNode) {
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        } else if (this.children[i].parentNode._id !== this._id) {
           this.children[i].remove();
           this.children[i].parentNode = this;
           this.children[i].init();
@@ -117,6 +107,41 @@ ePubFile.prototype.getIndex = function() {
     return -1;
   }
   return this.document.files.findIndex(item => item._id == this._id);
+}
+/**
+ * 
+ * @returns {string}
+ */
+ePubFile.prototype.getBasename = function() {
+  return getFilename(this.path);
+}
+/**
+ * 
+ * @returns {string}
+ */
+ePubFile.prototype.getFilename = function() {
+  return getFilename(this.path, getExtension(this.path));
+}
+/**
+ * 
+ * @returns {string}
+ */
+ePubFile.prototype.getDirname = function() {
+  return getDirectoryPath(this.path);
+}
+/**
+ * 
+ * @returns {string}
+ */
+ePubFile.prototype.getExtname = function() {
+  return getExtension(this.path);
+}
+/**
+ * 
+ * @returns {string}
+ */
+ePubFile.prototype.getMimetype = function() {
+  return extToMime(this.path);
 }
 /**
  * 
@@ -376,62 +401,6 @@ ePubFile.prototype.removeNodes = function(query) {
   }
   return this;
 }
-/**
- * https://www.w3.org/TR/epub-33/#sec-item-elem
- * @param {object} obj - Attributes of manifest node
- * @property {string} id
- * @property {string} href - Path of file
- * @property {string} media-overlay
- * @property {string} media-type 
- * @property {string} properties "cover-image"|"nav"|"ncx"|...
- * @property {string} fallback
- * @returns 
- */
-ePubFile.prototype.toManifestChild = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createNode({
-    tag: "item",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "id": this._id,
-        // "href": this.getRelativePath(packagePath),
-        "href": this,
-        "media-type": this.mimetype,
-      }, 
-      obj,
-    ),
-  });
-}
-/**
- * 
- * @param {string} content - Attributes of a tag 
- * @param {object} attributes - Attributes of a tag 
- * @property {string} id
- * @property {string} class
- * @property {string} style
- * @property {string} href - Path of file
- * @returns 
- */
-ePubFile.prototype.toAnchorNode = function(content, attributes) {
-  if (!isString(content)) {
-    content = "";
-  }
-  if (!isObject(attributes)) {
-    attributes = {};
-  }
-  return this.createNode({
-    tag: "a",
-    attributes: Object.assign({
-      "href": this,
-    }, attributes),
-    children: [{
-      content: content,
-    }],
-  });
-}
 
 ePubFile.prototype.toString = function() {
   if (isDOM(this.mimetype)) {
@@ -459,6 +428,9 @@ ePubFile.prototype.toFile = function() {
     encoding: this.encoding,
   }
 }
+
+ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
+ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
 
 ePubFile.prototype.update = ePubDoc.prototype.update;
 ePubFile.prototype.createFile = ePubDoc.prototype.createFile;

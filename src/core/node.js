@@ -67,23 +67,14 @@ ePubNode.prototype.init = function() {
     this.closer = null;
   }
 
-  // Parse instance of attributes when a node is appended
-  if (isNode(this.parentNode) && isObject(this.attributes)) {
-    for (const [key, value] of Object.entries(this.attributes)) {
-      if (isFile(value) || isNode(value)) {
-        this.attributes[key] = value.getRelativePath(this);
-      }
-    }
-  }
-
   // Convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
       if (isNode(this.children[i])) {
-        if (
-          !this.children[i].parentNode ||
-          this.children[i].parentNode._id !== this._id
-        ) {
+        if (!this.children[i].parentNode) {
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        } else if (this.children[i].parentNode._id !== this._id) {
           this.children[i].remove();
           this.children[i].parentNode = this;
           this.children[i].init();
@@ -99,12 +90,12 @@ ePubNode.prototype.init = function() {
       } else if (isString(this.children[i])) {
         this.children[i] = this.createNode({
           parentNode: this,
-          content: this.children[i]
+          content: this.children[i],
         });
       } else if (isNumber(this.children[i])) {
         this.children[i] = this.createNode({
           parentNode: this,
-          content: "" + this.children[i]
+          content: "" + this.children[i],
         });
       }
     }
@@ -112,7 +103,10 @@ ePubNode.prototype.init = function() {
 
   return this;
 }
-
+/**
+ * 
+ * @returns {ePubDoc|undefined}
+ */
 ePubNode.prototype.getDocument = function() {
   const rootNode = this.getRootNode();
   if (rootNode) {
@@ -120,7 +114,10 @@ ePubNode.prototype.getDocument = function() {
   }
   return;
 }
-
+/**
+ * 
+ * @returns {ePubFile|undefined}
+ */
 ePubNode.prototype.getRootNode = function() {
   let parentNode = this.parentNode;
   while(isNode(parentNode)) {
@@ -128,7 +125,10 @@ ePubNode.prototype.getRootNode = function() {
   }
   return parentNode;
 }
-
+/**
+ * 
+ * @returns {number}
+ */
 ePubNode.prototype.getIndex = function() {
   if (!this.parentNode) {
     return -1;
@@ -171,30 +171,6 @@ ePubNode.prototype.remove = function() {
 
   return this;
 }
-/**
- * https://www.w3.org/TR/epub-33/#sec-itemref-elem
- * @param {object} obj - Attributes of spine node
- * @property {string} id
- * @property {string} idref - ID of manifest node
- * @property {string} linear - "yes"|"no"
- * @property {string} properties
- * @returns 
- */
-ePubNode.prototype.toSpineChild = function(obj) {
-  if (!isObject(obj)) {
-    obj = {};
-  }
-  return this.createNode({
-    tag: "itemref",
-    closer: " /",
-    attributes: Object.assign(
-      {
-        "idref": this.getAttribute("id"),
-      },
-      obj,
-    ),
-  });
-}
 
 ePubNode.prototype.toString = function() {
   return beautifyHTML(toStr(this));
@@ -209,6 +185,10 @@ ePubNode.prototype.toObject = function() {
 
   return deepcopy(obj);
 }
+
+ePubNode.prototype.getFile = ePubNode.prototype.getRootNode;
+ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
+ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
 
 ePubNode.prototype.update = ePubDoc.prototype.update;
 ePubNode.prototype.createFile = ePubDoc.prototype.createFile;

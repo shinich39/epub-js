@@ -263,7 +263,15 @@ ePubDoc.prototype.defaults = {
             "epub:type": "toc",
             "id": "toc",
             "role": "doc-toc",
-          }
+          },
+          children: [{
+            tag: "h1",
+            children: [{
+              content: "Table of Contents"
+            }]
+          }, {
+            tag: "ol",
+          }],
         }, {
           tag: "nav",
           attributes: {

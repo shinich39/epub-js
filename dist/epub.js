@@ -4553,9 +4553,6 @@ var epub = (() => {
   function isInstance(obj) {
     return obj instanceof ePubDoc || obj instanceof ePubFile || obj instanceof ePubNode;
   }
-  function isDoc(obj) {
-    return obj instanceof ePubDoc;
-  }
   function isFile(obj) {
     return obj instanceof ePubFile;
   }
@@ -4919,7 +4916,15 @@ var epub = (() => {
               "epub:type": "toc",
               "id": "toc",
               "role": "doc-toc"
-            }
+            },
+            children: [{
+              tag: "h1",
+              children: [{
+                content: "Table of Contents"
+              }]
+            }, {
+              tag: "ol"
+            }]
           }, {
             tag: "nav",
             attributes: {
@@ -5605,27 +5610,23 @@ var epub = (() => {
     this.content = null;
     if (isString(this.path)) {
       this.path = normalizePath(this.path);
-      this.basename = getFilename(this.path);
-      this.filename = getFilename(this.path, getExtension(this.path));
-      this.dirname = getDirectoryPath(this.path);
-      this.extension = getExtension(this.path);
-      this.mimetype = extToMime(this.path);
+      this.basename = this.getBasename();
+      this.filename = this.getFilename();
+      this.dirname = this.getDirname();
+      this.extname = this.getExtname();
+      this.mimetype = this.getMimetype();
     }
     if (isDOM(this.mimetype) && isString(this.data)) {
       this.children = strToObj(this.data).children;
       this.data = null;
     }
-    if (isDoc(this.document) && isObject(this.attributes)) {
-      for (const [key, value] of Object.entries(this.attributes)) {
-        if (isFile(value) || isNode(value)) {
-          this.attributes[key] = value.getRelativePath(this);
-        }
-      }
-    }
     if (isArray(this.children)) {
       for (let i = 0; i < this.children.length; i++) {
         if (isNode(this.children[i])) {
-          if (!this.children[i].parentNode || this.children[i].parentNode._id !== this._id) {
+          if (!this.children[i].parentNode) {
+            this.children[i].parentNode = this;
+            this.children[i].init();
+          } else if (this.children[i].parentNode._id !== this._id) {
             this.children[i].remove();
             this.children[i].parentNode = this;
             this.children[i].init();
@@ -5658,6 +5659,21 @@ var epub = (() => {
       return -1;
     }
     return this.document.files.findIndex((item) => item._id == this._id);
+  };
+  ePubFile.prototype.getBasename = function() {
+    return getFilename(this.path);
+  };
+  ePubFile.prototype.getFilename = function() {
+    return getFilename(this.path, getExtension(this.path));
+  };
+  ePubFile.prototype.getDirname = function() {
+    return getDirectoryPath(this.path);
+  };
+  ePubFile.prototype.getExtname = function() {
+    return getExtension(this.path);
+  };
+  ePubFile.prototype.getMimetype = function() {
+    return extToMime(this.path);
   };
   ePubFile.prototype.getAbsolutePath = function() {
     return this.path;
@@ -5801,41 +5817,6 @@ var epub = (() => {
     }
     return this;
   };
-  ePubFile.prototype.toManifestChild = function(obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return this.createNode({
-      tag: "item",
-      closer: " /",
-      attributes: Object.assign(
-        {
-          "id": this._id,
-          // "href": this.getRelativePath(packagePath),
-          "href": this,
-          "media-type": this.mimetype
-        },
-        obj
-      )
-    });
-  };
-  ePubFile.prototype.toAnchorNode = function(content, attributes) {
-    if (!isString(content)) {
-      content = "";
-    }
-    if (!isObject(attributes)) {
-      attributes = {};
-    }
-    return this.createNode({
-      tag: "a",
-      attributes: Object.assign({
-        "href": this
-      }, attributes),
-      children: [{
-        content
-      }]
-    });
-  };
   ePubFile.prototype.toString = function() {
     if (isDOM(this.mimetype)) {
       return beautifyHTML(objToStr(this));
@@ -5857,6 +5838,8 @@ var epub = (() => {
       encoding: this.encoding
     };
   };
+  ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
+  ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
   ePubFile.prototype.update = ePubDoc.prototype.update;
   ePubFile.prototype.createFile = ePubDoc.prototype.createFile;
   ePubFile.prototype.createNode = ePubDoc.prototype.createNode;
@@ -5920,17 +5903,13 @@ var epub = (() => {
       this.tag = null;
       this.closer = null;
     }
-    if (isNode(this.parentNode) && isObject(this.attributes)) {
-      for (const [key, value] of Object.entries(this.attributes)) {
-        if (isFile(value) || isNode(value)) {
-          this.attributes[key] = value.getRelativePath(this);
-        }
-      }
-    }
     if (isArray(this.children)) {
       for (let i = 0; i < this.children.length; i++) {
         if (isNode(this.children[i])) {
-          if (!this.children[i].parentNode || this.children[i].parentNode._id !== this._id) {
+          if (!this.children[i].parentNode) {
+            this.children[i].parentNode = this;
+            this.children[i].init();
+          } else if (this.children[i].parentNode._id !== this._id) {
             this.children[i].remove();
             this.children[i].parentNode = this;
             this.children[i].init();
@@ -6002,21 +5981,6 @@ var epub = (() => {
     delete this.parentNode;
     return this;
   };
-  ePubNode.prototype.toSpineChild = function(obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return this.createNode({
-      tag: "itemref",
-      closer: " /",
-      attributes: Object.assign(
-        {
-          "idref": this.getAttribute("id")
-        },
-        obj
-      )
-    });
-  };
   ePubNode.prototype.toString = function() {
     return beautifyHTML(objToStr(this));
   };
@@ -6027,6 +5991,9 @@ var epub = (() => {
     delete obj.parentNode;
     return deepcopy(obj);
   };
+  ePubNode.prototype.getFile = ePubNode.prototype.getRootNode;
+  ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
+  ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
   ePubNode.prototype.update = ePubDoc.prototype.update;
   ePubNode.prototype.createFile = ePubDoc.prototype.createFile;
   ePubNode.prototype.createNode = ePubDoc.prototype.createNode;

@@ -10,18 +10,84 @@ const COVER_PATH = path.join(process.cwd(), "test/cover.png");
 // Create a ePub document
 const doc = new ePubDoc();
 
-// ### Find default files
+/**
+ * Default files
+ */
 const mimetypeFile = doc.findFile({ filename: "mimetype" });
 const containerFile = doc.findFile({ basename: "container.xml" });
 const packageFile = doc.findFile({ basename: "package.opf" });
 
-// ### Find default nodes
+/**
+ * Default nodes
+ */
 const packageNode = packageFile.findNode({ tag: "package" });
 const metadataNode = packageFile.findNode({ tag: "metadata" });
 const manifestNode = packageFile.findNode({ tag: "manifest" });
 const spineNode = packageFile.findNode({ tag: "spine" });
 
-// ### Set metadata
+/**
+ * Custom methods to update manifest and spine node
+ */
+
+/**
+ * https://www.w3.org/TR/epub-33/#sec-item-elem
+ * @param {object} obj - Attributes of manifest node
+ * @property {string} id
+ * @property {string} href - Path of file
+ * @property {string} media-overlay
+ * @property {string} media-type 
+ * @property {string} properties "cover-image"|"nav"|"ncx"|...
+ * @property {string} fallback
+ * @returns 
+ */
+const addToManifest = function(file, properties) {
+  const n = doc.createNode({
+    tag: "item",
+    closer: " /",
+    attributes: {
+      "id": file._id,
+      "href": file.getRelativePath(packageFile),
+      "media-overlay": null,
+      "media-type": file.mimetype,
+      "properties": properties || null,
+      "fallback": null,
+    },
+  });
+
+  manifestNode.appendChild(n);
+
+  return n;
+}
+
+/**
+ * https://www.w3.org/TR/epub-33/#sec-itemref-elem
+ * @param {object} obj - Attributes of spine node
+ * @property {string} id
+ * @property {string} idref - ID of manifest child
+ * @property {string} linear - "yes"|"no"
+ * @property {string} properties
+ * @returns 
+ */
+const addToSpine = function(file, linear) {
+  const n = doc.createNode({
+    tag: "itemref",
+    closer: " /",
+    attributes: {
+      "id": null,
+      "idref": file._id,
+      "linear": linear || null,
+      "properties": null,
+    },
+  });
+
+  spineNode.appendChild(n);
+
+  return n;
+}
+
+/**
+ * Metadata
+ */
 
 // Set title
 // <dc:title id="title-1">New Title</dc:title>
@@ -132,7 +198,9 @@ spineNode.update({
   }
 });
 
-// ### Add cover file
+/**
+ * Cover
+ */
 
 // Create a cover file
 const coverImage = doc.createImage({
@@ -144,13 +212,9 @@ const coverImage = doc.createImage({
 // Add cover file to document
 doc.appendChild(coverImage);
 
-// Create manifest child and spine child
-const coverManifest = coverImage.toManifestChild({
-  properties: "cover-image"
-});
-
-// Add manifest child to <manifest>
-manifestNode.appendChild(coverManifest);
+// Create manifest child
+const coverManifest = addToManifest(coverImage);
+coverManifest.setAttribute("properties", "cover-image");
 
 // Add metadata for ePub 2.0 compatibility
 metadataNode.appendChild({
@@ -162,7 +226,9 @@ metadataNode.appendChild({
   }
 });
 
-// ### Add navigation file
+/**
+ * Navigation
+ */
 
 // Create a navigation file
 const navFile = doc.createNav();
@@ -170,33 +236,17 @@ const navFile = doc.createNav();
 // Append nav file to document
 doc.appendChild(navFile);
 
-// Create manifest child and spine child
-const navManifest = navFile.toManifestChild({
-  properties: "nav"
-});
-const navSpine = navManifest.toSpineChild();
+// Create a manifest child
+const navManifest = addToManifest(navFile);
+navManifest.setAttribute("properties", "nav");
 
-// Set manifest child attributes
-navManifest.update({
-  $set: {
-    "attributes.properties": "nav"
-  }
-});
+// Create a spine child
+const navSpine = addToSpine(navFile);
+navSpine.setAttribute("linear", "no");
 
-// Add manifest child to <manifest>
-manifestNode.appendChild(navManifest);
-
-// Set spine child attributes
-navSpine.update({
-  $set: {
-    "attributes.linear": "yes"
-  }
-});
-
-// Add nav to spine
-spineNode.appendChild(navSpine);
-
-// ### Add NCX file
+/**
+ * NCX (legacy)
+ */
 
 // Create a NCX file
 const ncxPage = doc.createNCX();
@@ -204,13 +254,9 @@ const ncxPage = doc.createNCX();
 // Append ncx file to document
 doc.appendChild(ncxPage);
 
-// Create manifest child and spine child
-const ncxManifest = ncxPage.toManifestChild({
-  properties: "ncx"
-});
-
-// Add ncx to manifest
-manifestNode.appendChild(ncxManifest);
+// Create manifest child
+const ncxManifest = addToManifest(ncxPage);
+ncxManifest.setAttribute("properties", "ncx");
 
 // Set EPUB2 compatibility for using NCX file
 // <spine ... toc="ncx">...</spine>
@@ -287,7 +333,9 @@ ncxPage.findNode({
   }
 ), docTitleIndex + 1);
 
-// ### Add page file
+/**
+ * Text page
+ */
 
 // Create a text page
 const textPage = doc.createPage({
@@ -298,14 +346,8 @@ const textPage = doc.createPage({
 doc.appendChild(textPage);
 
 // Create manifest child and spine child
-const textManifest = textPage.toManifestChild();
-const textSpine = textManifest.toSpineChild();
-
-// Add new page to manifest
-manifestNode.appendChild(textManifest);
-
-// Add new page to spine
-spineNode.appendChild(textSpine);
+addToManifest(textPage);
+addToSpine(textPage);
 
 // Add <h1> to <body>
 // <h1 id="heading" class="heading" style="font-size 1rem;">Text page</h1>
@@ -356,6 +398,10 @@ textPage
     }]
   }]);
 
+/**
+ * Image page
+ */
+
 // Create an image page
 const imagePage = doc.createPage({
   path: "EPUB/texts/page-02.xhtml",
@@ -365,16 +411,10 @@ const imagePage = doc.createPage({
 doc.appendChild(imagePage);
 
 // Create manifest child and spine child
-const imageManifest = imagePage.toManifestChild();
-const imageSpine = imageManifest.toSpineChild();
+addToManifest(imagePage);
+addToSpine(imagePage);
 
-// Add new page to manifest
-manifestNode.appendChild(imageManifest);
-
-// Add new page to spine
-spineNode.appendChild(imageSpine);
-
-// Create <img /> node
+// Create a node: <img /> 
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
 const imageNode = doc.createNode({
   tag: "img",
@@ -382,8 +422,7 @@ const imageNode = doc.createNode({
   attributes: {
     id: "cover-image",
     style: "display: block; width: auto; height: 100%; margin: 0 auto;",
-    // src: coverImage.getRelativePath(imagePage),
-    src: coverImage,
+    src: coverImage.getRelativePath(imagePage),
     alt: "Cover image",
   }
 });
@@ -393,7 +432,9 @@ imagePage
   .findNode({ tag: "body" })
   .appendChild(imageNode);
 
-// ### Set TOC items
+/**
+ * TOC
+ */
 
 // Find <nav epub:type="toc">...</nav> node
 const tocNode = navFile.findNode({
@@ -403,66 +444,71 @@ const tocNode = navFile.findNode({
   }
 });
 
-// Add <h1> node
-tocNode.appendNode({
+// Find <h1> node in TOC node
+const tocTitleNode = tocNode.findNode({
   tag: "h1",
-  children: [{
-    content: "Table of Contents",
-  }],
 });
 
-// Add List node
-tocNode.appendNode({
+tocTitleNode.setContent("Table of Contents");
+
+// Find <ol> node in TOC node
+const tocListNode = tocNode.findNode({
   tag: "ol",
-  children: [{
-    tag: "li",
-    children: [{
-      tag: "a",
-      attributes: {
-        // href: navFile.getRelativePath(navFile),
-        href: navFile,
-      },
-      children: [{
-        content: "Navigation"
-      }]
-    }]
-  }, {
-    tag: "li",
-    children: [{
-      tag: "a",
-      attributes: {
-        // href: textPage.getRelativePath(navFile),
-        href: textPage,
-      },
-      data: "<strong>Page 1</strong>",
-      // children: [{
-      //   tag: "string",
-      //   content: "Page 1",
-      // }]
-    }]
-  }, {
-    tag: "li",
-    children: [{
-      tag: "a",
-      attributes: {
-        // href: imagePage.getRelativePath(navFile),
-        href: imagePage,
-      },
-      // children: [{
-      //   content: "Page 2"
-      // }],
-      content: "Page 2",
-    }, {
-      tag: "ol",
-      children: [{
-        tag: "li",
-        children: [
-          imageNode.toAnchorNode("toAnchorNode()"),
-        ]
-      }]
-    }]
-  }],
 });
+
+// Add Item node to List node
+tocListNode.appendNodes([{
+  tag: "li",
+  children: [{
+    tag: "a",
+    attributes: {
+      href: navFile.getRelativePath(navFile),
+    },
+    children: [{
+      content: "Navigation"
+    }]
+  }]
+}, {
+  tag: "li",
+  children: [{
+    tag: "a",
+    attributes: {
+      href: textPage.getRelativePath(navFile),
+    },
+    data: "<strong>Page 1</strong>",
+    // children: [{
+    //   tag: "string",
+    //   content: "Page 1",
+    // }]
+  }]
+}, {
+  tag: "li",
+  children: [{
+    tag: "a",
+    attributes: {
+      href: imagePage.getRelativePath(navFile),
+    },
+    // children: [{
+    //   content: "Page 2"
+    // }],
+    content: "Page 2",
+  }, {
+    tag: "ol",
+    children: [{
+      tag: "li",
+      children: [{
+        tag: "a",
+        attributes: {
+          href: imageNode.getRelativePath(navFile),
+        },
+        // children: [{
+        //   content: "Page 2 - image"
+        // }],
+        content: "Page 2 - image",
+      }]
+    }]
+  }]
+}]);
 
 // Set text direction to all pages
 // doc.updateNodes({
@@ -487,7 +533,9 @@ doc.updateNode({
   }
 });
 
-// ### Get metadata
+/**
+ * Read metadata from package file
+ */
 
 const id = doc.findNode({ tag: "dc:identifier" }).getContent();
 // "urn:uuid:1e812363-9604-4f33-aad0-e0064ccb5a60"
@@ -507,18 +555,19 @@ console.log("Title:", title);
 console.log("Authors:", authors);
 console.log("Language:", language);
 
-// Clear output
+/**
+ * Export
+ */
+
+// Clear output directory
 console.log();
 console.log(`> Remove all files in the output directory`);
-
 fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
 
-// ### Export to file
-
-// Export document to JSON
+// Export document to object
 const exportedObject = doc.toObject();
 
-// Import document from JSON
+// Import document from object
 const newDoc = new ePubDoc(exportedObject);
 
 // Export to file
@@ -527,7 +576,6 @@ const exportedFiles = newDoc.toFiles();
 // Test with fs
 console.log();
 console.log(`> Start writing files`);
-
 for (const file of exportedFiles) {
   const filePath = path.join(OUTPUT_PATH, title, file.path);
   const dirPath = path.dirname(filePath);
