@@ -5594,7 +5594,12 @@ ePubFile.prototype.init = function() {
   this.closer = null;
   this.content = null;
   if (isString(this.path)) {
-    this.path = normalizePath(this.path);
+    const fullPath = normalizePath(this.path);
+    this.basename = getFilename(fullPath);
+    this.extname = getExtension(fullPath);
+    this.filename = getFilename(fullPath, this.extname);
+    this.dirname = getDirectoryPath(fullPath);
+    this.mimetype = extToMime(fullPath);
     this.basename = this.getBasename();
     this.filename = this.getFilename();
     this.dirname = this.getDirname();
@@ -5646,22 +5651,22 @@ ePubFile.prototype.getIndex = function() {
   return this.document.files.findIndex((item) => item._id == this._id);
 };
 ePubFile.prototype.getBasename = function() {
-  return getFilename(this.path);
+  return getFilename(this.getAbsolutePath());
 };
 ePubFile.prototype.getFilename = function() {
-  return getFilename(this.path, getExtension(this.path));
+  return getFilename(this.path, getExtension(this.getAbsolutePath()));
 };
 ePubFile.prototype.getDirname = function() {
-  return getDirectoryPath(this.path);
+  return getDirectoryPath(this.getAbsolutePath());
 };
 ePubFile.prototype.getExtname = function() {
-  return getExtension(this.path);
+  return getExtension(this.getAbsolutePath());
 };
 ePubFile.prototype.getMimetype = function() {
-  return extToMime(this.path);
+  return extToMime(this.getAbsolutePath());
 };
 ePubFile.prototype.getAbsolutePath = function() {
-  return this.path;
+  return normalizePath(this.path);
 };
 ePubFile.prototype.getRelativePath = function(from) {
   if (isFile(from) || isNode(from)) {
