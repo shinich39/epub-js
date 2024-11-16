@@ -5600,11 +5600,6 @@ ePubFile.prototype.init = function() {
     this.filename = getFilename(fullPath, this.extname);
     this.dirname = getDirectoryPath(fullPath);
     this.mimetype = extToMime(fullPath);
-    this.basename = this.getBasename();
-    this.filename = this.getFilename();
-    this.dirname = this.getDirname();
-    this.extname = this.getExtname();
-    this.mimetype = this.getMimetype();
   }
   if (isDOM(this.mimetype) && isString(this.data)) {
     this.children = strToObj(this.data).children;
