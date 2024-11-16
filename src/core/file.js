@@ -48,7 +48,13 @@ ePubFile.prototype.init = function() {
 
   // Parse path
   if (isString(this.path)) {
-    this.path = normalizePath(this.path);
+    const fullPath = normalizePath(this.path);
+    this.basename = getFilename(fullPath);
+    this.extname = getExtension(fullPath);
+    this.filename = getFilename(fullPath, this.extname);
+    this.dirname = getDirectoryPath(fullPath);
+    this.mimetype = extToMime(fullPath);
+  
     this.basename = this.getBasename();
     this.filename = this.getFilename();
     this.dirname = this.getDirname();
@@ -113,42 +119,42 @@ ePubFile.prototype.getIndex = function() {
  * @returns {string}
  */
 ePubFile.prototype.getBasename = function() {
-  return getFilename(this.path);
+  return getFilename(this.getAbsolutePath());
 }
 /**
  * 
  * @returns {string}
  */
 ePubFile.prototype.getFilename = function() {
-  return getFilename(this.path, getExtension(this.path));
+  return getFilename(this.path, getExtension(this.getAbsolutePath()));
 }
 /**
  * 
  * @returns {string}
  */
 ePubFile.prototype.getDirname = function() {
-  return getDirectoryPath(this.path);
+  return getDirectoryPath(this.getAbsolutePath());
 }
 /**
  * 
  * @returns {string}
  */
 ePubFile.prototype.getExtname = function() {
-  return getExtension(this.path);
+  return getExtension(this.getAbsolutePath());
 }
 /**
  * 
  * @returns {string}
  */
 ePubFile.prototype.getMimetype = function() {
-  return extToMime(this.path);
+  return extToMime(this.getAbsolutePath());
 }
 /**
  * 
  * @returns {string}
  */
 ePubFile.prototype.getAbsolutePath = function() {
-  return this.path;
+  return normalizePath(this.path);
 }
 /**
  * 
