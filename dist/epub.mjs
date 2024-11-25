@@ -4272,7 +4272,7 @@ function isArray(obj) {
   }
 }
 function getExtension(path) {
-  if (/\.[^\\\/]/.test(path)) {
+  if (/\.[^\\\/.]+?$/.test(path)) {
     return "." + path.split(".").pop();
   } else {
     return "";
@@ -4285,11 +4285,11 @@ function getFilename(path, ext) {
   return path.replace(/[\\\/]$/, "").split(/[\\\/]/).pop();
 }
 function getDirectoryPath(path) {
-  return path.replace(/[^\\\/]+?[\\\/]?$/, "").replace(/(.)[\\\/]$/, "$1") || ".";
+  return path.replace(/[^\\\/]+[\\\/]?$/, "").replace(/[\\\/]+$/, "") || ".";
 }
 function getRelativePath(from, to) {
   from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
-  to = (to + "/").replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+  to = (to + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
   let result = "";
   while (!to.startsWith(from)) {
     result += "../";
