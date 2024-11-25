@@ -60,6 +60,7 @@ __export(utils_js_exports, {
   isString: () => isString,
   isStringArray: () => isStringArray,
   parseCommand: () => parseCommand,
+  parsePath: () => parsePath,
   parseQueryString: () => parseQueryString,
   parseTemplate: () => parseTemplate,
   promiseAll: () => promiseAll,
@@ -439,15 +440,13 @@ function parseCommand(str) {
   return result;
 }
 function parseQueryString(str) {
-  if (str.indexOf("?") > -1) {
-    str = str.split("?").pop();
-  }
-  let result = {};
-  for (const [key, value] of new URLSearchParams(str).entries()) {
-    if (!result[key]) {
-      result[key] = [value];
+  let parts = str.split("?").pop().split("&"), result = {};
+  for (const part of parts) {
+    const kv = part.split("=").map(decodeURIComponent);
+    if (!result[kv[0]]) {
+      result[kv[0]] = [decodeURIComponent(kv[1])];
     } else {
-      result[key].push(value);
+      result[kv[0]].push(decodeURIComponent(kv[1]));
     }
   }
   return result;
@@ -464,6 +463,27 @@ function parseTemplate(str, obj) {
       return target[key];
     }
   });
+}
+function parsePath(str) {
+  str = str.replace(/[\\\/]+/g, "/").replace(/\/$/, "").replace(/^\.?\//, "");
+  let dirs = str.split("/"), filename = "", basename = "", dirname = ".", extname = "";
+  if (dirs.length > 0) {
+    basename = dirs.pop();
+    if (/\.[^\\\/.]+?$/.test(basename)) {
+      extname = "." + basename.split(".").pop();
+    }
+    filename = basename.replace(new RegExp(extname + "$"), "");
+  }
+  if (dirs.length > 0) {
+    dirname = dirs.join("/");
+  }
+  return {
+    dirs,
+    filename,
+    basename,
+    dirname,
+    extname
+  };
 }
 function createArray(len, value) {
   let arr = new Array(len);
@@ -875,6 +895,7 @@ function promiseAll(funcs) {
   isString,
   isStringArray,
   parseCommand,
+  parsePath,
   parseQueryString,
   parseTemplate,
   promiseAll,

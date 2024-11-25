@@ -1,8 +1,8 @@
 "use strict";
 
 import { toStr, toObj } from "../libs/dom.mjs";
-import { extToMime, normalizeBase64, normalizeIndex, beautifyHTML, normalizePath, isDOM, deepcopy, isFile, isNode, isDoc, } from "../libs/utilities.js";
-import { generateUUID, getDirectoryPath, getExtension, getFilename, getRelativePath, isArray, isNumber, isObject, isString, queryObject } from "../libs/utils.mjs";
+import { extToMime, normalizeIndex, beautifyHTML, normalizePath, isDOM, deepcopy, isFile, isNode, isDoc, } from "../libs/utilities.js";
+import { generateUUID, getRelativePath, isArray, isNumber, isObject, isString, parsePath, queryObject } from "../libs/utils.mjs";
 import { ePubDoc, ePubNode } from "../index.js";
 
 class ePubFile {
@@ -49,11 +49,18 @@ ePubFile.prototype.init = function() {
   // Parse path
   if (isString(this.path)) {
     const fullPath = normalizePath(this.path);
-    this.basename = getFilename(fullPath);
-    this.extname = getExtension(fullPath);
-    this.filename = getFilename(fullPath, this.extname);
-    this.dirname = getDirectoryPath(fullPath);
-    this.mimetype = extToMime(fullPath);
+    const parsedPath = parsePath(fullPath);
+    this.basename = parsedPath.basename;
+    this.extname = parsedPath.extname;
+    this.filename = parsedPath.filename;
+    this.dirname = parsedPath.dirname;
+    this.mimetype = extToMime(parsedPath.extname);
+  } else {
+    this.basename = null;
+    this.extname = null;
+    this.filename = null;
+    this.dirname = null;
+    this.mimetype = null;
   }
 
   // Parse imported by string DOM
@@ -69,7 +76,7 @@ ePubFile.prototype.init = function() {
         if (!this.children[i].parentNode) {
           this.children[i].parentNode = this;
           this.children[i].init();
-        } else if (this.children[i].parentNode._id !== this._id) {
+        } else if (this.children[i].parentNode != this) {
           this.children[i].remove();
           this.children[i].parentNode = this;
           this.children[i].init();
@@ -87,10 +94,10 @@ ePubFile.prototype.init = function() {
           parentNode: this,
           content: this.children[i],
         });
-      } else if (isNumber(this.children[i])) {
+      } else {
         this.children[i] = this.createNode({
           parentNode: this,
-          content: "" + this.children[i],
+          content: this.children[i].toString(),
         });
       }
     }
@@ -112,41 +119,6 @@ ePubFile.prototype.getIndex = function() {
  * 
  * @returns {string}
  */
-ePubFile.prototype.getBasename = function() {
-  return getFilename(this.getAbsolutePath());
-}
-/**
- * 
- * @returns {string}
- */
-ePubFile.prototype.getFilename = function() {
-  return getFilename(this.path, getExtension(this.getAbsolutePath()));
-}
-/**
- * 
- * @returns {string}
- */
-ePubFile.prototype.getDirname = function() {
-  return getDirectoryPath(this.getAbsolutePath());
-}
-/**
- * 
- * @returns {string}
- */
-ePubFile.prototype.getExtname = function() {
-  return getExtension(this.getAbsolutePath());
-}
-/**
- * 
- * @returns {string}
- */
-ePubFile.prototype.getMimetype = function() {
-  return extToMime(this.getAbsolutePath());
-}
-/**
- * 
- * @returns {string}
- */
 ePubFile.prototype.getAbsolutePath = function() {
   return normalizePath(this.path);
 }
@@ -159,7 +131,8 @@ ePubFile.prototype.getRelativePath = function(from) {
   if (isFile(from) || isNode(from)) {
     from = from.getAbsolutePath();
   }
-  return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
+  from = parsePath(from).dirname;
+  return getRelativePath(from, this.getAbsolutePath());
 }
 /**
  * 

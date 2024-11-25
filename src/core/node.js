@@ -43,12 +43,6 @@ class ePubNode {
  * @returns 
  */
 ePubNode.prototype.init = function() {
-  // Parse imported by string DOM
-  if (isString(this.data)) {
-    this.children = toObj(this.data).children;
-    this.data = null;
-  }
-  
   // Parse node properties
   if (isString(this.tag)) {
     if (isString(this.content)) {
@@ -66,7 +60,13 @@ ePubNode.prototype.init = function() {
     this.tag = null;
     this.closer = null;
   }
-
+  
+  // Parse imported by string DOM
+  if (isString(this.data)) {
+    this.children = toObj(this.data).children;
+    this.data = null;
+  }
+  
   // Convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
@@ -74,7 +74,7 @@ ePubNode.prototype.init = function() {
         if (!this.children[i].parentNode) {
           this.children[i].parentNode = this;
           this.children[i].init();
-        } else if (this.children[i].parentNode._id !== this._id) {
+        } else if (this.children[i].parentNode != this) {
           this.children[i].remove();
           this.children[i].parentNode = this;
           this.children[i].init();
@@ -92,10 +92,10 @@ ePubNode.prototype.init = function() {
           parentNode: this,
           content: this.children[i],
         });
-      } else if (isNumber(this.children[i])) {
+      } else {
         this.children[i] = this.createNode({
           parentNode: this,
-          content: "" + this.children[i],
+          content: this.children[i].toString(),
         });
       }
     }
@@ -224,8 +224,5 @@ ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
 ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
 ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
 ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
-
-ePubNode.prototype.toAnchorNode = ePubFile.prototype.toAnchorNode;
-
 
 export { ePubNode }

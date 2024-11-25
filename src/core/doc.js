@@ -377,10 +377,10 @@ ePubDoc.prototype.init = function() {
   if (isArray(this.files)) {
     for (let i = 0; i < this.files.length; i++) {
       if (isFile(this.files[i])) {
-        if (
-          !this.files[i].document ||
-          this.files[i].document != this
-        ) {
+        if (!this.files[i].document) {
+          this.files[i].document = this;
+          this.files[i].init();
+        } else if (this.files[i].document != this) {
           this.files[i].remove();
           this.files[i].document = this;
           this.files[i].init();
