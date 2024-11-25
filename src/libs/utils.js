@@ -77,17 +77,6 @@ var utils = (() => {
     toHalfWidth: () => toHalfWidth,
     wait: () => wait
   });
-  var BASE64_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  var TYPE_PRIORITY = [
-    isUndefined,
-    isNull,
-    isBoolean,
-    isNumber,
-    isString,
-    isObject,
-    isArray,
-    isFunction
-  ];
   var __uniq__ = 0;
   function isBoolean(obj) {
     return typeof obj === "boolean";
@@ -226,7 +215,7 @@ var utils = (() => {
     return str.split(/([0-9]+\.[0-9]+)+/);
   }
   function getExtension(path) {
-    if (/\.[^\\\/]/.test(path)) {
+    if (/\.[^\\\/.]+?$/.test(path)) {
       return "." + path.split(".").pop();
     } else {
       return "";
@@ -239,11 +228,11 @@ var utils = (() => {
     return path.replace(/[\\\/]$/, "").split(/[\\\/]/).pop();
   }
   function getDirectoryPath(path) {
-    return path.replace(/[^\\\/]+?[\\\/]?$/, "").replace(/(.)[\\\/]$/, "$1") || ".";
+    return path.replace(/[^\\\/]+[\\\/]?$/, "").replace(/[\\\/]+$/, "") || ".";
   }
   function getRelativePath(from, to) {
     from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
-    to = (to + "/").replace(/[\\\/]/g, "/").replace(/^\.?\//, "");
+    to = (to + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
     let result = "";
     while (!to.startsWith(from)) {
       result += "../";
@@ -358,6 +347,7 @@ var utils = (() => {
     return res;
   }
   function toBase64(str, type) {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     str = String(str);
     if (/[^\0-\xFF]/.test(str)) {
       throw new Error(
@@ -371,16 +361,16 @@ var utils = (() => {
       b = str.charCodeAt(++position) << 8;
       c = str.charCodeAt(++position);
       buffer = a + b + c;
-      output += BASE64_CHARACTERS.charAt(buffer >> 18 & 63) + BASE64_CHARACTERS.charAt(buffer >> 12 & 63) + BASE64_CHARACTERS.charAt(buffer >> 6 & 63) + BASE64_CHARACTERS.charAt(buffer & 63);
+      output += charset.charAt(buffer >> 18 & 63) + charset.charAt(buffer >> 12 & 63) + charset.charAt(buffer >> 6 & 63) + charset.charAt(buffer & 63);
     }
     if (padding == 2) {
       a = str.charCodeAt(position) << 8;
       b = str.charCodeAt(++position);
       buffer = a + b;
-      output += BASE64_CHARACTERS.charAt(buffer >> 10) + BASE64_CHARACTERS.charAt(buffer >> 4 & 63) + BASE64_CHARACTERS.charAt(buffer << 2 & 63) + "=";
+      output += charset.charAt(buffer >> 10) + charset.charAt(buffer >> 4 & 63) + charset.charAt(buffer << 2 & 63) + "=";
     } else if (padding == 1) {
       buffer = str.charCodeAt(position);
-      output += BASE64_CHARACTERS.charAt(buffer >> 2) + BASE64_CHARACTERS.charAt(buffer << 4 & 63) + "==";
+      output += charset.charAt(buffer >> 2) + charset.charAt(buffer << 4 & 63) + "==";
     }
     if (type) {
       return "data:" + type + ";base64," + output;
@@ -389,6 +379,7 @@ var utils = (() => {
     }
   }
   function fromBase64(str) {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     str = String(str).replace(/^data:([A-Za-z-+\/]+);[A-Za-z0-9]+,/, "").replace(/[\t\n\f\r ]/g, "");
     let length = str.length;
     if (length % 4 == 0) {
@@ -402,7 +393,7 @@ var utils = (() => {
     }
     let bitCounter = 0, bitStorage, buffer, output = "", position = -1;
     while (++position < length) {
-      buffer = BASE64_CHARACTERS.indexOf(str.charAt(position));
+      buffer = charset.indexOf(str.charAt(position));
       bitStorage;
       if (bitCounter % 4) {
         bitStorage = bitStorage * 64 + buffer;
@@ -535,10 +526,20 @@ var utils = (() => {
     return maxValue;
   }
   function compareObject(a, b) {
-    const aIdx = TYPE_PRIORITY.findIndex(function(fn) {
+    const priority = [
+      isUndefined,
+      isNull,
+      isBoolean,
+      isNumber,
+      isString,
+      isObject,
+      isArray,
+      isFunction
+    ];
+    const aIdx = priority.findIndex(function(fn) {
       return fn(a);
     });
-    const bIdx = TYPE_PRIORITY.findIndex(function(fn) {
+    const bIdx = priority.findIndex(function(fn) {
       return fn(b);
     });
     if (aIdx !== bIdx) {
