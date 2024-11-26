@@ -1,8 +1,0 @@
-# Ignore artifacts:
-dist
-
-# Ignore all HTML files:
-# **/*.html
-
-# Ignore all Markdown files:
-# **/*.md

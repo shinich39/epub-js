@@ -1,7 +1,8 @@
 import { ePubDoc } from "../index.js";
+// import { ePubDoc } from "../dist/epub.min.mjs";
 import path from "node:path";
 import fs from "node:fs";
-import JSZip from "./jszip.min.mjs";
+import JSZip from "./libs/jszip.min.mjs";
 
 const INPUT_PATH = path.join(process.cwd(), "input");
 const OUTPUT_PATH = path.join(process.cwd(), "output");
@@ -573,7 +574,7 @@ const newDoc = new ePubDoc(exportedObject);
 // Export to file
 const exportedFiles = newDoc.toFiles();
 
-// Test with fs
+// Write each file to directory
 console.log();
 console.log(`> Start writing files`);
 for (const file of exportedFiles) {
@@ -586,14 +587,19 @@ for (const file of exportedFiles) {
   fs.writeFileSync(filePath, file.data, { encoding: file.encoding });
 }
 
-// Test with JSZip
+// Write a json file
 console.log();
-console.log(`> Start writing files to archive`);
+console.log(`> Start writing JSON: ${title}.json`);
+fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.json`), JSON.stringify(exportedObject, null, 2), {encoding: "utf8"})
+
+// Create zip object with JSZip
+console.log();
+console.log(`> Start creating zip object`);
 
 const zip = new JSZip();
 for (const file of exportedFiles) {
   try {
-    console.log(`> Write ${file.path}`);
+    console.log(`> Append ${file.path}`);
 
     const p = file.path;
 
@@ -612,15 +618,8 @@ for (const file of exportedFiles) {
   }
 }
 
-zip.generateAsync({ type: "base64" })
-  .then(function(content) {
-    console.log();
-    console.log(`> Start writing archive: ${title}.epub`);
-    fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.epub`), content, {encoding: "base64"});
-  });
-
-// Test with JSON
+// Write a epub file
+const epub = await zip.generateAsync({ type: "base64" });
 console.log();
-console.log(`> Start writing JSON: ${title}.json`);
-
-fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.json`), JSON.stringify(exportedObject, null, 2), {encoding: "utf8"})
+console.log(`> Start writing archive: ${title}.epub`);
+fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.epub`), epub, {encoding: "base64"});

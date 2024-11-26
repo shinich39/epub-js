@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node ./test/index.js",
-    "pretty": "prettier . --write --config .prettierrc.js",
+    "test": "node test/index.js",
+    "pretty": "prettier index.js --write --config .prettierrc.js",
     "build": "node .esbuild.js"
   },
   "keywords": [
