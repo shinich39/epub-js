@@ -8,7 +8,7 @@ const config = {
   "semi": true,
   "singleQuote": false,
   "bracketSpacing": true,
-  "bracketSameLine": true
+  "bracketSameLine": false
 };
 
 export default config;
