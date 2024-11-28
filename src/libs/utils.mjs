@@ -109,27 +109,6 @@ function getBezierPoint(data, time) {
   }
   return getBezierPoint(d, time);
 }
-function setAnimation(data, cb, time, tick) {
-  if (!time) {
-    time = 1e3;
-  }
-  if (!tick) {
-    tick = 10;
-  }
-  let now = 0, d = getBezierPoint(data, now / time, now);
-  cb(d, now, anim());
-  function anim() {
-    now += tick;
-    d = getBezierPoint(data, now / time);
-    return setTimeout(function() {
-      if (now < time) {
-        cb(d, now, anim());
-      } else {
-        cb(d, now, null);
-      }
-    }, tick);
-  }
-}
 function splitInt(str) {
   return str.split(/([0-9]+)/);
 }
@@ -596,7 +575,7 @@ function copyObject(obj) {
     result = {};
   }
   for (const [key, value] of Object.entries(obj)) {
-    if (isObject(value) && !isNull(value)) {
+    if (isObject(value)) {
       result[key] = copyObject(value);
     } else {
       result[key] = value;
@@ -607,10 +586,11 @@ function copyObject(obj) {
 function groupByKey(arr, key) {
   let group = {};
   for (const obj of arr) {
-    if (!group[String(obj[key])]) {
-      group[String(obj[key])] = [obj];
+    const k = String(obj[key]);
+    if (!group[k]) {
+      group[k] = [obj];
     } else {
-      group[String(obj[key])].push(obj);
+      group[k].push(obj);
     }
   }
   return group;
@@ -820,7 +800,6 @@ export {
   parseTemplate,
   promiseAll,
   queryObject,
-  setAnimation,
   shuffleArray,
   sortArray,
   sortObject,
