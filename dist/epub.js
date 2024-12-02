@@ -4267,9 +4267,6 @@ var epub = (() => {
   });
 
   // src/libs/utils.mjs
-  function isNumber(obj) {
-    return typeof obj === "number" && !Number.isNaN(obj) && Number.isFinite(obj);
-  }
   function isString(obj) {
     return typeof obj === "string";
   }
@@ -4286,8 +4283,27 @@ var epub = (() => {
       return Object.prototype.toString.call(obj) === "[object Array]";
     }
   }
-  function getDirectoryPath(path) {
-    return path.replace(/[^\\\/]+[\\\/]?$/, "").replace(/[\\\/]+$/, "") || ".";
+  function generateUUID() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+      let r = Math.random() * 16 | 0, v;
+      if (c == "x") {
+        v = r;
+      } else {
+        v = r & 3 | 8;
+      }
+      return v.toString(16);
+    });
+  }
+  function getContainedNumber(num, min, max) {
+    num -= min;
+    max -= min;
+    if (num < 0) {
+      num = num % max + max;
+    }
+    if (num >= max) {
+      num = num % max;
+    }
+    return num + min;
   }
   function getRelativePath(from, to) {
     from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
@@ -4299,17 +4315,6 @@ var epub = (() => {
     }
     result += to.substring(from.length, to.length);
     return result.replace(/[\\\/]$/, "");
-  }
-  function generateUUID() {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-      let r = Math.random() * 16 | 0, v;
-      if (c == "x") {
-        v = r;
-      } else {
-        v = r & 3 | 8;
-      }
-      return v.toString(16);
-    });
   }
   function parsePath(str) {
     str = str.replace(/[\\\/]+/g, "/").replace(/\/$/, "").replace(/^\.?\//, "");
@@ -4566,15 +4571,6 @@ var epub = (() => {
   }
   function isNode(obj) {
     return obj instanceof ePubNode;
-  }
-  function normalizeIndex(max, idx) {
-    if (!isNumber(idx)) {
-      idx = -1;
-    }
-    if (idx < 0) {
-      idx += max + 1;
-    }
-    return Math.floor(idx);
   }
   function normalizePath(str) {
     return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
@@ -5082,13 +5078,13 @@ var epub = (() => {
     return this;
   };
   ePubDoc.prototype.insertFile = function(file, idx) {
-    idx = normalizeIndex(this.files.length, idx);
+    idx = getContainedNumber(idx, 0, this.files.length);
     this.files.splice(idx, 0, file);
     this.init();
     return this;
   };
   ePubDoc.prototype.insertFiles = function(files, idx) {
-    idx = normalizeIndex(this.files.length, idx);
+    idx = getContainedNumber(idx, 0, this.files.length);
     this.files.splice(idx, 0, ...files);
     this.init();
     return this;
@@ -5758,13 +5754,13 @@ var epub = (() => {
     return this;
   };
   ePubFile.prototype.insertNode = function(node, idx) {
-    idx = normalizeIndex(this.children.length, idx);
+    idx = getContainedNumber(idx, 0, this.children.length);
     this.children.splice(idx, 0, node);
     this.init();
     return this;
   };
   ePubFile.prototype.insertNodes = function(nodes, idx) {
-    idx = normalizeIndex(this.children.length, idx);
+    idx = getContainedNumber(idx, 0, this.children.length);
     this.children.splice(idx, 0, ...nodes);
     this.init();
     return this;
@@ -5975,7 +5971,8 @@ var epub = (() => {
     if (isFile(from) || isNode(from)) {
       from = from.getAbsolutePath();
     }
-    return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
+    from = parsePath(from).dirname;
+    return getRelativePath(from, this.getAbsolutePath());
   };
   ePubNode.prototype.remove = function() {
     const currentIndex = this.getIndex();

@@ -1,8 +1,8 @@
 "use strict";
 
-import { generateUUID, getRelativePath, getDirectoryPath, isArray, isNumber, isObject, isString } from "../libs/utils.mjs";
+import { generateUUID, getRelativePath, isArray, isNumber, isObject, isString, parsePath } from "../libs/utils.mjs";
 import { ePubDoc, ePubFile } from "../index.js";
-import { beautifyHTML, deepcopy, isFile, isNode, normalizeIndex } from "../libs/utilities.js";
+import { beautifyHTML, deepcopy, isFile, isNode } from "../libs/utilities.js";
 import { toObj, toStr } from "../libs/dom.mjs";
 
 class ePubNode {
@@ -158,7 +158,8 @@ ePubNode.prototype.getRelativePath = function(from) {
   if (isFile(from) || isNode(from)) {
     from = from.getAbsolutePath();
   }
-  return getRelativePath(getDirectoryPath(from), this.getAbsolutePath());
+  from = parsePath(from).dirname;
+  return getRelativePath(from, this.getAbsolutePath());
 }
 
 ePubNode.prototype.remove = function() {

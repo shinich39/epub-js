@@ -31,16 +31,6 @@ function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
 }
 
-function normalizeIndex(max, idx) {
-  if (!isNumber(idx)) {
-    idx = -1;
-  }
-  if (idx < 0) {
-    idx += max + 1;
-  }
-  return Math.floor(idx);
-}
-
 function normalizeBase64(str) {
   return str.replace(/^data\:.*?\,/, "");
 }
@@ -226,7 +216,6 @@ export {
   isFile,
   isNode,
   dateToISOString,
-  normalizeIndex,
   normalizeBase64,
   normalizePath,
   toKebabCase,

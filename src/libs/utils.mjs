@@ -94,42 +94,47 @@ function isUndefined(obj) {
 function isSameType(objA, objB) {
   return isNull(objA) && isNull(objB) || typeof objA === typeof objB && objA.constructor === objB.constructor;
 }
-function getRandomNumber(min, max) {
+function generateRandomNumber(min, max) {
   return Math.random() * (max - min) + min;
 }
-function getBezierPoint(data, time) {
-  if (data.length === 1) {
-    return data[0];
+function generateRandomString(charset) {
+  return charset.charAt(Math.floor(Math.random() * charset.length));
+}
+function generateObjectId() {
+  return Math.floor((/* @__PURE__ */ new Date()).getTime() / 1e3).toString(16) + "xxxxxx".replace(/x/g, function(v) {
+    return Math.floor(Math.random() * 16).toString(16);
+  }) + (__uniq__++).toString(16).padStart(6, "0");
+}
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    let r = Math.random() * 16 | 0, v;
+    if (c == "x") {
+      v = r;
+    } else {
+      v = r & 3 | 8;
+    }
+    return v.toString(16);
+  });
+}
+function getClampedNumber(num, min, max) {
+  return Math.min(max, Math.max(num, min));
+}
+function getContainedNumber(num, min, max) {
+  num -= min;
+  max -= min;
+  if (num < 0) {
+    num = num % max + max;
   }
-  let d = [];
-  for (let i = 0; i < data.length - 1; i++) {
-    let x = (1 - time) * data[i][0] + time * data[i + 1][0];
-    let y = (1 - time) * data[i][1] + time * data[i + 1][1];
-    d.push([x, y]);
+  if (num >= max) {
+    num = num % max;
   }
-  return getBezierPoint(d, time);
+  return num + min;
 }
 function splitInt(str) {
   return str.split(/([0-9]+)/);
 }
 function splitFloat(str) {
   return str.split(/([0-9]+\.[0-9]+)+/);
-}
-function getExtension(path) {
-  if (/\.[^\\\/.]+?$/.test(path)) {
-    return "." + path.split(".").pop();
-  } else {
-    return "";
-  }
-}
-function getFilename(path, ext) {
-  if (typeof ext === "string") {
-    path = path.replace(new RegExp(ext + "$"), "");
-  }
-  return path.replace(/[\\\/]$/, "").split(/[\\\/]/).pop();
-}
-function getDirectoryPath(path) {
-  return path.replace(/[^\\\/]+[\\\/]?$/, "").replace(/[\\\/]+$/, "") || ".";
 }
 function getRelativePath(from, to) {
   from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
@@ -145,16 +150,12 @@ function getRelativePath(from, to) {
 function toHalfWidth(str) {
   return str.replace(/[！-～]/g, function(ch) {
     return String.fromCharCode(ch.charCodeAt(0) - 65248);
-  }).replace(/[^\S\r\n]/g, function(ch) {
-    return " ";
-  });
+  }).replace(/[^\S\r\n]/g, " ");
 }
 function toFullWidth(str) {
   return str.replace(/[!-~]/g, function(ch) {
     return String.fromCharCode(ch.charCodeAt(0) + 65248);
-  }).replace(/[^\S\r\n]/g, function(ch) {
-    return "\u3000";
-  });
+  }).replace(/[^\S\r\n]/g, "\u3000");
 }
 function compareString(strA, strB) {
   function C(a, b) {
@@ -217,22 +218,6 @@ function compareString(strA, strB) {
   }
   return P(M(C(strA, strB), strA, strB), strA, strB);
 }
-function generateObjectId() {
-  return Math.floor((/* @__PURE__ */ new Date()).getTime() / 1e3).toString(16) + "xxxxxx".replace(/x/g, function(v) {
-    return Math.floor(Math.random() * 16).toString(16);
-  }) + (__uniq__++).toString(16).padStart(6, "0");
-}
-function generateUUID() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-    let r = Math.random() * 16 | 0, v;
-    if (c == "x") {
-      v = r;
-    } else {
-      v = r & 3 | 8;
-    }
-    return v.toString(16);
-  });
-}
 function encryptString(str, salt) {
   if (salt.length === 0) {
     return str;
@@ -246,68 +231,6 @@ function encryptString(str, salt) {
     i++;
   }
   return res;
-}
-function toBase64(str, type) {
-  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  str = String(str);
-  if (/[^\0-\xFF]/.test(str)) {
-    throw new Error(
-      "The string to be encoded contains characters outside of the Latin1 range."
-    );
-  }
-  let padding = str.length % 3, output = "", position = -1, a, b, c, buffer;
-  let length = str.length - padding;
-  while (++position < length) {
-    a = str.charCodeAt(position) << 16;
-    b = str.charCodeAt(++position) << 8;
-    c = str.charCodeAt(++position);
-    buffer = a + b + c;
-    output += charset.charAt(buffer >> 18 & 63) + charset.charAt(buffer >> 12 & 63) + charset.charAt(buffer >> 6 & 63) + charset.charAt(buffer & 63);
-  }
-  if (padding == 2) {
-    a = str.charCodeAt(position) << 8;
-    b = str.charCodeAt(++position);
-    buffer = a + b;
-    output += charset.charAt(buffer >> 10) + charset.charAt(buffer >> 4 & 63) + charset.charAt(buffer << 2 & 63) + "=";
-  } else if (padding == 1) {
-    buffer = str.charCodeAt(position);
-    output += charset.charAt(buffer >> 2) + charset.charAt(buffer << 4 & 63) + "==";
-  }
-  if (type) {
-    return "data:" + type + ";base64," + output;
-  } else {
-    return output;
-  }
-}
-function fromBase64(str) {
-  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  str = String(str).replace(/^data:([A-Za-z-+\/]+);[A-Za-z0-9]+,/, "").replace(/[\t\n\f\r ]/g, "");
-  let length = str.length;
-  if (length % 4 == 0) {
-    str = str.replace(/==?$/, "");
-    length = str.length;
-  }
-  if (length % 4 == 1 || /[^+a-zA-Z0-9/]/.test(str)) {
-    throw new Error(
-      "Invalid character: the string to be decoded is not correctly encoded."
-    );
-  }
-  let bitCounter = 0, bitStorage, buffer, output = "", position = -1;
-  while (++position < length) {
-    buffer = charset.indexOf(str.charAt(position));
-    bitStorage;
-    if (bitCounter % 4) {
-      bitStorage = bitStorage * 64 + buffer;
-    } else {
-      bitStorage = buffer;
-    }
-    if (bitCounter++ % 4) {
-      output += String.fromCharCode(
-        255 & bitStorage >> (-2 * bitCounter & 6)
-      );
-    }
-  }
-  return output;
 }
 function parseCommand(str) {
   let result = [], i = 0, tmp = str.replace(/\\'|\\"/g, "00"), bracket = null, part = "";
@@ -498,7 +421,7 @@ function sortArray(arr, desc) {
     }
   });
 }
-function sortObject(arr, sorter) {
+function sortBy(arr, sorter) {
   if (typeof sorter === "string") {
     sorter = sorter.split(" ").filter(Boolean);
   }
@@ -526,7 +449,7 @@ function shuffleArray(arr) {
   return arr;
 }
 function getRandomValue(arr) {
-  return arr[Math.floor(getRandomNumber(0, arr.length))];
+  return arr[Math.floor(generateRandomNumber(0, arr.length))];
 }
 function spreadArray(arr) {
   function getFirstIndexes(a) {
@@ -760,20 +683,18 @@ export {
   copyObject,
   createArray,
   encryptString,
-  fromBase64,
   generateObjectId,
+  generateRandomNumber,
+  generateRandomString,
   generateUUID,
-  getBezierPoint,
+  getClampedNumber,
+  getContainedNumber,
   getContainedSize,
   getCoveredSize,
-  getDirectoryPath,
-  getExtension,
-  getFilename,
   getMaxValue,
   getMeanValue,
   getMinValue,
   getModeValue,
-  getRandomNumber,
   getRandomValue,
   getRelativePath,
   groupByKey,
@@ -802,11 +723,10 @@ export {
   queryObject,
   shuffleArray,
   sortArray,
-  sortObject,
+  sortBy,
   splitFloat,
   splitInt,
   spreadArray,
-  toBase64,
   toFullWidth,
   toHalfWidth,
   wait

@@ -1,8 +1,8 @@
 "use strict";
 
-import { generateUUID, isArray, isBoolean, isNull, isNumber, isObject, isObjectArray, isString, isStringArray, queryObject } from "../libs/utils.mjs";
+import { generateUUID, getContainedNumber, isArray, isBoolean, isNull, isNumber, isObject, isObjectArray, isString, isStringArray, queryObject } from "../libs/utils.mjs";
 import { ePubFile, ePubNode } from "../index.js";
-import { deepcopy, isFile, normalizeIndex, updateObject } from "../libs/utilities.js";
+import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
 
 class ePubDoc {
   constructor(obj) {
@@ -460,7 +460,7 @@ ePubDoc.prototype.prependFiles = function(files) {
  * @returns 
  */
 ePubDoc.prototype.insertFile = function(file, idx) {
-  idx = normalizeIndex(this.files.length, idx);
+  idx = getContainedNumber(idx, 0, this.files.length);
   this.files.splice(idx, 0, file);
   this.init();
   return this;
@@ -472,7 +472,7 @@ ePubDoc.prototype.insertFile = function(file, idx) {
  * @returns 
  */
 ePubDoc.prototype.insertFiles = function(files, idx) {
-  idx = normalizeIndex(this.files.length, idx);
+  idx = getContainedNumber(idx, 0, this.files.length);
   this.files.splice(idx, 0, ...files);
   this.init();
   return this;

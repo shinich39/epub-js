@@ -1,8 +1,8 @@
 "use strict";
 
 import { toStr, toObj } from "../libs/dom.mjs";
-import { extToMime, normalizeIndex, beautifyHTML, normalizePath, isDOM, deepcopy, isFile, isNode, isDoc, } from "../libs/utilities.js";
-import { generateUUID, getRelativePath, isArray, isNumber, isObject, isString, parsePath, queryObject } from "../libs/utils.mjs";
+import { extToMime, beautifyHTML, normalizePath, isDOM, deepcopy, isFile, isNode, isDoc, } from "../libs/utilities.js";
+import { generateUUID, getContainedNumber, getRelativePath, isArray, isNumber, isObject, isString, parsePath, queryObject } from "../libs/utils.mjs";
 import { ePubDoc, ePubNode } from "../index.js";
 
 class ePubFile {
@@ -257,7 +257,7 @@ ePubFile.prototype.prependNodes = function(nodes) {
  * @returns 
  */
 ePubFile.prototype.insertNode = function(node, idx) {
-  idx = normalizeIndex(this.children.length, idx);
+  idx = getContainedNumber(idx, 0, this.children.length);
   this.children.splice(idx, 0, node);
   this.init();
   return this;
@@ -269,7 +269,7 @@ ePubFile.prototype.insertNode = function(node, idx) {
  * @returns 
  */
 ePubFile.prototype.insertNodes = function(nodes, idx) {
-  idx = normalizeIndex(this.children.length, idx);
+  idx = getContainedNumber(idx, 0, this.children.length);
   this.children.splice(idx, 0, ...nodes);
   this.init();
   return this;
