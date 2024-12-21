@@ -1,0 +1,1145 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>index.html</title>
+    <style>
+      *, *::after, *::before{
+        font-family: monospace;
+      }
+      body{
+        margin: 4rem;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>epub-js</h1>
+    <p>This page has been developed for browser compatibility testing.</p>
+
+    <h2>Import</h2>
+    <p>Create a ePub doucment from JSON, EPUB and ZIP files.</p>
+    <input id="import-file" type="file" accept="application/json, application/zip, application/x-zip-compressed, application/epub+zip">
+    <button id="clear-files">Clear</button>
+    <h2>Set Cover</h2>
+    <input id="set-cover" type="file" accept="image/*">
+    <h2>Add Files</h2>
+    <p>The first line of .txt file will be contained within an h1.</p>
+    <p>Create a page for each file.</p>
+    <input id="add-files" type="file" multiple>
+    <br />
+    <h2>File List</h2>
+    <p>Add all files to manifest.</p>
+    <p>Add .xhtml files to spine.</p>
+    <p>Check the box to add it to TOC.</p>
+    <ol id="file-list"></ol>
+    
+    <h2>Options</h2>
+    <p>
+      <strong>Text Direction</strong>
+      <label>
+        <input name="text-direction" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="text-direction" type="radio" value="ltr">
+        ltr
+      </label>
+      <label>
+        <input name="text-direction" type="radio" value="rtl">
+        rtl
+      </label>
+    </p>
+
+    <p>
+      <strong>Page Direction</strong>
+      <label>
+        <input name="page-direction" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="page-direction" type="radio" value="ltr">
+        ltr
+      </label>
+      <label>
+        <input name="page-direction" type="radio" value="rtl">
+        rtl
+      </label>
+    </p>
+
+    <p>
+      <strong>Layout</strong>
+      <label>
+        <input name="rendition:layout" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:layout" type="radio" value="pre-paginated">
+        pre-paginated
+      </label>
+      <label>
+        <input name="rendition:layout" type="radio" value="reflowable">
+        reflowable
+      </label>
+    </p>
+
+    <p>
+      <strong>Orientation</strong>
+      <label>
+        <input name="rendition:orientation" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="auto">
+        Auto
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="landscape">
+        Landscape
+      </label>
+      <label>
+        <input name="rendition:orientation" type="radio" value="portrait">
+        Portrait
+      </label>
+    </p>
+
+    <p>
+      <strong>Spread</strong>
+      <label>
+        <input name="rendition:spread" type="radio" value="" checked>
+        None
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="auto">
+        Auto
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="both">
+        Both
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="landscape">
+        Landscape
+      </label>
+      <label>
+        <input name="rendition:spread" type="radio" value="portrait" disabled>
+        Portrait(Deprecated)
+      </label>
+    </p>
+    <h2>Download</h2>
+    <button id="download-file">ePub</button>
+    <button id="export-file">JSON</button>
+
+    <h2>References</h2>
+    <p>
+      <a href="https://github.com/shinich39/epub-js">Git</a>
+      /
+      <a href="https://www.w3.org/TR/epub-33/">W3C</a>
+    </p>
+
+    <script src="./dist/epub.js"></script>
+    <script src="./test/jszip.min.js"></script>
+    <script src="./test/jszip-utils.min.js"></script>
+    <script src="./src/libs/utils.js"></script>
+    <script>
+      const { ePubDoc, ePubFile } = epub;
+
+      let inProgress = false,
+          doc, 
+          packageFile,
+          packageNode,
+          metadataNode,
+          titleNode,
+          languageNode,
+          authorNode,
+          viewportData = "width=512, height=768",
+          styleData = `
+img,
+video{
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+  page-break-before: always !important;
+  page-break-inside: avoid !important;
+  page-break-after: always !important;
+}
+.landscape{
+  width: 100%;
+  height: auto;
+}
+.portrait{
+  width: auto;
+  height: 100%;
+}
+          `,
+          manifestNode, 
+          spineNode,
+          navFile;
+
+      let coverFile, 
+          uploadedFiles = [];
+
+      initDoc();
+
+      document.getElementById("set-cover").addEventListener("change", setCoverHandler);
+      document.getElementById("add-files").addEventListener("change", addFilesHandler);
+      document.getElementById("clear-files").addEventListener("click", clearFilesHandler);
+      document.getElementById("download-file").addEventListener("click", downloadFileHandler);
+      document.getElementById("export-file").addEventListener("click", exportFileHandler);
+      document.getElementById("import-file").addEventListener("change", importFileHandler);
+
+      function toText(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function() {
+            resolve(reader.result);
+          }
+          reader.readAsText(file);
+        });
+      }
+
+      function toBinary(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function() {
+            resolve(reader.result);
+          }
+          reader.readAsBinaryString(file);
+        });
+      }
+
+      function addRootDirectory(str) {
+        return ("EPUB/" + str.replace(/^\.?[\\\/]/, ""))
+          .replace(/[\\\/]+/g, "/");
+      }
+
+      async function uncompressZip(file, sort) {
+        let b = await toBinary(file);
+        b = await JSZip.loadAsync(b);
+
+        let files = [];
+        for (const file of Object.values(b.files)) {
+          if (file.dir) {
+            continue;
+          }
+
+          let path = file.unsafeOriginalName;
+          let ext = "."+path.split(".").pop();
+          let encoding;
+          let type;
+          switch(ext) {
+            case ".mimetype":
+            case ".css":
+            case ".js":
+            case ".xml":
+            case ".opf":
+            case ".xhtml":
+            case ".html":
+            case ".txt":
+              type = "string";
+              encoding = "utf8";
+              break;
+            case ".jpg":
+            case ".jpeg":
+            case ".png":
+            case ".webp":
+            case ".gif":
+            case ".mp3":
+            case ".mp4":
+              type = "base64";
+              encoding = "base64";
+              break;
+            default: 
+              break;
+          }
+          
+          if (!type) {
+            console.error(`${path} not supported`);
+            continue;
+          }
+
+          files.push({
+            path: path,
+            data: await file.async(type),
+            encoding: encoding,
+          });
+        }
+
+        // Remove root dir
+        let hasRootDir = true;
+        while (hasRootDir) {
+          let rootPaths = files.map(item => item.path.split(/[\\\/]+/)[0]);
+          let rootPath = rootPaths.shift();
+          if (!rootPath) {
+            hasRootDir = false;
+            break;
+          }
+
+          for (const p of rootPaths) {
+            if (rootPath != p) {
+              hasRootDir = false;
+              break;
+            }
+          }
+
+          if (hasRootDir) {
+            console.log("Remove root dir:", rootPath);
+
+            files.forEach(item => {
+              item.path = item.path.split(/[\\\/]+/).slice(1).join("/");
+            });
+          }
+        }
+
+        // Sort files
+        if (sort) {
+          files = files.sort(function(a, b) {
+            return utils.compareObject(
+              a.path, 
+              b.path
+            );
+          });
+        }
+
+        return files;
+      }
+      
+      function toBase64(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function() {
+            resolve(reader.result);
+          }
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function getImageSize(base64) {
+        return new Promise(function(resolve, reject) {
+          const img = new Image();
+          
+          img.onload = function () {
+            resolve({
+              width: image.width,
+              height: image.height,
+            });
+          };
+
+          img.onerror = function() {
+            reject(new Error("Error occurred"));
+          }
+
+          img.src = base64;
+        });
+      }
+
+      async function initDoc() {
+        try {
+          if (inProgress) {
+            console.error("Already in progress");
+            return;
+          }
+
+          inProgress = true;
+
+          doc = new ePubDoc();
+
+          await loadEpub();
+
+          renderFileList();
+
+          console.log("ePub document initialized!");
+        } catch(err) {
+          console.error(err);
+          alert(err.message);
+        }
+
+        inProgress = false;
+      }
+
+      async function loadEpub() {
+        const importedFile = document.getElementById("import-file").files[0];
+        if (!importedFile) {
+          console.log(`Create a empty ePub doucment`);
+          
+          packageFile = doc.findFile({ extname: ".opf" });
+          packageNode = packageFile.findNode({ tag: "package" });
+          metadataNode = packageFile.findNode({ tag: "metadata" });
+          manifestNode = packageFile.findNode({ tag: "manifest" });
+          spineNode = packageFile.findNode({ tag: "spine" });
+
+          titleNode = metadataNode.findNode({ tag: "dc:title" });
+          languageNode = metadataNode.findNode({ tag: "dc:language" });
+          authorNode = doc.createNode({ tag: "dc:creator" });
+          metadataNode.appendNode(authorNode);
+
+          titleNode?.setContent("epub-js");
+          languageNode?.setContent("en");
+          authorNode?.setContent("Anonymous");
+
+          navFile = doc.createNav();
+          navFile.isNav = true;
+          doc.appendChild(navFile);
+          addToManifest(navFile, "nav");
+
+          if (coverFile) {
+            doc.appendChild(coverFile);
+            addToManifest(coverFile, "cover-image");
+          }
+        } // Import JSON file
+        else if (/\/json$/.test(importedFile.type)) {
+          console.log(`${importedFile.type} has been chosen`);
+
+          doc = new ePubDoc(JSON.parse(await toText(importedFile)));
+
+          packageFile = doc.findFile({ extname: ".opf" });
+          packageNode = packageFile.findNode({ tag: "package" });
+          metadataNode = packageFile.findNode({ tag: "metadata" });
+          manifestNode = packageFile.findNode({ tag: "manifest" });
+          spineNode = packageFile.findNode({ tag: "spine" });
+
+          titleNode = metadataNode.findNode({ tag: "dc:title" });
+          languageNode = metadataNode.findNode({ tag: "dc:language" });
+          authorNode = metadataNode.findNode({ tag: "dc:creator" });
+
+          titleNode?.setContent("epub-js");
+          languageNode?.setContent("en");
+          authorNode?.setContent("Anonymous");
+
+          navFile = findNavFile();
+          navFile.isNav = true;
+
+          setCheckboxes(getMetadata());
+        } // Import EPUB files
+        else if (importedFile.type === "application/epub+zip") {
+          console.log(`${importedFile.type} has been chosen`);
+          
+          doc = new ePubDoc({ files: [] });
+
+          let files = await uncompressZip(importedFile);
+          for (const file of files) {
+            doc.appendFile(
+              doc.createFile({
+                path: file.path,
+                data: file.data,
+                encoding: file.encoding,
+              })
+            );
+          }
+
+          packageFile = doc.findFile({ extname: ".opf" });
+          packageNode = packageFile.findNode({ tag: "package" });
+          metadataNode = packageFile.findNode({ tag: "metadata" });
+          manifestNode = packageFile.findNode({ tag: "manifest" });
+          spineNode = packageFile.findNode({ tag: "spine" });
+
+          titleNode = metadataNode.findNode({ tag: "dc:title" });
+          languageNode = metadataNode.findNode({ tag: "dc:language" });
+          authorNode = metadataNode.findNode({ tag: "dc:creator" });
+
+          navFile = findNavFile();
+          if (!navFile) {
+            throw new Error("Nav file not found");
+          }
+          navFile.isNav = true;
+
+          setCheckboxes(getMetadata());
+        } // Append after generate a ePubDoc
+        else if (
+          importedFile.type === "application/x-zip-compressed"||
+          importedFile.type === "application/zip"
+        ) {
+          console.log(`${importedFile.type} has been chosen`);
+
+          doc = new ePubDoc();
+
+          packageFile = doc.findFile({ extname: ".opf" });
+          packageNode = packageFile.findNode({ tag: "package" });
+          metadataNode = packageFile.findNode({ tag: "metadata" });
+          manifestNode = packageFile.findNode({ tag: "manifest" });
+          spineNode = packageFile.findNode({ tag: "spine" });
+
+          titleNode = metadataNode.findNode({ tag: "dc:title" });
+          languageNode = metadataNode.findNode({ tag: "dc:language" });
+          authorNode = metadataNode.findNode({ tag: "dc:creator" });
+
+          navFile = doc.createNav();
+          navFile.isNav = true;
+          doc.appendChild(navFile);
+          addToManifest(navFile, "nav");
+
+          let files = await uncompressZip(importedFile, true);
+          for (const file of files) {
+            try {
+              file.path = addRootDirectory(file.path);
+              appendFile(file.path, file.data);
+            } catch(err) {
+              console.error(err);
+            }
+          }
+
+          if (coverFile) {
+            doc.appendChild(coverFile);
+            addToManifest(coverFile, "cover-image");
+          }
+        } // Not supported
+        else {
+          console.error(`${importedFile.type} not supported`);
+        }
+      }
+
+      function initPage(page) {
+        // Set HTML title
+        page.updateNode({
+          tag: "title",
+        }, {
+          $set: {
+            children: [{
+              content: "epub-js",
+            }]
+          }
+        });
+
+        // Set default viewport
+        // For iOS WebKit
+        // <meta name="viewport" content="width=512, height=768"/>
+        page.findNode({
+          tag: "head",
+        })?.appendNode(
+          {
+            tag: "meta",
+            closer: "/",
+            attributes: {
+              name: "viewport",
+              content: viewportData,
+            }
+          },
+        )?.appendNode(
+          {
+            tag: "style",
+            attributes: {
+              type: "text/css",
+            },
+            content: styleData,
+          },
+        );
+      }
+
+      function getMetadata() {
+        let result = {
+          textDirection: packageNode.getAttribute("dir") || null,
+          pageDirection: spineNode.getAttribute("page-progression-direction") || null,
+          rendition: {
+            layout: null,
+            orientation: null,
+            spread: null,
+          },
+        };
+
+        result.rendition.layout = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:layout",
+        })?.getContent() || null;
+
+        result.rendition.orientation = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:orientation",
+        })?.getContent() || null;
+
+        result.rendition.spread = metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:spread",
+        })?.getContent() || null;
+   
+        return result;
+      }
+
+      function getCheckboxes() {
+        return {
+          textDirection: getRadioValue("text-direction"),
+          pageDirection: getRadioValue("page-direction"),
+          rendition: {
+            layout: getRadioValue("rendition:layout"),
+            orientation: getRadioValue("rendition:orientation"),
+            spread: getRadioValue("rendition:spread"),
+          },
+        };
+      }
+
+      function setCheckboxes(metadata) {
+        function match(a, b) {
+          return (
+            (a == null || a == "") && 
+            (b == null || b == "")
+          ) || a == b;
+        }
+
+        document.querySelectorAll("[name='rendition:layout']").forEach(item => {
+          if (match(item.value, metadata.rendition.layout)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='rendition:orientation']").forEach(item => {
+          if (match(item.value, metadata.rendition.orientation)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='rendition:spread']").forEach(item => {
+          if (match(item.value, metadata.rendition.spread)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='text-direction']").forEach(item => {
+          if (match(item.value, metadata.textDirection)) {
+            item.checked = true;
+            return;
+          }
+        });
+
+        document.querySelectorAll("[name='page-direction']").forEach(item => {
+          if (match(item.value, metadata.pageDirection)) {
+            item.checked = true;
+            return;
+          }
+        });
+      }
+
+      async function setCoverHandler() {
+        if (coverFile) {
+          coverFile.remove();
+          coverFile = null;
+        }
+
+        const file = document.getElementById("set-cover").files[0];
+        if (!file) {
+          return;
+        }
+
+        coverFile = doc.createImage({
+          path: "EPUB/cover."+file.type.split("/").pop(),
+          data: await toBase64(file),
+        });
+
+        doc.appendChild(coverFile);
+        addToManifest(coverFile, "cover-image");
+        
+        renderFileList();
+      }
+
+      async function addFilesHandler(e) {
+        let files = Array.prototype.slice.call(e.target.files);
+        if (files.length < 1) {
+          return;
+        }
+
+        files = files.sort(function(a, b) {
+          return utils.compareObject(a.name, b.name);
+        });
+
+        let newFile, 
+            newPage;
+
+        for (const file of files) {
+          const { name, type, size } = file;
+
+          // EPUB/...
+          let filePath = addRootDirectory(name),
+              fileData;
+
+          // Check duplicated file
+          if (!!doc.findFile({ path: filePath })) {
+            console.error(`${filePath} already exists`);
+            continue;
+          }
+
+          if (/^image/.test(type)) {
+            fileData = await toBase64(file);
+          } else if (/^video\/mp4/.test(type)) {
+            fileData = await toBase64(file);
+          } else if (/^audio\/mpeg/.test(type)) {
+            fileData = await toBase64(file);
+          } else if (/^text\/plain/.test(type)) {
+            fileData = await toText(file);
+          } else if (/^text\/javascript/.test(type)) {
+            fileData = await toText(file);
+          } else if (/^text\/css/.test(type)) {
+            fileData = await toText(file);
+          } else if (/^text\/css/.test(type)) {
+            fileData = await toText(file);
+          } else if (/[/+](html|xml)$/.test(type)) {
+            fileData = await toText(file);
+          } else {
+            console.error(`${name} not supported`);
+            continue;
+          }
+          
+          try {
+            appendFile(filePath, fileData);
+          } catch(err) {
+            console.error(err);
+          }
+        }
+
+        document.getElementById("add-files").value = "";
+
+        renderFileList();
+      }
+
+      function updatePackage() {
+        const metadata = getCheckboxes();
+
+        packageNode.setAttribute("dir", metadata.textDirection);
+        spineNode.setAttribute("page-progression-direction", metadata.pageDirection);
+
+        metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:layout",
+        })?.remove();
+
+        metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:orientation",
+        })?.remove();
+
+        metadataNode.findNode({
+          tag: "meta",
+          "attributes.property": "rendition:spread",
+        })?.remove();
+
+        if (metadata.rendition.layout) {
+          metadataNode.appendChild({
+            tag: "meta",
+            attributes: {
+              property: "rendition:layout"
+            },
+            content: metadata.rendition.layout,
+          });
+        }
+
+        if (metadata.rendition.orientation) {
+          metadataNode.appendChild({
+            tag: "meta",
+            attributes: {
+              property: "rendition:orientation"
+            },
+            content: metadata.rendition.orientation,
+          });
+        }
+
+        if (metadata.rendition.spread) {
+          metadataNode.appendChild({
+            tag: "meta",
+            attributes: {
+              property: "rendition:spread"
+            },
+            content: metadata.rendition.spread,
+          });
+        }
+
+        const isPaginated = metadata.rendition.layout === "pre-paginated";
+        const isRTL = metadata.pageDirection === "rtl";
+        for (let i = 0; i < spineNode.children.length; i++) {
+          const n = spineNode.children[i];
+          n.update({
+            $set: {
+              "attributes.properties": isPaginated ? (
+                i % 2 === (isRTL ? 0 : 1) ? 
+                  "page-spread-right" : 
+                  "page-spread-left"
+              ) : null
+            }
+          });
+        }
+
+        // Set textDirection
+        doc.updateNodes({
+          tag: "html"
+        }, {
+          $set: {
+            "attributes.dir": metadata.textDirection || null,
+          }
+        });
+      }
+
+      function updateNav() {
+        navFile.findNode({
+          tag: {
+            $in: ["ol", "ul"]
+          }
+        }).update({
+          $set: {
+            children: doc.findFiles({ toc: true }).map(file => {
+              return {
+                tag: "li",
+                children: [{
+                  tag: "a",
+                  attributes: {
+                    href: file.getRelativePath(navFile),
+                  },
+                  children: [{
+                    content: file.basename,
+                  }]
+                }]
+              }
+            }),
+          }
+        });
+
+        console.log("Nav file has been updated");
+      }
+
+      function textToNode(str) {
+        let toggle = false;
+        return str.replace(/\r\n/g, "\n")
+          .replace(/\n\s*\n/g, "\n\n")
+          .trim()
+          .split(/\n/)
+          .map(item => {
+            if (item) {
+              if (!toggle) {
+                toggle = true;
+                return {
+                  tag: "h1",
+                  children: [{
+                    content: item,
+                  }]
+                }
+              } else {
+                return {
+                  tag: "div",
+                  children: [{
+                    content: item,
+                  }]
+                }
+              }
+            } else {
+              return {
+                tag: "br",
+                closer: " /",
+              }
+            }
+          });
+      }
+
+      function appendFile(path, data) {
+        let ext = "." + path.split(".").pop(),
+            newFile, 
+            newPage;
+        switch(ext) {
+          // case ".mimetype":
+          //   newFile = doc.createText({
+          //     path: path,
+          //     data: data,
+          //   });
+          //   break;
+          case ".css":
+            newFile = doc.createStyle({
+              path: path,
+              data: data,
+            });
+
+            for (const p of doc.findFiles({ extname: ".xhtml" })) {
+              p
+                .findNode({ tag: "head" })
+                .appendChild({
+                  tag: "link",
+                  closer: "/",
+                  attributes: {
+                    rel: "stylesheet",
+                    href: newFile.getRelativePath(p),
+                  }
+                });
+            }
+            break;
+          case ".js":
+            newFile = doc.createScript({
+              path: path,
+              data: data,
+            });
+
+            for (const p of doc.findFiles({ extname: ".xhtml" })) {
+              p
+                .findNode({ tag: "head" })
+                .appendChild({
+                  tag: "script",
+                  attributes: {
+                    type: "text/javascript",
+                    src: newFile.getRelativePath(p),
+                  }
+                });
+            }
+            break;
+          case ".xml":
+          case ".opf":
+          case ".xhtml":
+          case ".html":
+            newFile = doc.createText({
+              path: path,
+              data: data,
+            });
+            break;
+          case ".txt":
+            newPage = doc.createPage({
+              path: path.replace(ext, ".xhtml"),
+            });
+
+            newPage
+              .findNode({ tag: "body" })
+              .appendChildren(textToNode(data))
+            break;
+          case ".jpg":
+          case ".jpeg":
+          case ".png":
+          case ".webp":
+          case ".gif":
+            newFile = doc.createImage({
+              path: path,
+              data: data,
+            });
+
+            newPage = doc.createPage({
+              path: path.replace(ext, ".xhtml"),
+            });
+
+            newPage
+              .findNode({ tag: "body" })
+              .appendChild({
+                tag: "img",
+                closer: " /",
+                attributes: {
+                  class: "portrait",
+                  src: newFile.getRelativePath(newPage),
+                  alt: "The image in zip file",
+                }
+              });
+            break;
+          case ".mp3":
+            newFile = doc.createAudio({
+              path: path,
+              data: data,
+            });
+
+            newPage = doc.createPage({
+              path: path.replace(ext, ".xhtml"),
+            });
+
+            newPage
+              .findNode({ tag: "body" })
+              .appendChild({
+                tag: "audio",
+                attributes: {
+                  controls: "",
+                },
+                children: [{
+                  tag: "source",
+                  closer: " /",
+                  attributes: {
+                    src: newFile.getRelativePath(newPage),
+                    type: newFile.mimetype,
+                  }
+                }]
+              });
+            break;
+          case ".mp4":
+            newFile = doc.createVideo({
+              path: path,
+              data: data,
+            });
+
+            newPage = doc.createPage({
+              path: path.replace(ext, ".xhtml"),
+            });
+
+            newPage
+              .findNode({ tag: "body" })
+              .appendChild({
+                tag: "video",
+                attributes: {
+                  controls: "",
+                },
+                children: [{
+                  tag: "source",
+                  closer: " /",
+                  attributes: {
+                    src: newFile.getRelativePath(newPage),
+                    type: newFile.mimetype,
+                  }
+                }]
+              })
+            break;
+          default:
+            console.error(`${path} not supported type`);
+        }
+        if (newFile) {
+          doc.appendFile(newFile);
+          addToManifest(newFile);
+        }
+        if (newPage) {
+          initPage(newPage);
+          doc.appendFile(newPage);
+          addToManifest(newPage);
+          addToSpine(newPage);
+        }
+      }
+
+      function getRadioValue(name) {
+        let result;
+        document.querySelectorAll(`[name='${name}']`).forEach(item => {
+          if (item.checked) {
+            result = item.value;
+            return;
+          }
+        });
+        return result || null;
+      }
+
+      function renderFileList() {
+        const target = document.getElementById("file-list");
+        target.innerHTML = "";
+
+        for (const file of doc.findFiles({})) {
+          const item = document.createElement("li");
+
+          const label = document.createElement("label");
+          const span = document.createElement("span");
+          span.innerHTML += file.path;
+
+          const tocBox = document.createElement("input");
+          tocBox.type = "checkbox";
+          tocBox.checked = file.toc;
+          tocBox.disabled = file.extname !== ".xhtml" || file.isNav;
+          tocBox.addEventListener("change", function(e) {
+            file.toc = e.target.checked;
+          });
+
+          label.appendChild(tocBox);
+          label.appendChild(span);
+          item.appendChild(label);
+          target.appendChild(item);
+        }
+      }
+
+      function clearFilesHandler() {
+        initDoc();
+      }
+
+      function downloadFileHandler() {
+        updatePackage();
+        updateNav();
+
+        const files = doc.toFiles();
+        const zip = new JSZip();
+        for (const file of files) {
+          try {
+            const p = file.path;
+
+            const data = file.encoding === "base64" ?
+              // Remove prefix of base64
+              file.data.split(",").pop() :
+              file.data;
+
+            const options = {
+              base64: file.encoding === "base64"
+            };
+
+            zip.file(p, data, options);
+          } catch(err) {
+            console.error(err);
+          }
+        }
+
+        zip.generateAsync({ type: "blob" })
+          .then(function(blob) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "epub-js.epub";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          });
+      }
+
+      function exportFileHandler() {
+        updatePackage();
+        updateNav();
+        
+        const obj = doc.toObject();
+        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null ,2));
+        const a = document.createElement('a');
+        a.href = data;
+        a.download = "epub-js.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }
+
+      function importFileHandler(e) {
+        const file = e.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        initDoc();
+      }
+
+      function findNavFile() {
+        return doc.findFile({
+          path: {
+            $regex: new RegExp(
+              manifestNode.findNode({
+                "attributes.properties": "nav"
+              }).getAttribute("href") + "$"
+            )
+          }
+        });
+      }
+
+      function addToManifest(file, properties) {
+        const n = doc.createNode({
+          tag: "item",
+          closer: " /",
+          attributes: {
+            "id": file._id,
+            "href": file.getRelativePath(packageFile),
+            "media-overlay": null,
+            "media-type": file.mimetype,
+            "properties": properties || null,
+            "fallback": null,
+          },
+        });
+
+        manifestNode.appendChild(n);
+
+        return n;
+      }
+
+      function addToSpine(file, linear) {
+        const n = doc.createNode({
+          tag: "itemref",
+          closer: " /",
+          attributes: {
+            "id": null,
+            "idref": file._id,
+            "linear": linear || null,
+            "properties": null,
+          },
+        });
+
+        spineNode.appendChild(n);
+
+        return n;
+      }
+    </script>
+  </body>
+</html>

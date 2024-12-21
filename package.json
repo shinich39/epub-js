@@ -1,0 +1,35 @@
+{
+  "name": "epub-js",
+  "version": "1.0.0",
+  "description": "Build ePub document with javascript",
+  "main": "./dist/epub.min.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/epub.min.cjs",
+      "require": "./dist/epub.min.mjs"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "init": "npm install && rimraf .git",
+    "test": "npm run pretty && npm run lint && npm run build && node test/index.js",
+    "build": "node esbuild.config.js",
+    "pretty": "prettier index.js src/index.js src/core --write --config prettier.config.js",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "javascript"
+  ],
+  "author": "shinich39 <shinich39@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.24.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "js-beautify": "^1.15.1",
+    "mime": "^4.0.6"
+  }
+}
