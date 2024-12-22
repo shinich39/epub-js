@@ -5,8 +5,8 @@
   "main": "./dist/epub.min.mjs",
   "exports": {
     ".": {
-      "import": "./dist/epub.min.cjs",
-      "require": "./dist/epub.min.mjs"
+      "import": "./dist/epub.min.mjs",
+      "require": "./dist/epub.min.cjs"
     }
   },
   "type": "module",
@@ -15,7 +15,8 @@
     "test": "npm run pretty && npm run lint && npm run build && node test/index.js",
     "build": "node esbuild.config.js",
     "pretty": "prettier index.js src/index.js src/core --write --config prettier.config.js",
-    "lint": "eslint ."
+    "lint": "eslint index.js src/index.js src/core/*.js",
+    "lint:fix": "eslint index.js src/index.js src/core/*.js --fix"
   },
   "keywords": [
     "javascript"

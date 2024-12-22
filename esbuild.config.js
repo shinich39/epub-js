@@ -11,16 +11,19 @@ function camelize(str) {
 
 const ENTRY_POINTS = ["index.js"];
 const MODULE_NAME = pkg.name.replace(/\W/g, "-").replace(/-?js$/, "");
-// const MODULE_VERSION = pkg.version;
-const GLOBAL_NAME = camelize(MODULE_NAME); // For IIFE
+const MODULE_VERSION = pkg.version;
+const GLOBAL_NAME = camelize(MODULE_NAME); // For browser
 
+// Update package.json
 pkg.main = `./dist/${MODULE_NAME}.min.mjs`;
-pkg.exports = {
-  ".": {
-    "import": `./dist/${MODULE_NAME}.min.cjs`,
-    "require": `./dist/${MODULE_NAME}.min.mjs`,
-  }
-};
+if (!pkg.exports) {
+  pkg.exports = {};
+}
+if (!pkg.exports["."]) {
+  pkg.exports["."] = {};
+}
+pkg.exports["."]["import"] = `./dist/${MODULE_NAME}.min.mjs`;
+pkg.exports["."]["require"] = `./dist/${MODULE_NAME}.min.cjs`;
 
 const ESM = [
   {
@@ -58,7 +61,7 @@ const CJS = [
   }
 ];
 
-const BROWSERIFY = [
+const BROWSER = [
   {
     entryPoints: ENTRY_POINTS,
     bundle: true,
@@ -79,6 +82,7 @@ const BROWSERIFY = [
 ];
 
 ;(async function () {
+  // Remove dist directory
   if (fs.existsSync("./dist")) {
     fs.rmSync("./dist", { recursive: true });
   }
@@ -86,9 +90,10 @@ const BROWSERIFY = [
   const options = [
     ...ESM,
     ...CJS,
-    ...BROWSERIFY,
+    ...BROWSER,
   ];
 
+  // Bundle files
   for (const option of options) {
     await esbuild.build(option);
   }
