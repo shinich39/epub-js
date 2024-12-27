@@ -15,6 +15,9 @@ import { ePubNode } from "./src/core/node.js";
 /**
  * ePubFile method links
  */
+ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
+ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
+
 ePubFile.prototype.update = ePubDoc.prototype.update;
 
 /**
@@ -25,20 +28,9 @@ ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
 ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
 
 ePubNode.prototype.update = ePubFile.prototype.update;
-
-ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
-ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
-ePubNode.prototype.prependNode = ePubFile.prototype.prependNode;
-ePubNode.prototype.prependNodes = ePubFile.prototype.prependNodes;
-ePubNode.prototype.insertNode = ePubFile.prototype.insertNode;
-ePubNode.prototype.insertNodes = ePubFile.prototype.insertNodes;
-
-ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
-ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;
-ePubNode.prototype.prependChild = ePubFile.prototype.prependChild;
-ePubNode.prototype.prependChildren = ePubFile.prototype.prependChildren;
-ePubNode.prototype.insertChild = ePubFile.prototype.insertChild;
-ePubNode.prototype.insertChildren = ePubFile.prototype.insertChildren;
+ePubNode.prototype.append = ePubFile.prototype.append;
+ePubNode.prototype.prepend = ePubFile.prototype.prepend;
+ePubNode.prototype.insert = ePubFile.prototype.insert;
 
 ePubNode.prototype.getContent = ePubFile.prototype.getContent;
 ePubNode.prototype.setContent = ePubFile.prototype.setContent;
@@ -50,11 +42,5 @@ ePubNode.prototype.updateNode = ePubFile.prototype.updateNode;
 ePubNode.prototype.updateNodes = ePubFile.prototype.updateNodes;
 ePubNode.prototype.removeNode = ePubFile.prototype.removeNode;
 ePubNode.prototype.removeNodes = ePubFile.prototype.removeNodes;
-ePubNode.prototype.findChild = ePubFile.prototype.findChild;
-ePubNode.prototype.findChildren = ePubFile.prototype.findChildren;
-ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
-ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
-ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
-ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
 
 export { ePubDoc, ePubFile, ePubNode };

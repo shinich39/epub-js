@@ -1,5 +1,6 @@
 "use strict";
 
+import { ePubNode } from "./node.js";
 import {
   extToMime,
   beautifyHTML,
@@ -18,27 +19,27 @@ import {
   isArray,
   isNumber,
   isObject,
+  isObjectArray,
   isString,
   parsePath,
   queryObject,
   strToDom,
 } from "../libs/utils.mjs";
 
-import { ePubNode } from "./node.js";
-
 export class ePubFile {
   /**
    *
-   * @param {object[]} arr
+   * @param {...object} objs
+   * @property {ePubDoc} document
    * @property {string} _id - Default value is UUID
    * @property {string} path - Required
    * @property {string} data
-   * @property {string} encoding - "base64", "utf8",
-   * @property {object[]} children
+   * @property {string} encoding - "base64", "utf8" or any encoding
+   * @property {ePubNode[]} children
    * @property {object} attributes
-   * @returns {ePubFile[]}
+   * @returns {ePubFile}
    */
-  constructor(obj) {
+  constructor(...objs) {
     // Reference properties
     this.document = null;
 
@@ -51,7 +52,7 @@ export class ePubFile {
     this.extension = null;
     this.mimetype = null;
     this.data = null;
-    this.encoding = null; // "utf8", "base64"
+    this.encoding = null;
 
     // DOM properties
     this.tag = null;
@@ -61,8 +62,8 @@ export class ePubFile {
     this.children = [];
 
     // Import data
-    if (isObject(obj)) {
-      Object.assign(this, deepcopy(obj, true));
+    if (isObjectArray(objs)) {
+      Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
     }
 
     this.init();
@@ -114,9 +115,7 @@ ePubFile.prototype.init = function () {
           this.children[i].init();
         }
       } else if (isObject(this.children[i])) {
-        this.children[i] = new ePubNode(
-          Object.assign({}, this.children[i], { parentNode: this })
-        );
+        this.children[i] = new ePubNode(this.children[i], { parentNode: this });
       } else if (isString(this.children[i])) {
         this.children[i] = new ePubNode({
           parentNode: this,
@@ -242,66 +241,60 @@ ePubFile.prototype.setAttribute = function (key, value) {
 };
 /**
  *
- * @param {ePubNode|object|string} node
+ * @param {ePubNode|object|string} nodes
  * @returns
  */
-ePubFile.prototype.appendNode = function (node) {
-  this.children.push(node);
-  this.init();
-  return this;
-};
-/**
- *
- * @param {ePubNode[]|object[]|string[]} nodes
- * @returns
- */
-ePubFile.prototype.appendNodes = function (nodes) {
+ePubFile.prototype.append = function (...nodes) {
   this.children = this.children.concat(nodes);
   this.init();
   return this;
 };
 /**
  *
- * @param {ePubNode|object} node
+ * @param {ePubNode|object} nodes
  * @returns
  */
-ePubFile.prototype.prependNode = function (node) {
-  this.children.unshift(node);
-  this.init();
-  return this;
-};
-/**
- *
- * @param {ePubNode[]|object[]} nodes
- * @returns
- */
-ePubFile.prototype.prependNodes = function (nodes) {
+ePubFile.prototype.prepend = function (...nodes) {
   this.children = [].concat(nodes, this.children);
   this.init();
   return this;
 };
 /**
  *
- * @param {ePubNode|object} node
- * @param {number} idx - Default value is -1
+ * @param {number} idx
+ * @param {ePubNode|object} nodes
  * @returns
  */
-ePubFile.prototype.insertNode = function (node, idx) {
+ePubFile.prototype.insert = function (idx, ...nodes) {
   idx = getContainedNumber(idx, 0, this.children.length);
-  this.children.splice(idx, 0, node);
+  this.children.splice(idx, 0, ...nodes);
   this.init();
   return this;
 };
 /**
  *
- * @param {ePubNode[]|object[]} nodes
- * @param {number} idx - Default value is -1
+ * @param {ePubFile|object} files
  * @returns
  */
-ePubFile.prototype.insertNodes = function (nodes, idx) {
-  idx = getContainedNumber(idx, 0, this.children.length);
-  this.children.splice(idx, 0, ...nodes);
-  this.init();
+ePubFile.prototype.before = function (...files) {
+  const idx = this.getIndex();
+  if (idx > -1) {
+    this.document.files.splice(idx, 0, ...files);
+    this.document.init();
+  }
+  return this;
+};
+/**
+ *
+ * @param {ePubFile|object} files
+ * @returns
+ */
+ePubFile.prototype.after = function (...files) {
+  const idx = this.getIndex();
+  if (idx > -1) {
+    this.document.files.splice(idx + 1, 0, ...files);
+    this.document.init();
+  }
   return this;
 };
 /**
@@ -425,25 +418,5 @@ ePubFile.prototype.toObject = function () {
 };
 
 ePubFile.prototype.toFile = function () {
-  return {
-    path: this.getAbsolutePath(),
-    data: this.toString(),
-    encoding: this.encoding,
-  };
+  return Object.assign(this.toObject(), { data: this.toString() });
 };
-
-ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
-ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
-
-ePubFile.prototype.appendChild = ePubFile.prototype.appendNode;
-ePubFile.prototype.appendChildren = ePubFile.prototype.appendNodes;
-ePubFile.prototype.prependChild = ePubFile.prototype.prependNode;
-ePubFile.prototype.prependChildren = ePubFile.prototype.prependNodes;
-ePubFile.prototype.insertChild = ePubFile.prototype.insertNode;
-ePubFile.prototype.insertChildren = ePubFile.prototype.insertNodes;
-ePubFile.prototype.findChild = ePubFile.prototype.findNode;
-ePubFile.prototype.findChildren = ePubFile.prototype.findNodes;
-ePubFile.prototype.updateChild = ePubFile.prototype.updateNode;
-ePubFile.prototype.updateChildren = ePubFile.prototype.updateNodes;
-ePubFile.prototype.removeChild = ePubFile.prototype.removeNode;
-ePubFile.prototype.removeChildren = ePubFile.prototype.removeNodes;

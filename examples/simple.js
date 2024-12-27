@@ -11,7 +11,7 @@ export function createDoc() {
   const metadataNode = packageFile.findNode({ tag: "metadata" });
   const manifestNode = packageFile.findNode({ tag: "manifest" });
   const spineNode = packageFile.findNode({ tag: "spine" });
-  const navFile = doc.createNav();
+  const navFile = new ePubFile(doc.defaults.nav);
   const tocNode = navFile
     .findNode({
       tag: "nav",
@@ -35,7 +35,7 @@ export function createDoc() {
       },
     });
 
-    manifestNode.appendChild(n);
+    manifestNode.append(n);
 
     return n;
   };
@@ -52,7 +52,7 @@ export function createDoc() {
       },
     });
 
-    spineNode.appendChild(n);
+    spineNode.append(n);
 
     return n;
   };
@@ -60,7 +60,7 @@ export function createDoc() {
   doc.addToNav = function (file, content) {
     const n = new ePubNode({
       tag: "li",
-    }).appendChild({
+    }).append({
       tag: "a",
       attributes: {
         href: file.getRelativePath(navFile),
@@ -68,18 +68,19 @@ export function createDoc() {
       content: content,
     });
 
-    tocNode.appendChild(n);
+    tocNode.append(n);
 
     return n;
   };
 
   doc.setCover = function (filePath) {
-    const i = this.createImage({
+    const i = new ePubFile({
+      encoding: "base64",
       path: "EPUB/images/cover" + path.extname(filePath),
-      data: readImage(filePath),
+      data: fs.readFileSync(filePath, "base64"),
     });
 
-    const prev = manifestNode.findChild({
+    const prev = manifestNode.findNode({
       attributes: {
         properties: "cover-image",
       },
@@ -92,7 +93,7 @@ export function createDoc() {
       prev.remove();
     }
 
-    this.appendChild(i);
+    this.append(i);
     this.addToManifest(i, "cover-image");
   };
 
@@ -114,8 +115,8 @@ export function createDoc() {
       tag: "dc:creator",
     });
 
-    metadataNode.appendChildren(
-      authors.map((item, i) => {
+    metadataNode.append(
+      ...authors.map((item, i) => {
         return {
           tag: "dc:creator",
           attributes: {
@@ -146,12 +147,12 @@ export function createDoc() {
   };
 
   doc.setCreatedAt = function (date) {
-    metadataNode.removeChild({
+    metadataNode.removeNode({
       tag: "meta",
       "attributes.property": "dcterms:modified",
     });
 
-    metadataNode.appendChild(
+    metadataNode.updateNode(
       {
         tag: "meta",
         "attributes.property": "dcterms:modified",
@@ -165,18 +166,18 @@ export function createDoc() {
   };
 
   doc.setPublishedAt = function (date) {
-    metadataNode.removeChild({
+    metadataNode.removeNode({
       tag: "dc:date",
     });
 
-    metadataNode.appendChild({
+    metadataNode.append({
       tag: "dc:date",
       content: moment(date).toISOString(),
     });
   };
 
   doc.setRendition = function (rendition) {
-    metadataNode.removeChildren({
+    metadataNode.removeNodes({
       tag: "meta",
       attributes: {
         property: {
@@ -190,7 +191,7 @@ export function createDoc() {
     });
 
     if (rendition.layout) {
-      metadataNode.appendChild({
+      metadataNode.append({
         tag: "meta",
         attributes: {
           property: "rendition:layout",
@@ -200,7 +201,7 @@ export function createDoc() {
     }
 
     if (rendition.orientation) {
-      metadataNode.appendChild({
+      metadataNode.append({
         tag: "meta",
         attributes: {
           property: "rendition:orientation",
@@ -210,7 +211,7 @@ export function createDoc() {
     }
 
     if (rendition.spread) {
-      metadataNode.appendChild({
+      metadataNode.append({
         tag: "meta",
         attributes: {
           property: "rendition:spread",
@@ -228,12 +229,13 @@ export function createDoc() {
     });
 
     if (!f) {
-      f = this.createImage({
+      f = new ePubFile({
+        encoding: "base64",
         path: newPath,
         data: fs.readFileSync(srcPath, "base64"),
       });
 
-      this.appendChild(f);
+      this.append(f);
       this.addToManifest(f);
     }
 
@@ -248,12 +250,13 @@ export function createDoc() {
     });
 
     if (!f) {
-      f = this.createAudio({
+      f = new ePubFile({
+        encoding: "base64",
         path: newPath,
         data: fs.readFileSync(srcPath, "base64"),
       });
 
-      this.appendChild(f);
+      this.append(f);
       this.addToManifest(f);
     }
 
@@ -268,12 +271,13 @@ export function createDoc() {
     });
 
     if (!f) {
-      f = this.createAudio({
+      f = new ePubFile({
+        encoding: "base64",
         path: newPath,
         data: fs.readFileSync(srcPath, "base64"),
       });
 
-      this.appendChild(f);
+      this.append(f);
       this.addToManifest(f);
     }
 
@@ -281,9 +285,10 @@ export function createDoc() {
   }
 
   doc.addPage = function(filePath, headNodes, bodyNodes) {
-    const p = this.createPage({
-      path: filePath,
-    });
+    const p = new ePubFile(
+      doc.defaults.page,
+      { path: filePath }
+    );
 
     if (headNodes) {
       for (const n of headNodes) {
@@ -309,7 +314,7 @@ export function createDoc() {
       }
     }
 
-    this.appendChild(p);
+    this.append(p);
     this.addToManifest(p);
     this.addToSpine(p);
     this.addToNav(p);
@@ -327,7 +332,7 @@ export function createDoc() {
     return obj;
   };
 
-  doc.appendChild(navFile);
+  doc.append(navFile);
   doc.addToManifest(navFile, "nav");
 
   return {

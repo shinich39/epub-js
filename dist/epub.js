@@ -4,16 +4,46 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.epub = {}));
 })(this, (function (exports) { 'use strict';
 
-  // src/type.js
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
   function isString(obj) {
     return typeof obj === "string";
   }
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
   function isObject(obj) {
     return typeof obj === "object" && obj !== null;
+    // return (
+    //   typeof obj === "object" &&
+    //   obj !== null &&
+    //   obj.constructor === Object &&
+    //   Object.getPrototypeOf(obj) === Object.prototype
+    // );
   }
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
   function isNull(obj) {
     return typeof obj === "object" && obj === null;
   }
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
   function isArray(obj) {
     if (Array && Array.isArray) {
       return Array.isArray(obj);
@@ -21,25 +51,31 @@
       return Object.prototype.toString.call(obj) === "[object Array]";
     }
   }
+  /**
+   *
+   * @param {*} obj
+   * @returns {boolean}
+   */
+  function isObjectArray(obj) {
+    if (!isArray(obj)) {
+      return false;
+    }
+    for (const item of obj) {
+      if (!isObject(item)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /**
+   * Query operator list:
+   * $and, $nand, $or, $nor, $in, $nin, $gt, $gte, $lt, $lte, $eq, $ne, $exists, $fn, $re
+   * https://www.mongodb.com/docs/manual/tutorial/query-documents/
+   * @param {object} obj
+   * @param {object} qry
+   * @returns {boolean}
+   */
   function queryObject(obj, qry) {
-    const QUERY_OPERATORS = {
-      and: ["$and"],
-      notAnd: ["$notAnd", "$nand"],
-      or: ["$or"],
-      notOr: ["$notOr", "$nor"],
-      not: ["$not"],
-      include: ["$include", "$in"],
-      exclude: ["$exclude", "$nin"],
-      greaterThan: ["$greaterThan", "$gt"],
-      greaterThanOrEqual: ["$greaterThanOrEqual", "$gte"],
-      lessThan: ["$lessThan", "$lt"],
-      lessThanOrEqual: ["$lessThanOrEqual", "$lte"],
-      equal: ["$equal", "$eq"],
-      notEqual: ["$notEqual", "$neq", "$ne"],
-      exists: ["$exists"],
-      function: ["$function", "$func", "$fn"],
-      regexp: ["$regexp", "$regex", "$re", "$reg"]
-    };
     function A(d, q) {
       for (const [key, value] of Object.entries(q)) {
         if (!B(d, value, key.split("."))) {
@@ -48,6 +84,7 @@
       }
       return true;
     }
+
     function B(d, q, k) {
       const o = k.shift();
       if (k.length > 0) {
@@ -59,60 +96,61 @@
       }
       return C(d, q, o);
     }
+
     function C(d, q, o) {
-      if (QUERY_OPERATORS.and.indexOf(o) > -1) {
+      if (o === "$and") {
         for (const v of q) {
           if (!A(d, v)) {
             return false;
           }
         }
         return true;
-      } else if (QUERY_OPERATORS.notAnd.indexOf(o) > -1) {
+      } else if (o === "$nand") {
         return !C(d, q, "$and");
-      } else if (QUERY_OPERATORS.or.indexOf(o) > -1) {
+      } else if (o === "$or") {
         for (const v of q) {
           if (A(d, v)) {
             return true;
           }
         }
         return false;
-      } else if (QUERY_OPERATORS.notOr.indexOf(o) > -1) {
+      } else if (o === "$nor") {
         return !C(d, q, "$or");
-      } else if (QUERY_OPERATORS.not.indexOf(o) > -1) {
+      } else if (o === "$not") {
         return !A(d, q);
-      } else if (QUERY_OPERATORS.include.indexOf(o) > -1) {
+      } else if (o === "$in") {
         if (isArray(d)) {
           for (const v of d) {
-            if (!C(v, q, "$include")) {
+            if (!C(v, q, "$in")) {
               return false;
             }
           }
           return true;
         } else {
           for (const v of q) {
-            if (C(d, v, "$equal")) {
+            if (C(d, v, "$eq")) {
               return true;
             }
           }
           return false;
         }
-      } else if (QUERY_OPERATORS.exclude.indexOf(o) > -1) {
-        return !C(d, q, "$include");
-      } else if (QUERY_OPERATORS.greaterThan.indexOf(o) > -1) {
+      } else if (o === "$nin") {
+        return !C(d, q, "$in");
+      } else if (o === "$gt") {
         return d > q;
-      } else if (QUERY_OPERATORS.greaterThanOrEqual.indexOf(o) > -1) {
+      } else if (o === "$gte") {
         return d >= q;
-      } else if (QUERY_OPERATORS.lessThan.indexOf(o) > -1) {
+      } else if (o === "$lt") {
         return d < q;
-      } else if (QUERY_OPERATORS.lessThanOrEqual.indexOf(o) > -1) {
+      } else if (o === "$lte") {
         return d <= q;
-      } else if (QUERY_OPERATORS.equal.indexOf(o) > -1) {
+      } else if (o === "$eq") {
         if (isArray(d) && isArray(q)) {
           if (d.length !== q.length) {
             return false;
           }
           for (let i = 0; i < q.length; i++) {
-            if (!C(d[i], q[i], "$equal")) {
+            if (!C(d[i], q[i], "$eq")) {
               return false;
             }
           }
@@ -120,60 +158,99 @@
         } else {
           return d === q;
         }
-      } else if (QUERY_OPERATORS.notEqual.indexOf(o) > -1) {
-        return !C(d, q, "$equal");
-      } else if (QUERY_OPERATORS.exists.indexOf(o) > -1) {
-        return (d !== null && d !== void 0) === Boolean(q);
-      } else if (QUERY_OPERATORS.function.indexOf(o) > -1) {
+      } else if (o === "$ne") {
+        return !C(d, q, "$eq");
+      } else if (o === "$exists") {
+        return (d !== null && d !== undefined) === Boolean(q);
+      } else if (o === "$fn") {
         return q(d);
-      } else if (QUERY_OPERATORS.regexp.indexOf(o) > -1) {
+      } else if (o === "$re") {
         return q.test(d);
       } else if (!isObject(d)) {
         return false;
       } else if (isObject(q)) {
         return A(d[o], q);
       } else {
-        return C(d[o], q, "$equal");
+        return C(d[o], q, "$eq");
       }
     }
+
     return A(obj, qry);
   }
+  /**
+   *
+   * @param {number} num
+   * @param {number} min
+   * @param {number} max
+   * @returns {number} min <= n < max
+   */
   function getContainedNumber(num, min, max) {
     num -= min;
     max -= min;
+
     if (num < 0) {
-      num = num % max + max;
+      num = (num % max) + max;
     }
+
     if (num >= max) {
       num = num % max;
     }
+
     return num + min;
   }
+  /**
+   * Generate uuid v4
+   * @returns {string}
+   */
   function generateUUID() {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-      let r = Math.random() * 16 | 0, v;
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      let r = (Math.random() * 16) | 0,
+        v;
       if (c == "x") {
         v = r;
       } else {
-        v = r & 3 | 8;
+        v = (r & 0x3) | 0x8;
       }
       return v.toString(16);
     });
   }
+  /**
+   *
+   * @param {string} from
+   * @param {string} to
+   * @returns {string}
+   */
   function getRelativePath(from, to) {
     from = (from + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
     to = (to + "/").replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
+
     let result = "";
     while (!to.startsWith(from)) {
       result += "../";
       from = from.substring(0, from.lastIndexOf("/", from.length - 2) + 1);
     }
     result += to.substring(from.length, to.length);
+
     return result.replace(/[\\\/]$/, "");
   }
+  /**
+   *
+   * @param {string} str
+   * @returns {object}
+   */
   function parsePath(str) {
-    str = str.replace(/[\\\/]+/g, "/").replace(/\/$/, "").replace(/^\.?\//, "");
-    let dirs = str.split("/"), filename = "", basename = "", dirname = ".", extname = "";
+    // Normalize
+    str = str
+      .replace(/[\\\/]+/g, "/")
+      .replace(/\/$/, "")
+      .replace(/^\.?\//, "");
+
+    let dirs = str.split("/"),
+      filename = "",
+      basename = "",
+      dirname = ".",
+      extname = "";
+
     if (dirs.length > 0) {
       basename = dirs.pop();
       if (/\.[^\\\/.]+?$/.test(basename)) {
@@ -181,48 +258,60 @@
       }
       filename = basename.replace(new RegExp(extname + "$"), "");
     }
+
     if (dirs.length > 0) {
       dirname = dirs.join("/");
     }
+
     return {
       dirs,
       filename,
       basename,
       dirname,
-      extname
+      extname,
     };
   }
 
-  // src/dom.js
-  var HTML_ENTITIES = [
+  // HTML entities
+  // https://www.w3schools.com/html/html_entities.asp
+  const HTML_ENTITIES = [
     ["&", "&amp;"],
     [" ", "&nbsp;"],
     ["<", "&lt;"],
     [">", "&gt;"],
-    ['"', "&quot;"],
-    ["'", "&apos;"],
-    ["\xA2", "&cent;"],
-    ["\xA3", "&pound;"],
-    ["\xA5", "&yen;"],
-    ["\u20AC", "&euro;"],
-    ["\xA9", "&copy;"],
-    ["\xAE", "&reg;"]
+    ['\"', "&quot;"],
+    ["\'", "&apos;"],
+    ["¢", "&cent;"],
+    ["£", "&pound;"],
+    ["¥", "&yen;"],
+    ["€", "&euro;"],
+    ["©", "&copy;"],
+    ["®", "&reg;"],
   ];
-  var ATTR_ENTITIES = [
+
+  const ATTR_ENTITIES = [
     ["<", "&lt;"],
     [">", "&gt;"],
-    ['"', "&quot;"],
-    ["'", "&apos;"]
+    ['\"', "&quot;"],
+    ["\'", "&apos;"],
   ];
+
   function normalizeLineBreakers(str) {
     return str.replace(/\r\n/g, "\n");
   }
+
   function normalizeTag(str) {
-    return str.replace(/^\</, "").replace(/([^\<][!?/])?\>$/, "").replace(/\s+/g, " ").trim();
+    return str
+      .replace(/^\</, "")
+      .replace(/([^\<][!?/])?\>$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
+
   function isText(node) {
     return node.tag === null;
   }
+
   function findLastIndex(arr, func) {
     for (let i = arr.length - 1; i >= 0; i--) {
       if (func(arr[i], i, arr)) {
@@ -231,12 +320,15 @@
     }
     return -1;
   }
+
   function encodeStr(str) {
     return encodeURIComponent(str);
   }
+
   function decodeStr(str) {
     return decodeURIComponent(str);
   }
+
   function escapeStr(str) {
     for (let i = 0; i < HTML_ENTITIES.length; i++) {
       str = str.replace(
@@ -246,6 +338,7 @@
     }
     return str;
   }
+
   function unescapeStr(str) {
     for (let i = HTML_ENTITIES.length - 1; i >= 0; i--) {
       str = str.replace(
@@ -255,6 +348,7 @@
     }
     return str;
   }
+
   function escapeAttr(str) {
     for (let i = 0; i < ATTR_ENTITIES.length; i++) {
       str = str.replace(
@@ -264,30 +358,35 @@
     }
     return str;
   }
+
   function convertComments(str) {
-    return str.replace(/<!--([\s\S]*?)-->/g, function(...args) {
+    return str.replace(/<!--([\s\S]*?)-->/g, function (...args) {
       return `<!-->${encodeStr(args[1])}</!-->`;
     });
   }
+
   function encodeScripts(str) {
     return str.replace(
       /(<script(?:[\s\S]*?)>)([\s\S]*?)(<\/script>)/g,
-      function(...args) {
+      function (...args) {
         return `${args[1]}${encodeStr(args[2])}${args[3]}`;
       }
     );
   }
+
   function encodeContents(str) {
-    return str.replace(/(>)([\s\S]*?)(<)/g, function(...args) {
+    return str.replace(/(>)([\s\S]*?)(<)/g, function (...args) {
       return `${args[1]}${escapeStr(args[2])}${args[3]}`;
     });
   }
+
   function encodeAttributes(str) {
     function func(...args) {
       return `=${encodeStr(args[1])} `;
     }
     return str.replace(/\='([^'>]*?)'/g, func).replace(/\="([^">]*?)"/g, func);
   }
+
   function parseTag(str) {
     let arr = normalizeTag(str).split(/\s/);
     let result = {};
@@ -299,24 +398,38 @@
     result.isClosing = /^\//.test(result.tag);
     result.isClosed = result.isClosing;
     result.tag = result.tag.replace(/^\//, "");
+
     for (let i = 1; i < arr.length; i++) {
       let [key, value] = arr[i].split("=");
       if (key.length > 0) {
         if (typeof value === "string") {
+          // Escape quotation marks in attribute value
           result.attributes[key] = decodeStr(value);
         } else {
+          // https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#boolean-attributes
+          // The values "true" and "false" are not allowed on boolean attributes. To represent a false value, the attribute has to be omitted altogether.
           result.attributes[key] = true;
         }
       }
     }
+
     return result;
   }
+
   function strToDom(str) {
     str = encodeAttributes(
       encodeContents(encodeScripts(convertComments(normalizeLineBreakers(str))))
     );
-    let offset = 0, re = /<[^>]*?>/g, match, children = [], nodes = [], obj;
-    while (match = re.exec(str)) {
+
+    let offset = 0,
+      re = /<[^>]*?>/g,
+      match,
+      children = [],
+      nodes = [],
+      obj;
+
+    while ((match = re.exec(str))) {
+      // Read content
       let content = str.substring(offset, match.index).trim();
       if (content.length > 0) {
         obj = {
@@ -326,21 +439,30 @@
           closer: null,
           content: unescapeStr(content),
           attributes: {},
-          children: []
+          children: [],
         };
+
         children.push(obj);
       }
+
+      // Read tag
       obj = parseTag(match[0]);
       if (!obj.isClosing) {
+        // Tag is opening tag
         children.push(obj);
         nodes.push(obj);
       } else {
-        let i = findLastIndex(children, function(item) {
+        // Tag is closing tag
+        // Add children to tag
+        let i = findLastIndex(children, function (item) {
           return !item.isClosed && item.tag === obj.tag;
         });
+
         if (i > -1) {
           children[i].isClosed = true;
           children[i].children = children.splice(i + 1, children.length - i + 1);
+
+          // Decode contents of the scripts and comments
           if (["script", "!--"].indexOf(children[i].tag) > -1) {
             for (let j = 0; j < children[i].children.length; j++) {
               if (isText(children[i].children[j])) {
@@ -352,29 +474,44 @@
           }
         }
       }
+
       offset = re.lastIndex;
     }
+
     for (let node of nodes) {
       if (node.tag.toUpperCase() === "!DOCTYPE") {
+        // HTML doctype declaration
+        // https://www.w3schools.com/tags/tag_doctype.ASP
         node.closer = "";
       } else if (node.tag.toLowerCase() === "?xml") {
+        // XML Prolog
+        // <?xml version="1.0" encoding="utf-8"?>
+        // https://www.w3schools.com/xml/xml_syntax.asp
         node.closer = "?";
       } else if (node.tag === "!--") {
+        // Comment
+        // https://www.w3schools.com/tags/tag_comment.asp
         node.closer = "--";
       } else if (!node.isClosed) {
+        // Self-closing tag, Empty tag
+        // Requirements for XHTML
         node.closer = " /";
       }
+
+      // Remove unused attributes
       delete node.isClosed;
       delete node.isClosing;
     }
+
     return {
       tag: null,
       closer: null,
       content: null,
       attributes: {},
-      children
+      children: children,
     };
   }
+
   function objToAttr(obj) {
     let result = "";
     for (const [k, v] of Object.entries(obj)) {
@@ -386,36 +523,46 @@
     }
     return result;
   }
+
   function domToStr(obj) {
     const { tag, closer, attributes, content, children } = obj;
     let result = "";
+
+    // Node
     if (typeof tag === "string") {
       result += `<${tag}`;
+
       if (typeof attributes === "object") {
         result += objToAttr(attributes);
       }
+
       if (typeof closer !== "string") {
         result += ">";
       }
+
       if (Array.isArray(children)) {
         for (const child of children) {
           result += domToStr(child);
         }
       }
+
       if (typeof closer === "string") {
         result += `${closer}>`;
       } else {
         result += `</${tag}>`;
       }
-    } else if (typeof content === "string") {
+    } // TextContent
+    else if (typeof content === "string") {
       result = content;
-    } else {
+    } // Root Node
+    else {
       if (Array.isArray(children)) {
         for (const child of children) {
           result += domToStr(child);
         }
       }
     }
+
     return result;
   }
 
@@ -7165,19 +7312,136 @@
 
   var mime = new Mime(types, types$1)._freeze();
 
+  function isDOM(str) {
+    return /[/+](xml|html)$/.test(str);
+  }
+
+  function isInstance(obj) {
+    return obj instanceof ePubDoc || 
+      obj instanceof ePubFile ||
+      obj instanceof ePubNode;
+  }
+
+  function isFile(obj) {
+    return obj instanceof ePubFile;
+  }
+
+  function isNode(obj) {
+    return obj instanceof ePubNode;
+  }
+
+  function normalizePath(str) {
+    return str.replace(/[\\\/]+/g, "/")
+      .replace(/^\.?\//, "");
+  }
+
+  function extToMime(ext) {
+    return mime.getType(ext);
+  }
+
+  function beautifyHTML(str) {
+    return beautify.html(str, {
+      indent_size: 2,
+    });
+  }
+
+  function updateObject(obj, updates) {
+    for (const operator of Object.keys(updates)) {
+      for (let [keys, value] of Object.entries(updates[operator])) {
+        keys = keys.split(".");
+
+        let target = obj,
+            key = keys.pop();
+
+        while(isObject(target) && keys.length > 0) {
+          target = target[keys.shift()];
+        }
+
+        if (!isObject(target)) {
+          continue;
+        }
+
+        if (operator === "$set") {
+          if (target[key] !== value) {
+            target[key] = value;
+          }
+        } else if (operator === "$unset") {
+          if (!!value) {
+            delete target[key];
+          }
+        } else if (operator === "$push") {
+          target[key].push(value);
+        } else if (operator === "$pushAll") {
+          for (const v of value) {
+            target[key].push(v);
+          }
+        } else if (operator === "$pull") {
+          for (let i = target[key].length; i >= 0; i--) {
+            if (target[key][i] === value) {
+              target[key].splice(i, 1);
+              break;
+            }
+          }
+        } else if (operator === "$pullAll") {
+          const prev = target[key];
+          target[key] = [];
+          for (const v of prev) {
+            if (value.indexOf(v) === -1) {
+              target[key].push(v);
+            }
+          }
+        } else if (operator === "$addToSet") {
+          if (target[key].indexOf(value) === -1) {
+            target[key].push(value);
+          }
+        } else if (operator === "$addToSetAll") {
+          for (const v of value) {
+            if (target[key].indexOf(v) === -1) {
+              target[key].push(v);
+            }
+          }
+        } 
+      }
+    }
+  }
+
+  function deepcopy(obj, keepInstances) {
+    let result;
+    if (Array.isArray(obj)) {
+      result = [];
+    } else {
+      result = {};
+    }
+    for (const [key, value] of Object.entries(obj)) {
+      if (isInstance(value)) {
+        if (keepInstances) {
+          result[key] = value;
+        } else {
+          result[key] = null;
+        }
+      } else if (isObject(value) && !isNull(value)) {
+        result[key] = deepcopy(value, keepInstances);
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
+
   class ePubNode {
     /**
      *
-     * @param {object} obj
+     * @param {...object} objs
+     * @property {ePubFile|ePubNode} parentNode
      * @property {string} _id - Default value is UUID
      * @property {string|null} tag - Required
      * @property {string|null} closer - "/"
      * @property {string} content - You must set the tag to null
      * @property {object} attributes
-     * @property {object[]} children
+     * @property {ePubNode[]} children
      * @returns {ePubNode}
      */
-    constructor(obj) {
+    constructor(...objs) {
       // Reference properties
       this.parentNode = null;
 
@@ -7191,8 +7455,8 @@
       this.children = [];
 
       // Import data
-      if (isObject(obj)) {
-        Object.assign(this, deepcopy(obj, true));
+      if (isObjectArray(objs)) {
+        Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
       }
 
       this.init();
@@ -7253,9 +7517,7 @@
             this.children[i].init();
           }
         } else if (isObject(this.children[i])) {
-          this.children[i] = new ePubNode(
-            Object.assign({}, this.children[i], { parentNode: this })
-          );
+          this.children[i] = new ePubNode(this.children[i], { parentNode: this });
         } else if (isString(this.children[i])) {
           this.children[i] = new ePubNode({
             parentNode: this,
@@ -7330,7 +7592,36 @@
     from = parsePath(from).dirname;
     return getRelativePath(from, this.getAbsolutePath());
   };
-
+  /**
+   *
+   * @param {ePubNode|object} nodes
+   * @returns
+   */
+  ePubNode.prototype.before = function (...nodes) {
+    const idx = this.getIndex();
+    if (idx > -1) {
+      this.parentNode.children.splice(idx, 0, ...nodes);
+      this.parentNode.init();
+    }
+    return this;
+  };
+  /**
+   *
+   * @param {ePubNode|object} nodes
+   * @returns
+   */
+  ePubNode.prototype.after = function (...nodes) {
+    const idx = this.getIndex();
+    if (idx > -1) {
+      this.parentNode.children.splice(idx + 1, 0, ...nodes);
+      this.parentNode.init();
+    }
+    return this;
+  };
+  /**
+   *
+   * @returns
+   */
   ePubNode.prototype.remove = function () {
     const currentIndex = this.getIndex();
     if (currentIndex > -1) {
@@ -7359,16 +7650,17 @@
   class ePubFile {
     /**
      *
-     * @param {object[]} arr
+     * @param {...object} objs
+     * @property {ePubDoc} document
      * @property {string} _id - Default value is UUID
      * @property {string} path - Required
      * @property {string} data
-     * @property {string} encoding - "base64", "utf8",
-     * @property {object[]} children
+     * @property {string} encoding - "base64", "utf8" or any encoding
+     * @property {ePubNode[]} children
      * @property {object} attributes
-     * @returns {ePubFile[]}
+     * @returns {ePubFile}
      */
-    constructor(obj) {
+    constructor(...objs) {
       // Reference properties
       this.document = null;
 
@@ -7381,7 +7673,7 @@
       this.extension = null;
       this.mimetype = null;
       this.data = null;
-      this.encoding = null; // "utf8", "base64"
+      this.encoding = null;
 
       // DOM properties
       this.tag = null;
@@ -7391,8 +7683,8 @@
       this.children = [];
 
       // Import data
-      if (isObject(obj)) {
-        Object.assign(this, deepcopy(obj, true));
+      if (isObjectArray(objs)) {
+        Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
       }
 
       this.init();
@@ -7444,9 +7736,7 @@
             this.children[i].init();
           }
         } else if (isObject(this.children[i])) {
-          this.children[i] = new ePubNode(
-            Object.assign({}, this.children[i], { parentNode: this })
-          );
+          this.children[i] = new ePubNode(this.children[i], { parentNode: this });
         } else if (isString(this.children[i])) {
           this.children[i] = new ePubNode({
             parentNode: this,
@@ -7572,66 +7862,60 @@
   };
   /**
    *
-   * @param {ePubNode|object|string} node
+   * @param {ePubNode|object|string} nodes
    * @returns
    */
-  ePubFile.prototype.appendNode = function (node) {
-    this.children.push(node);
-    this.init();
-    return this;
-  };
-  /**
-   *
-   * @param {ePubNode[]|object[]|string[]} nodes
-   * @returns
-   */
-  ePubFile.prototype.appendNodes = function (nodes) {
+  ePubFile.prototype.append = function (...nodes) {
     this.children = this.children.concat(nodes);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubNode|object} node
+   * @param {ePubNode|object} nodes
    * @returns
    */
-  ePubFile.prototype.prependNode = function (node) {
-    this.children.unshift(node);
-    this.init();
-    return this;
-  };
-  /**
-   *
-   * @param {ePubNode[]|object[]} nodes
-   * @returns
-   */
-  ePubFile.prototype.prependNodes = function (nodes) {
+  ePubFile.prototype.prepend = function (...nodes) {
     this.children = [].concat(nodes, this.children);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubNode|object} node
-   * @param {number} idx - Default value is -1
+   * @param {number} idx
+   * @param {ePubNode|object} nodes
    * @returns
    */
-  ePubFile.prototype.insertNode = function (node, idx) {
+  ePubFile.prototype.insert = function (idx, ...nodes) {
     idx = getContainedNumber(idx, 0, this.children.length);
-    this.children.splice(idx, 0, node);
+    this.children.splice(idx, 0, ...nodes);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubNode[]|object[]} nodes
-   * @param {number} idx - Default value is -1
+   * @param {ePubFile|object} files
    * @returns
    */
-  ePubFile.prototype.insertNodes = function (nodes, idx) {
-    idx = getContainedNumber(idx, 0, this.children.length);
-    this.children.splice(idx, 0, ...nodes);
-    this.init();
+  ePubFile.prototype.before = function (...files) {
+    const idx = this.getIndex();
+    if (idx > -1) {
+      this.document.files.splice(idx, 0, ...files);
+      this.document.init();
+    }
+    return this;
+  };
+  /**
+   *
+   * @param {ePubFile|object} files
+   * @returns
+   */
+  ePubFile.prototype.after = function (...files) {
+    const idx = this.getIndex();
+    if (idx > -1) {
+      this.document.files.splice(idx + 1, 0, ...files);
+      this.document.init();
+    }
     return this;
   };
   /**
@@ -7755,156 +8039,39 @@
   };
 
   ePubFile.prototype.toFile = function () {
-    return {
-      path: this.getAbsolutePath(),
-      data: this.toString(),
-      encoding: this.encoding,
-    };
+    return Object.assign(this.toObject(), { data: this.toString() });
   };
 
-  ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
-  ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
-
-  ePubFile.prototype.appendChild = ePubFile.prototype.appendNode;
-  ePubFile.prototype.appendChildren = ePubFile.prototype.appendNodes;
-  ePubFile.prototype.prependChild = ePubFile.prototype.prependNode;
-  ePubFile.prototype.prependChildren = ePubFile.prototype.prependNodes;
-  ePubFile.prototype.insertChild = ePubFile.prototype.insertNode;
-  ePubFile.prototype.insertChildren = ePubFile.prototype.insertNodes;
-  ePubFile.prototype.findChild = ePubFile.prototype.findNode;
-  ePubFile.prototype.findChildren = ePubFile.prototype.findNodes;
-  ePubFile.prototype.updateChild = ePubFile.prototype.updateNode;
-  ePubFile.prototype.updateChildren = ePubFile.prototype.updateNodes;
-  ePubFile.prototype.removeChild = ePubFile.prototype.removeNode;
-  ePubFile.prototype.removeChildren = ePubFile.prototype.removeNodes;
-
-  function isDOM(str) {
-    return /[/+](xml|html)$/.test(str);
-  }
-
-  function isInstance(obj) {
-    return obj instanceof ePubDoc || 
-      obj instanceof ePubFile ||
-      obj instanceof ePubNode;
-  }
-
-  function isFile(obj) {
-    return obj instanceof ePubFile;
-  }
-
-  function isNode(obj) {
-    return obj instanceof ePubNode;
-  }
-
-  function normalizePath(str) {
-    return str.replace(/[\\\/]+/g, "/")
-      .replace(/^\.?\//, "");
-  }
-
-  function extToMime(ext) {
-    return mime.getType(ext);
-  }
-
-  function beautifyHTML(str) {
-    return beautify.html(str, {
-      indent_size: 2,
-    });
-  }
-
-  function updateObject(obj, updates) {
-    for (const operator of Object.keys(updates)) {
-      for (let [keys, value] of Object.entries(updates[operator])) {
-        keys = keys.split(".");
-
-        let target = obj,
-            key = keys.pop();
-
-        while(isObject(target) && keys.length > 0) {
-          target = target[keys.shift()];
-        }
-
-        if (!isObject(target)) {
-          continue;
-        }
-
-        if (operator === "$set") {
-          if (target[key] !== value) {
-            target[key] = value;
-          }
-        } else if (operator === "$unset") {
-          if (!!value) {
-            delete target[key];
-          }
-        } else if (operator === "$push") {
-          target[key].push(value);
-        } else if (operator === "$pushAll") {
-          for (const v of value) {
-            target[key].push(v);
-          }
-        } else if (operator === "$pull") {
-          for (let i = target[key].length; i >= 0; i--) {
-            if (target[key][i] === value) {
-              target[key].splice(i, 1);
-              break;
-            }
-          }
-        } else if (operator === "$pullAll") {
-          const prev = target[key];
-          target[key] = [];
-          for (const v of prev) {
-            if (value.indexOf(v) === -1) {
-              target[key].push(v);
-            }
-          }
-        } else if (operator === "$addToSet") {
-          if (target[key].indexOf(value) === -1) {
-            target[key].push(value);
-          }
-        } else if (operator === "$addToSetAll") {
-          for (const v of value) {
-            if (target[key].indexOf(v) === -1) {
-              target[key].push(v);
-            }
-          }
-        } 
-      }
-    }
-  }
-
-  function deepcopy(obj, keepInstances) {
-    let result;
-    if (Array.isArray(obj)) {
-      result = [];
-    } else {
-      result = {};
-    }
-    for (const [key, value] of Object.entries(obj)) {
-      if (isInstance(value)) {
-        if (keepInstances) {
-          result[key] = value;
-        } else {
-          result[key] = null;
-        }
-      } else if (isObject(value) && !isNull(value)) {
-        result[key] = deepcopy(value, keepInstances);
-      } else {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
-
   class ePubDoc {
-    constructor(obj) {
+    /**
+     *
+     * @param  {...object} objs
+     * @property {ePubFile[]} files
+     */
+    constructor(...objs) {
       this.files = [
-        this.createMimetype(),
-        this.createContainer(),
-        this.createPackage(),
+        new ePubFile(this.defaults.mimetype),
+        new ePubFile(this.defaults.container),
+        new ePubFile(this.defaults.package).updateNode(
+          {
+            tag: "dc:identifier",
+          },
+          {
+            $set: {
+              children: [
+                {
+                  // Generate BookID
+                  content: "urn:uuid:" + generateUUID(),
+                },
+              ],
+            },
+          }
+        ),
       ];
 
       // Import data
-      if (isObject(obj)) {
-        Object.assign(this, deepcopy(obj, true));
+      if (isObjectArray(objs)) {
+        Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
       }
 
       this.init();
@@ -8359,9 +8526,7 @@
             this.files[i].init();
           }
         } else if (isObject(this.files[i])) {
-          this.files[i] = new ePubFile(
-            Object.assign({}, this.files[i], { document: this })
-          );
+          this.files[i] = new ePubFile(this.files[i], { document: this });
         }
       }
     }
@@ -8371,255 +8536,52 @@
   /**
    *
    * @param {object} updates
+   * @property {object} $set
+   * @property {object} $unset
+   * @property {object} $push
+   * @property {object} $pushAll
+   * @property {object} $pull
+   * @property {object} $pullAll
+   * @property {object} $addToSet
+   * @property {object} $addToSetAll
    * @returns
    */
   ePubDoc.prototype.update = function (updates) {
-    if (isObject(updates)) {
-      updateObject(this, updates);
-    }
-
-    this.init();
-
-    return this;
-  };
-  /**
-   *
-   * @param {ePubFile|object} file
-   * @returns
-   */
-  ePubDoc.prototype.appendFile = function (file) {
-    this.files.push(file);
+    updateObject(this, updates);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubFile[]|object[]} files
+   * @param {ePubFile|object} files
    * @returns
    */
-  ePubDoc.prototype.appendFiles = function (files) {
+  ePubDoc.prototype.append = function (...files) {
     this.files = this.files.concat(files);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubFile|object} file
+   * @param {ePubFile|object} files
    * @returns
    */
-  ePubDoc.prototype.prependFile = function (file) {
-    this.files.unshift(file);
-    this.init();
-    return this;
-  };
-  /**
-   *
-   * @param {ePubFile[]|object[]} files
-   * @returns
-   */
-  ePubDoc.prototype.prependFiles = function (files) {
+  ePubDoc.prototype.prepend = function (...files) {
     this.files = [].concat(files, this.files);
     this.init();
     return this;
   };
   /**
    *
-   * @param {ePubFile|object} file
-   * @param {number} idx - Default value is -1
+   * @param {number} idx
+   * @param {ePubFile|object} files
    * @returns
    */
-  ePubDoc.prototype.insertFile = function (file, idx) {
-    idx = getContainedNumber(idx, 0, this.files.length);
-    this.files.splice(idx, 0, file);
-    this.init();
-    return this;
-  };
-  /**
-   *
-   * @param {ePubFile[]|object[]} files
-   * @param {number} idx - Default value is -1
-   * @returns
-   */
-  ePubDoc.prototype.insertFiles = function (files, idx) {
+  ePubDoc.prototype.insert = function (idx, ...files) {
     idx = getContainedNumber(idx, 0, this.files.length);
     this.files.splice(idx, 0, ...files);
     this.init();
     return this;
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createText = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.text, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createStyle = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.style, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createScript = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.script, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data "<div></div>"
-   * @property {array} children
-   * @property {object} attributes
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createPage = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.page, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createImage = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.image, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createAudio = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.audio, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createVideo = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.video, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @property {string} path
-   * @property {string} data
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createFont = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.font, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createMimetype = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.mimetype, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createContainer = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.container, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createPackage = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.package, obj)) // Generate BookID
-      .updateNode(
-        {
-          tag: "dc:identifier",
-        },
-        {
-          $set: {
-            children: [
-              {
-                content: "urn:uuid:" + generateUUID(),
-              },
-            ],
-          },
-        }
-      );
-  };
-  /**
-   *
-   * @param {object} obj
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createNav = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.nav, obj));
-  };
-  /**
-   *
-   * @param {object} obj
-   * @returns {ePubFile}
-   */
-  ePubDoc.prototype.createNCX = function (obj) {
-    if (!isObject(obj)) {
-      obj = {};
-    }
-    return new ePubFile(Object.assign({}, this.defaults.ncx, obj));
   };
   /**
    *
@@ -8703,7 +8665,11 @@
     }
     return this;
   };
-
+  /**
+   *
+   * @param {object} query
+   * @returns
+   */
   ePubDoc.prototype.findNode = function (query) {
     for (const file of this.files) {
       const node = file.findNode(query);
@@ -8712,7 +8678,11 @@
       }
     }
   };
-
+  /**
+   *
+   * @param {object} query
+   * @returns
+   */
   ePubDoc.prototype.findNodes = function (query) {
     let result = [];
     for (const file of this.files) {
@@ -8721,7 +8691,20 @@
     }
     return result;
   };
-
+  /**
+   *
+   * @param {object} query
+   * @param {object} updates
+   * @property {object} $set
+   * @property {object} $unset
+   * @property {object} $push
+   * @property {object} $pushAll
+   * @property {object} $pull
+   * @property {object} $pullAll
+   * @property {object} $addToSet
+   * @property {object} $addToSetAll
+   * @returns
+   */
   ePubDoc.prototype.updateNode = function (query, updates) {
     const node = this.findNode(query);
     if (node) {
@@ -8729,7 +8712,20 @@
     }
     return this;
   };
-
+  /**
+   *
+   * @param {object} query
+   * @param {object} updates
+   * @property {object} $set
+   * @property {object} $unset
+   * @property {object} $push
+   * @property {object} $pushAll
+   * @property {object} $pull
+   * @property {object} $pullAll
+   * @property {object} $addToSet
+   * @property {object} $addToSetAll
+   * @returns
+   */
   ePubDoc.prototype.updateNodes = function (query, updates) {
     const nodes = this.findNodes(query);
     for (const node of nodes) {
@@ -8737,7 +8733,11 @@
     }
     return this;
   };
-
+  /**
+   *
+   * @param {object} query
+   * @returns
+   */
   ePubDoc.prototype.removeNode = function (query) {
     const node = this.findNode(query);
     if (node) {
@@ -8745,7 +8745,11 @@
     }
     return this;
   };
-
+  /**
+   *
+   * @param {object} query
+   * @returns
+   */
   ePubDoc.prototype.removeNodes = function (query) {
     const nodes = this.findNodes(query);
     for (const node of nodes) {
@@ -8768,19 +8772,6 @@
     return files;
   };
 
-  ePubDoc.prototype.findChild = ePubDoc.prototype.findFile;
-  ePubDoc.prototype.findChildren = ePubDoc.prototype.findFiles;
-  ePubDoc.prototype.updateChild = ePubDoc.prototype.updateFile;
-  ePubDoc.prototype.updateChildren = ePubDoc.prototype.updateFiles;
-  ePubDoc.prototype.removeChild = ePubDoc.prototype.removeFile;
-  ePubDoc.prototype.removeChildren = ePubDoc.prototype.removeFiles;
-  ePubDoc.prototype.appendChild = ePubDoc.prototype.appendFile;
-  ePubDoc.prototype.appendChildren = ePubDoc.prototype.appendFiles;
-  ePubDoc.prototype.prependChild = ePubDoc.prototype.prependFile;
-  ePubDoc.prototype.prependChildren = ePubDoc.prototype.prependFiles;
-  ePubDoc.prototype.insertChild = ePubDoc.prototype.insertFile;
-  ePubDoc.prototype.insertChildren = ePubDoc.prototype.insertFiles;
-
   /**
    * ePubDoc method links
    */
@@ -8788,6 +8779,9 @@
   /**
    * ePubFile method links
    */
+  ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
+  ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
+
   ePubFile.prototype.update = ePubDoc.prototype.update;
 
   /**
@@ -8798,20 +8792,9 @@
   ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
 
   ePubNode.prototype.update = ePubFile.prototype.update;
-
-  ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
-  ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
-  ePubNode.prototype.prependNode = ePubFile.prototype.prependNode;
-  ePubNode.prototype.prependNodes = ePubFile.prototype.prependNodes;
-  ePubNode.prototype.insertNode = ePubFile.prototype.insertNode;
-  ePubNode.prototype.insertNodes = ePubFile.prototype.insertNodes;
-
-  ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
-  ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;
-  ePubNode.prototype.prependChild = ePubFile.prototype.prependChild;
-  ePubNode.prototype.prependChildren = ePubFile.prototype.prependChildren;
-  ePubNode.prototype.insertChild = ePubFile.prototype.insertChild;
-  ePubNode.prototype.insertChildren = ePubFile.prototype.insertChildren;
+  ePubNode.prototype.append = ePubFile.prototype.append;
+  ePubNode.prototype.prepend = ePubFile.prototype.prepend;
+  ePubNode.prototype.insert = ePubFile.prototype.insert;
 
   ePubNode.prototype.getContent = ePubFile.prototype.getContent;
   ePubNode.prototype.setContent = ePubFile.prototype.setContent;
@@ -8823,12 +8806,6 @@
   ePubNode.prototype.updateNodes = ePubFile.prototype.updateNodes;
   ePubNode.prototype.removeNode = ePubFile.prototype.removeNode;
   ePubNode.prototype.removeNodes = ePubFile.prototype.removeNodes;
-  ePubNode.prototype.findChild = ePubFile.prototype.findChild;
-  ePubNode.prototype.findChildren = ePubFile.prototype.findChildren;
-  ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
-  ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
-  ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
-  ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
 
   exports.ePubDoc = ePubDoc;
   exports.ePubFile = ePubFile;
