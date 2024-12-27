@@ -284,40 +284,22 @@ export function createDoc() {
     return f;
   }
 
-  doc.addPage = function(filePath, headNodes, bodyNodes) {
-    const p = new ePubFile(
-      doc.defaults.page,
-      { path: filePath }
-    );
+  doc.createPage = function(filePath) {
+    let p = this.findFile({ 
+      path: filePath
+    });
 
-    if (headNodes) {
-      for (const n of headNodes) {
-        p.updateNode({
-          tag: "head",
-        }, {
-          $push: {
-            children: n
-          }
-        });
-      }
+    if (!p) {
+      p = new ePubFile(
+        doc.defaults.page,
+        { path: filePath }
+      );
+
+      this.append(p);
+      this.addToManifest(p);
+      this.addToSpine(p);
+      this.addToNav(p);
     }
-
-    if (bodyNodes) {
-      for (const n of bodyNodes) {
-        p.updateNode({
-          tag: "body",
-        }, {
-          $push: {
-            children: n
-          }
-        });
-      }
-    }
-
-    this.append(p);
-    this.addToManifest(p);
-    this.addToSpine(p);
-    this.addToNav(p);
 
     return p;
   }
