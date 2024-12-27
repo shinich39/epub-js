@@ -1,5 +1,4 @@
-import { ePubDoc } from "../index.js";
-// import { ePubDoc } from "../dist/epub.min.mjs";
+import { ePubDoc } from "../dist/epub.mjs";
 import path from "node:path";
 import fs from "node:fs";
 import JSZip from "./libs/jszip.min.mjs";

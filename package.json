@@ -2,11 +2,11 @@
   "name": "epub-js",
   "version": "1.0.0",
   "description": "Build ePub document with javascript",
-  "main": "./dist/epub.min.mjs",
+  "main": "./dist/epub.mjs",
   "exports": {
     ".": {
-      "import": "./dist/epub.min.mjs",
-      "require": "./dist/epub.min.cjs"
+      "import": "./dist/epub.mjs",
+      "require": "./dist/epub.cjs"
     }
   },
   "type": "module",
