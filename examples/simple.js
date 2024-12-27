@@ -285,14 +285,16 @@ export function createDoc() {
   }
 
   doc.createPage = function(filePath) {
+    const newPath = path.join("EPUB", "pages", path.basename(filePath));
+
     let p = this.findFile({ 
-      path: filePath
+      path: newPath
     });
 
     if (!p) {
       p = new ePubFile(
         doc.defaults.page,
-        { path: filePath }
+        { path: newPath }
       );
 
       this.append(p);
