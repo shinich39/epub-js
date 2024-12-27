@@ -200,7 +200,7 @@ function deepcopy(obj, keepInstances) {
       if (keepInstances) {
         result[key] = value;
       } else {
-        result[key] = null;
+        delete result[key]
       }
     } else if (isObject(value) && !isNull(value)) {
       result[key] = deepcopy(value, keepInstances);

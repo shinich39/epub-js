@@ -7413,7 +7413,7 @@ function deepcopy(obj, keepInstances) {
       if (keepInstances) {
         result[key] = value;
       } else {
-        result[key] = null;
+        delete result[key];
       }
     } else if (isObject(value) && !isNull(value)) {
       result[key] = deepcopy(value, keepInstances);
@@ -7628,19 +7628,21 @@ ePubNode.prototype.remove = function () {
 
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubNode.prototype.toString = function () {
   return beautifyHTML(domToStr(this));
 };
-
+/**
+ *
+ * @returns
+ */
 ePubNode.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    children: (this.children || []).map((item) => item.toObject()),
-  });
-
-  delete obj.parentNode;
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.children = (this.children || []).map((item) => item.toObject());
+  return obj;
 };
 
 class ePubFile {
@@ -8014,7 +8016,10 @@ ePubFile.prototype.removeNodes = function (query) {
   }
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toString = function () {
   if (isDOM(this.mimetype)) {
     // Beautify DOM
@@ -8023,19 +8028,24 @@ ePubFile.prototype.toString = function () {
     return this.data;
   }
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    children: (this.children || []).map((item) => item.toObject()),
-  });
-
-  delete obj.document;
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.children = (this.children || []).map((item) => item.toObject());
+  return obj;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toFile = function () {
-  return Object.assign(this.toObject(), { data: this.toString() });
+  const obj = deepcopy(this);
+  obj.data = this.toString();
+  delete obj.children;
+  return obj;
 };
 
 class ePubDoc {
@@ -8753,18 +8763,21 @@ ePubDoc.prototype.removeNodes = function (query) {
   }
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubDoc.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    files: this.files.map((item) => item.toObject()),
-  });
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.files = this.files.map((item) => item.toObject());
+  return obj;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubDoc.prototype.toFiles = function () {
   const files = this.files.map((item) => item.toFile());
-
   return files;
 };
 

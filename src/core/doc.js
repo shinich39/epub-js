@@ -726,17 +726,20 @@ ePubDoc.prototype.removeNodes = function (query) {
   }
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubDoc.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    files: this.files.map((item) => item.toObject()),
-  });
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.files = this.files.map((item) => item.toObject());
+  return obj;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubDoc.prototype.toFiles = function () {
   const files = this.files.map((item) => item.toFile());
-
   return files;
 };

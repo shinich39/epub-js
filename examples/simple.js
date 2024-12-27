@@ -348,15 +348,15 @@ export function createDoc() {
     return p;
   }
 
-  doc.export = function () {
-    const obj = this.toObject();
-    for (const key of Object.keys(obj)) {
-      if (typeof obj[key] == "function") {
-        delete obj[key];
-      }
+  doc.export = function(outputPath) {
+    const files = doc.toFiles();
+    for (const file of files) {
+      const filePath = path.join(outputPath, file.path);
+      const dirPath = path.dirname(filePath);
+      fs.mkdirSync(dirPath, { recursive: true });
+      fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding } : undefined);
     }
-    return obj;
-  };
+  }
 
   doc.append(navFile);
   doc.addToManifest(navFile, "nav");

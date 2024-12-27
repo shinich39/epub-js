@@ -397,7 +397,10 @@ ePubFile.prototype.removeNodes = function (query) {
   }
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toString = function () {
   if (isDOM(this.mimetype)) {
     // Beautify DOM
@@ -406,17 +409,22 @@ ePubFile.prototype.toString = function () {
     return this.data;
   }
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    children: (this.children || []).map((item) => item.toObject()),
-  });
-
-  delete obj.document;
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.children = (this.children || []).map((item) => item.toObject());
+  return obj;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubFile.prototype.toFile = function () {
-  return Object.assign(this.toObject(), { data: this.toString() });
+  const obj = deepcopy(this);
+  obj.data = this.toString();
+  delete obj.children;
+  return obj;
 };

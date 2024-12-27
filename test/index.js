@@ -28,6 +28,9 @@ doc.setTitle(TITLE);
 doc.setAuthors(...AUTHORS);
 doc.setCover(COVER_PATH)
 
+// Export to object
+// const exportedObj = doc.toObject();
+
 // Export to file
 const exportedFiles = doc.toFiles();
 

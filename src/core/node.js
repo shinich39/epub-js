@@ -219,17 +219,19 @@ ePubNode.prototype.remove = function () {
 
   return this;
 };
-
+/**
+ *
+ * @returns
+ */
 ePubNode.prototype.toString = function () {
   return beautifyHTML(domToStr(this));
 };
-
+/**
+ *
+ * @returns
+ */
 ePubNode.prototype.toObject = function () {
-  const obj = Object.assign({}, this, {
-    children: (this.children || []).map((item) => item.toObject()),
-  });
-
-  delete obj.parentNode;
-
-  return deepcopy(obj);
+  const obj = deepcopy(this);
+  obj.children = (this.children || []).map((item) => item.toObject());
+  return obj;
 };
