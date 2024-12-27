@@ -11,10 +11,22 @@ import {
   parsePath,
   strToDom,
 } from "../libs/utils.mjs";
-import { ePubDoc, ePubFile } from "../index.js";
 import { beautifyHTML, deepcopy, isFile, isNode } from "../libs/utilities.js";
 
-class ePubNode {
+import { ePubDoc } from "./doc.js";
+
+export class ePubNode {
+  /**
+   *
+   * @param {object} obj
+   * @property {string} _id - Default value is UUID
+   * @property {string|null} tag - Required
+   * @property {string|null} closer - "/"
+   * @property {string} content - You must set the tag to null
+   * @property {object} attributes
+   * @property {object[]} children
+   * @returns {ePubNode}
+   */
   constructor(obj) {
     // Reference properties
     this.parentNode = null;
@@ -91,16 +103,16 @@ ePubNode.prototype.init = function () {
           this.children[i].init();
         }
       } else if (isObject(this.children[i])) {
-        this.children[i] = this.createNode(
+        this.children[i] = new ePubNode(
           Object.assign({}, this.children[i], { parentNode: this })
         );
       } else if (isString(this.children[i])) {
-        this.children[i] = this.createNode({
+        this.children[i] = new ePubNode({
           parentNode: this,
           content: this.children[i],
         });
       } else {
-        this.children[i] = this.createNode({
+        this.children[i] = new ePubNode({
           parentNode: this,
           content: this.children[i].toString(),
         });
@@ -193,44 +205,3 @@ ePubNode.prototype.toObject = function () {
 
   return deepcopy(obj);
 };
-
-ePubNode.prototype.getFile = ePubNode.prototype.getRootNode;
-ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
-ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
-
-ePubNode.prototype.update = ePubDoc.prototype.update;
-ePubNode.prototype.createFile = ePubDoc.prototype.createFile;
-ePubNode.prototype.createNode = ePubDoc.prototype.createNode;
-
-ePubNode.prototype.appendNode = ePubFile.prototype.appendNode;
-ePubNode.prototype.appendNodes = ePubFile.prototype.appendNodes;
-ePubNode.prototype.prependNode = ePubFile.prototype.prependNode;
-ePubNode.prototype.prependNodes = ePubFile.prototype.prependNodes;
-ePubNode.prototype.insertNode = ePubFile.prototype.insertNode;
-ePubNode.prototype.insertNodes = ePubFile.prototype.insertNodes;
-
-ePubNode.prototype.appendChild = ePubFile.prototype.appendChild;
-ePubNode.prototype.appendChildren = ePubFile.prototype.appendChildren;
-ePubNode.prototype.prependChild = ePubFile.prototype.prependChild;
-ePubNode.prototype.prependChildren = ePubFile.prototype.prependChildren;
-ePubNode.prototype.insertChild = ePubFile.prototype.insertChild;
-ePubNode.prototype.insertChildren = ePubFile.prototype.insertChildren;
-
-ePubNode.prototype.getContent = ePubFile.prototype.getContent;
-ePubNode.prototype.setContent = ePubFile.prototype.setContent;
-ePubNode.prototype.getAttribute = ePubFile.prototype.getAttribute;
-ePubNode.prototype.setAttribute = ePubFile.prototype.setAttribute;
-ePubNode.prototype.findNode = ePubFile.prototype.findNode;
-ePubNode.prototype.findNodes = ePubFile.prototype.findNodes;
-ePubNode.prototype.updateNode = ePubFile.prototype.updateNode;
-ePubNode.prototype.updateNodes = ePubFile.prototype.updateNodes;
-ePubNode.prototype.removeNode = ePubFile.prototype.removeNode;
-ePubNode.prototype.removeNodes = ePubFile.prototype.removeNodes;
-ePubNode.prototype.findChild = ePubFile.prototype.findChild;
-ePubNode.prototype.findChildren = ePubFile.prototype.findChildren;
-ePubNode.prototype.updateChild = ePubFile.prototype.updateChild;
-ePubNode.prototype.updateChildren = ePubFile.prototype.updateChildren;
-ePubNode.prototype.removeChild = ePubFile.prototype.removeChild;
-ePubNode.prototype.removeChildren = ePubFile.prototype.removeChildren;
-
-export { ePubNode };

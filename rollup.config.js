@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from '@rollup/plugin-commonjs';
+import terser from "@rollup/plugin-terser";
 
 const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
 
 const ESM = true;
 const CJS = true;
 const BROWSER = true;
-const MINIFY = false;
 const INPUT = "index.js";
 const OUTPUT_PATH = "./dist";
 const MODULE_NAME = pkg.name.replace(/\W/g, "-").replace(/-?js$/, "");
@@ -49,6 +51,15 @@ if (pkg.exports?.["."]?.["require"] && !compareFilename(pkg.exports["."]["requir
 fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2), "utf8");
 
 export default {
+  plugins: [
+    nodeResolve(),
+    commonjs(),
+  ],
+  onwarn(warning, warn) {
+    if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+    if (warning.code === 'THIS_IS_UNDEFINED') return;
+    warn(warning);
+  },
   input: INPUT,
   output: [
     ...(ESM ? 
@@ -56,7 +67,13 @@ export default {
         file: "./" + path.join(OUTPUT_PATH, `${MODULE_NAME}.mjs`),
         format: "es",
         strict: true,
-        compact: MINIFY,
+      }, {
+        file: "./" + path.join(OUTPUT_PATH, `${MODULE_NAME}.min.mjs`),
+        format: "es",
+        strict: true,
+        plugins: [
+          terser({ maxWorkers: 4 })
+        ],
       }] : []
     ), 
     ...(CJS ? 
@@ -64,7 +81,13 @@ export default {
         file: "./" + path.join(OUTPUT_PATH, `${MODULE_NAME}.cjs`),
         format: "cjs",
         strict: true,
-        compact: MINIFY,
+      }, {
+        file: "./" + path.join(OUTPUT_PATH, `${MODULE_NAME}.min.cjs`),
+        format: "cjs",
+        strict: true,
+        plugins: [
+          terser({ maxWorkers: 4 })
+        ],
       }] : []
     ), 
     ...(BROWSER ? 
@@ -73,7 +96,14 @@ export default {
         format: "umd",
         name: GLOBAL_NAME,
         strict: true,
-        compact: MINIFY,
+      }, {
+        file: "./" + path.join(OUTPUT_PATH, `${MODULE_NAME}.min.js`),
+        format: "umd",
+        name: GLOBAL_NAME,
+        strict: true,
+        plugins: [
+          terser({ maxWorkers: 4 })
+        ],
       }] : []
     ), 
   ]

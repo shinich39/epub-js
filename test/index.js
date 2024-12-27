@@ -1,4 +1,4 @@
-import { ePubDoc } from "../dist/epub.mjs";
+import { ePubDoc, ePubFile, ePubNode } from "../dist/epub.mjs";
 import path from "node:path";
 import fs from "node:fs";
 import JSZip from "./libs/jszip.min.mjs";
@@ -41,7 +41,7 @@ const spineNode = packageFile.findNode({ tag: "spine" });
  * @returns 
  */
 const addToManifest = function(file, properties) {
-  const n = doc.createNode({
+  const n = new ePubNode({
     tag: "item",
     closer: " /",
     attributes: {
@@ -69,7 +69,7 @@ const addToManifest = function(file, properties) {
  * @returns 
  */
 const addToSpine = function(file, linear) {
-  const n = doc.createNode({
+  const n = new ePubNode({
     tag: "itemref",
     closer: " /",
     attributes: {
@@ -118,7 +118,7 @@ metadataNode.updateNode({
 
 // Create <dc:creator> node
 // <dc:creator id="author-1">Bob</dc:creator>
-const author1 = doc.createNode({
+const author1 = new ePubNode({
   tag: "dc:creator",
   attributes: {
     id: "author-1"
@@ -416,7 +416,7 @@ addToSpine(imagePage);
 
 // Create a node: <img /> 
 // <img id="cover-image" style="width: 100%;" src="../images/cover.png" alt="Cover image" />
-const imageNode = doc.createNode({
+const imageNode = new ePubNode({
   tag: "img",
   closer: " /",
   attributes: {

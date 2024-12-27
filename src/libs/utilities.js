@@ -3,7 +3,9 @@
 import beautify from "js-beautify";
 import mime from 'mime';
 import { parseTemplate, isNumber, isObject, isNull } from "./utils.mjs";
-import { ePubDoc, ePubFile, ePubNode } from "../index.js";
+import { ePubDoc } from "../core/doc.js";
+import { ePubFile } from "../core/file.js";
+import { ePubNode } from "../core/node.js";
 
 function isDOM(str) {
   return /[/+](xml|html)$/.test(str);

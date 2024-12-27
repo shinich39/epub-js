@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import { ePubDoc } from "../dist/epub.mjs";
+import { ePubDoc, ePubFile, ePubNode } from "../dist/epub.mjs";
 
 export function createDoc() {
   const doc = new ePubDoc();
@@ -22,7 +22,7 @@ export function createDoc() {
     });
 
   doc.addToManifest = function (file, properties) {
-    const n = this.createNode({
+    const n = new ePubNode({
       tag: "item",
       closer: " /",
       attributes: {
@@ -41,7 +41,7 @@ export function createDoc() {
   };
 
   doc.addToSpine = function (file, linear) {
-    const n = this.createNode({
+    const n = new ePubNode({
       tag: "itemref",
       closer: " /",
       attributes: {
@@ -58,7 +58,7 @@ export function createDoc() {
   };
 
   doc.addToNav = function (file, content) {
-    const n = this.createNode({
+    const n = new ePubNode({
       tag: "li",
     }).appendChild({
       tag: "a",

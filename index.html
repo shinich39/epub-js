@@ -144,7 +144,7 @@
     <script src="./test/libs/jszip-utils.min.js"></script>
     <script src="./src/libs/utils.js"></script>
     <script>
-      const { ePubDoc, ePubFile } = epub;
+      const { ePubDoc, ePubFile, ePubNode } = epub;
 
       let inProgress = false,
           doc, 
@@ -373,7 +373,7 @@ video{
 
           titleNode = metadataNode.findNode({ tag: "dc:title" });
           languageNode = metadataNode.findNode({ tag: "dc:language" });
-          authorNode = doc.createNode({ tag: "dc:creator" });
+          authorNode = new ePubNode({ tag: "dc:creator" });
           metadataNode.appendNode(authorNode);
 
           titleNode?.setContent("epub-js");
@@ -422,7 +422,7 @@ video{
           let files = await uncompressZip(importedFile);
           for (const file of files) {
             doc.appendFile(
-              doc.createFile({
+              new ePubFile({
                 path: file.path,
                 data: file.data,
                 encoding: file.encoding,
@@ -1106,7 +1106,7 @@ video{
       }
 
       function addToManifest(file, properties) {
-        const n = doc.createNode({
+        const n = new ePubNode({
           tag: "item",
           closer: " /",
           attributes: {
@@ -1125,7 +1125,7 @@ video{
       }
 
       function addToSpine(file, linear) {
-        const n = doc.createNode({
+        const n = new ePubNode({
           tag: "itemref",
           closer: " /",
           attributes: {
