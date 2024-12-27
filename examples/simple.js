@@ -284,6 +284,48 @@ export function createDoc() {
     return f;
   }
 
+  doc.createStyle = function(srcPath) {
+    const newPath = path.join("EPUB", "styles", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = new ePubFile({
+        encoding: "utf8",
+        path: newPath,
+        data: fs.readFileSync(srcPath, "utf8"),
+      });
+
+      this.append(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
+  doc.createScript = function(srcPath) {
+    const newPath = path.join("EPUB", "scripts", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = new ePubFile({
+        encoding: "utf8",
+        path: newPath,
+        data: fs.readFileSync(srcPath, "utf8"),
+      });
+
+      this.append(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
   doc.createPage = function(filePath) {
     const newPath = path.join("EPUB", "pages", path.basename(filePath));
 
