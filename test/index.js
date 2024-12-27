@@ -28,57 +28,60 @@ doc.setTitle(TITLE);
 doc.setAuthors(...AUTHORS);
 doc.setCover(COVER_PATH)
 
+fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
+doc.export(OUTPUT_PATH);
+
 // Export to object
 // const exportedObj = doc.toObject();
 
 // Export to file
-const exportedFiles = doc.toFiles();
+// const exportedFiles = doc.toFiles();
 
 // Create zip object with JSZip
-console.log();
-console.log(`> Start creating zip object`);
+// console.log();
+// console.log(`> Start creating zip object`);
 
-const zip = new JSZip();
-for (const file of exportedFiles) {
-  try {
-    console.log(`> Append ${file.path}`);
+// const zip = new JSZip();
+// for (const file of exportedFiles) {
+//   try {
+//     console.log(`> Append ${file.path}`);
 
-    const p = file.path;
+//     const p = file.path;
 
-    const data = file.encoding === "base64" ?
-      // Remove prefix of base64
-      file.data.split(",").pop() :
-      file.data;
+//     const data = file.encoding === "base64" ?
+//       // Remove prefix of base64
+//       file.data.split(",").pop() :
+//       file.data;
 
-    const options = {
-      base64: file.encoding == "base64",
-    };
+//     const options = {
+//       base64: file.encoding == "base64",
+//     };
 
-    zip.file(p, data, options);
-  } catch(err) {
-    console.error(err);
-  }
-}
+//     zip.file(p, data, options);
+//   } catch(err) {
+//     console.error(err);
+//   }
+// }
 
-console.log();
-console.log(`> Remove all files in the output directory`);
-fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
+// console.log();
+// console.log(`> Remove all files in the output directory`);
+// fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
 
-// Write each file to directory
-console.log();
-console.log(`> Start writing files`);
-for (const file of exportedFiles) {
-  const filePath = path.join(OUTPUT_PATH, TITLE, file.path);
-  const dirPath = path.dirname(filePath);
+// // Write each file to directory
+// console.log();
+// console.log(`> Start writing files`);
+// for (const file of exportedFiles) {
+//   const filePath = path.join(OUTPUT_PATH, TITLE, file.path);
+//   const dirPath = path.dirname(filePath);
 
-  console.log(`> Write ${filePath}`);
+//   console.log(`> Write ${filePath}`);
 
-  fs.mkdirSync(dirPath, { recursive: true });
-  fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding } : undefined);
-}
+//   fs.mkdirSync(dirPath, { recursive: true });
+//   fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding } : undefined);
+// }
 
-// Write a epub file
-const epub = await zip.generateAsync({ type: "base64" });
-console.log();
-console.log(`> Start writing archive: ${TITLE}.epub`);
-fs.writeFileSync(path.join(OUTPUT_PATH, `${TITLE}.epub`), epub, {encoding: "base64"});
+// // Write a epub file
+// const epub = await zip.generateAsync({ type: "base64" });
+// console.log();
+// console.log(`> Start writing archive: ${TITLE}.epub`);
+// fs.writeFileSync(path.join(OUTPUT_PATH, `${TITLE}.epub`), epub, {encoding: "base64"});
