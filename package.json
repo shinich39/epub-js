@@ -11,8 +11,8 @@
   },
   "type": "module",
   "scripts": {
-    "test": "npm run build && node test/index.js",
-    "build": "npm run pretty && node esbuild.config.js",
+    "test": "npm run pretty && npm run build && node test/index.js",
+    "build": "rollup --config rollup.config.js",
     "pretty": "prettier index.js src/index.js src/core --write --config prettier.config.js"
   },
   "keywords": [
@@ -21,8 +21,8 @@
   "author": "shinich39 <shinich39@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.24.2",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "rollup": "^4.29.1"
   },
   "dependencies": {
     "js-beautify": "^1.15.1",
