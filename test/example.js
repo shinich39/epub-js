@@ -1,4 +1,4 @@
-
+import { ePubDoc } from "../dist/epub.mjs";
 
 export function createDoc() {
   const doc = new ePubDoc();
@@ -73,7 +73,7 @@ export function createDoc() {
 
   doc.setCover = function (filePath) {
     const i = this.createImage({
-      path: "EPUB/images/cover.png",
+      path: "EPUB/images/cover" + path.extname(filePath),
       data: readImage(filePath),
     });
 
@@ -156,7 +156,7 @@ export function createDoc() {
       },
       {
         $set: {
-          content: new Date(date).toISOString(),
+          content: moment(date).toISOString(),
         },
       }
     );
@@ -169,7 +169,7 @@ export function createDoc() {
 
     metadataNode.appendChild({
       tag: "dc:date",
-      content: new Date(date).toISOString(),
+      content: moment(date).toISOString(),
     });
   };
 
@@ -217,6 +217,103 @@ export function createDoc() {
       });
     }
   };
+
+  doc.createImage = function(srcPath) {
+    const newPath = path.join("EPUB", "images", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = this.createImage({
+        path: newPath,
+        data: fs.readFileSync(srcPath, "base64"),
+      });
+
+      this.appendChild(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
+  doc.createAudio = function(srcPath) {
+    const newPath = path.join("EPUB", "audios", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = this.createAudio({
+        path: newPath,
+        data: fs.readFileSync(srcPath, "base64"),
+      });
+
+      this.appendChild(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
+  doc.createVideo = function(srcPath) {
+    const newPath = path.join("EPUB", "videos", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = this.createAudio({
+        path: newPath,
+        data: fs.readFileSync(srcPath, "base64"),
+      });
+
+      this.appendChild(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
+  doc.addPage = function(filePath, headNodes, bodyNodes) {
+    const p = this.createPage({
+      path: filePath,
+    });
+
+    if (headNodes) {
+      for (const n of headNodes) {
+        p.updateNode({
+          tag: "head",
+        }, {
+          $push: {
+            children: n
+          }
+        });
+      }
+    }
+
+    if (bodyNodes) {
+      for (const n of bodyNodes) {
+        p.updateNode({
+          tag: "body",
+        }, {
+          $push: {
+            children: n
+          }
+        });
+      }
+    }
+
+    this.appendChild(p);
+    this.addToManifest(p);
+    this.addToSpine(p);
+    this.addToNav(p);
+
+    return p;
+  }
 
   doc.export = function () {
     const obj = this.toObject();
