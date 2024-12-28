@@ -347,8 +347,8 @@ export function createDoc() {
     return f;
   }
 
-  doc.createPage = function(filePath, dstPath) {
-    const newPath = dstPath || path.join("EPUB", "pages", path.basename(filePath));
+  doc.createPage = function(dstPath) {
+    const newPath = path.join("EPUB", "pages", path.basename(dstPath));
 
     let p = this.findFile({ 
       path: newPath
