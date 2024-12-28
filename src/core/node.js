@@ -12,7 +12,7 @@ import {
   isString,
   parsePath,
   strToDom,
-} from "../libs/utils.mjs";
+} from "utils-js";
 import { beautifyHTML, deepcopy, isFile, isNode } from "../libs/utilities.js";
 
 export class ePubNode {

@@ -8,7 +8,7 @@ import {
   isObject,
   isObjectArray,
   queryObject,
-} from "../libs/utils.mjs";
+} from "utils-js";
 import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
 
 export class ePubDoc {

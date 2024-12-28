@@ -24,7 +24,7 @@ import {
   parsePath,
   queryObject,
   strToDom,
-} from "../libs/utils.mjs";
+} from "utils-js";
 
 export class ePubFile {
   /**

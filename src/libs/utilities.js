@@ -2,7 +2,7 @@
 
 import beautify from "js-beautify";
 import mime from 'mime';
-import { parseTemplate, isNumber, isObject, isNull } from "./utils.mjs";
+import { parseTemplate, isNumber, isObject, isNull } from "utils-js";
 import { ePubDoc } from "../core/doc.js";
 import { ePubFile } from "../core/file.js";
 import { ePubNode } from "../core/node.js";

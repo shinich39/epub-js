@@ -159,7 +159,7 @@ export function createDoc() {
       },
       {
         $set: {
-          content: moment(date).toISOString(),
+          content: new Date(date).toISOString(),
         },
       }
     );
@@ -172,7 +172,7 @@ export function createDoc() {
 
     metadataNode.append({
       tag: "dc:date",
-      content: moment(date).toISOString(),
+      content: new Date(date).toISOString(),
     });
   };
 
