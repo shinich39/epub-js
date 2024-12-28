@@ -221,8 +221,8 @@ export function createDoc() {
     }
   };
 
-  doc.createImage = function(srcPath) {
-    const newPath = path.join("EPUB", "images", path.basename(srcPath));
+  doc.createImage = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "images", path.basename(srcPath));
 
     let f = this.findFile({ 
       path: newPath
@@ -242,8 +242,8 @@ export function createDoc() {
     return f;
   }
 
-  doc.createAudio = function(srcPath) {
-    const newPath = path.join("EPUB", "audios", path.basename(srcPath));
+  doc.createAudio = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "audios", path.basename(srcPath));
 
     let f = this.findFile({ 
       path: newPath
@@ -263,8 +263,8 @@ export function createDoc() {
     return f;
   }
 
-  doc.createVideo = function(srcPath) {
-    const newPath = path.join("EPUB", "videos", path.basename(srcPath));
+  doc.createVideo = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "videos", path.basename(srcPath));
 
     let f = this.findFile({ 
       path: newPath
@@ -284,8 +284,8 @@ export function createDoc() {
     return f;
   }
 
-  doc.createStyle = function(srcPath) {
-    const newPath = path.join("EPUB", "styles", path.basename(srcPath));
+  doc.createStyle = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "styles", path.basename(srcPath));
 
     let f = this.findFile({ 
       path: newPath
@@ -305,8 +305,8 @@ export function createDoc() {
     return f;
   }
 
-  doc.createScript = function(srcPath) {
-    const newPath = path.join("EPUB", "scripts", path.basename(srcPath));
+  doc.createScript = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "scripts", path.basename(srcPath));
 
     let f = this.findFile({ 
       path: newPath
@@ -326,8 +326,29 @@ export function createDoc() {
     return f;
   }
 
-  doc.createPage = function(filePath) {
-    const newPath = path.join("EPUB", "pages", path.basename(filePath));
+  doc.createFont = function(srcPath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "fonts", path.basename(srcPath));
+
+    let f = this.findFile({ 
+      path: newPath
+    });
+
+    if (!f) {
+      f = new ePubFile({
+        encoding: "utf8",
+        path: newPath,
+        data: fs.readFileSync(srcPath, "utf8"),
+      });
+
+      this.append(f);
+      this.addToManifest(f);
+    }
+
+    return f;
+  }
+
+  doc.createPage = function(filePath, dstPath) {
+    const newPath = dstPath || path.join("EPUB", "pages", path.basename(filePath));
 
     let p = this.findFile({ 
       path: newPath
