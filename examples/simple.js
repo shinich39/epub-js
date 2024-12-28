@@ -342,7 +342,7 @@ export function createDoc() {
       this.append(p);
       this.addToManifest(p);
       this.addToSpine(p);
-      this.addToNav(p);
+      this.addToNav(p, p.filename);
     }
 
     return p;
