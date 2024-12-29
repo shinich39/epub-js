@@ -185,6 +185,7 @@ export function createDoc() {
             "rendition:layout",
             "rendition:orientation",
             "rendition:spread",
+            "rendition:flow",
           ],
         },
       },
@@ -217,6 +218,16 @@ export function createDoc() {
           property: "rendition:spread",
         },
         content: rendition.spread, // "none"
+      });
+    }
+
+    if (rendition.flow) {
+      metadataNode.append({
+        tag: "meta",
+        attributes: {
+          property: "rendition:flow",
+        },
+        content: rendition.flow,
       });
     }
   };
