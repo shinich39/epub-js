@@ -128,8 +128,6 @@ ePubDoc.prototype.defaults = {
           xmlns: "http://www.w3.org/ns/SMIL",
           "xmlns:epub": "http://www.idpf.org/2007/ops",
           version: "3.0",
-          // https://help.apple.com/itc/booksassetguide/en.lproj/static.html#itc7601469d2
-          profile: "http://www.idpf.org/epub/30/profile/content/",
         },
         children: [
           {
