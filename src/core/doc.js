@@ -65,7 +65,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -116,11 +116,20 @@ ePubDoc.prototype.defaults = {
     encoding: "utf8",
     children: [
       {
+        tag: "?xml",
+        closer: "?",
+        attributes: {
+          version: "1.0",
+          encoding: "UTF-8",
+        },
+      }, {
         tag: "smil",
         attributes: {
           xmlns: "http://www.w3.org/ns/SMIL",
           "xmlns:epub": "http://www.idpf.org/2007/ops",
           version: "3.0",
+          // https://help.apple.com/itc/booksassetguide/en.lproj/static.html#itc7601469d2
+          profile: "http://www.idpf.org/epub/30/profile/content/",
         },
         children: [
           {
@@ -164,7 +173,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -200,7 +209,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -313,7 +322,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -432,7 +441,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
