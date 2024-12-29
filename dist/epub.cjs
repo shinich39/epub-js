@@ -8048,53 +8048,17 @@ ePubFile.prototype.toFile = function () {
   return obj;
 };
 
-class ePubDoc {
-  /**
-   *
-   * @param  {...object} objs
-   * @property {ePubFile[]} files
-   */
-  constructor(...objs) {
-    this.files = [
-      new ePubFile(this.defaults.mimetype),
-      new ePubFile(this.defaults.container),
-      new ePubFile(this.defaults.package).updateNode(
-        {
-          tag: "dc:identifier",
-        },
-        {
-          $set: {
-            children: [
-              {
-                // Generate BookID
-                content: "urn:uuid:" + generateUUID(),
-              },
-            ],
-          },
-        }
-      ),
-    ];
-
-    // Import data
-    if (isObjectArray(objs)) {
-      Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
-    }
-
-    this.init();
-  }
-}
-
-ePubDoc.prototype.defaults = {
-  text: {
+const FILE_FORMATS = {
+  TEXT: {
     encoding: "utf8",
   },
-  style: {
+  STYLE: {
     encoding: "utf8",
   },
-  script: {
+  SCRIPT: {
     encoding: "utf8",
   },
-  page: {
+  PAGE: {
     encoding: "utf8",
     children: [
       {
@@ -8102,7 +8066,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -8149,9 +8113,17 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
-  smil: {
+  SMIL: {
     encoding: "utf8",
     children: [
+      {
+        tag: "?xml",
+        closer: "?",
+        attributes: {
+          version: "1.0",
+          encoding: "UTF-8",
+        },
+      },
       {
         tag: "smil",
         attributes: {
@@ -8175,24 +8147,24 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
-  image: {
+  IMAGE: {
     encoding: "base64",
   },
-  audio: {
+  AUDIO: {
     encoding: "base64",
   },
-  video: {
+  VIDEO: {
     encoding: "base64",
   },
-  font: {
+  FONT: {
     encoding: "base64",
   },
-  mimetype: {
+  MIMETYPE: {
     encoding: "utf8",
     path: "mimetype",
     data: "application/epub+zip",
   },
-  container: {
+  CONTAINER: {
     encoding: "utf8",
     path: "META-INF/container.xml",
     children: [
@@ -8201,7 +8173,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -8228,7 +8200,7 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
-  package: {
+  PACKAGE: {
     encoding: "utf8",
     path: "EPUB/package.opf",
     children: [
@@ -8237,7 +8209,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -8341,7 +8313,7 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
-  nav: {
+  NAV: {
     encoding: "utf8",
     path: "EPUB/nav.xhtml",
     children: [
@@ -8350,7 +8322,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -8460,7 +8432,7 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
-  ncx: {
+  NCX: {
     encoding: "utf8",
     path: "EPUB/toc.ncx",
     children: [
@@ -8469,7 +8441,7 @@ ePubDoc.prototype.defaults = {
         closer: "?",
         attributes: {
           version: "1.0",
-          encoding: "utf-8",
+          encoding: "UTF-8",
         },
       },
       {
@@ -8540,6 +8512,89 @@ ePubDoc.prototype.defaults = {
     ],
   },
 };
+
+const NODE_FORMATS = {
+  /**
+   * @param attributes.idref - Required
+   * @param attributes.linear - "yes"|"no"|null
+   * @example
+   * const spineNode = new ePubNode(
+   *  ePubNode.DEFAULTS.SPINE,
+   *  { idref: file._id }
+   * );
+   */
+  SPINE: {
+    tag: "itemref",
+    closer: " /",
+    attributes: {
+      id: null,
+      idref: "",
+      linear: null,
+      properties: null,
+    },
+  },
+  /**
+   * @param attributes.id - Required
+   * @param attributes.href - Required
+   * @example
+   * const manifestNode = new ePubNode(
+   *  ePubNode.DEFAULTS.MANIFEST,
+   *  {
+   *    id: file._id, href:
+   *    file.getRelativePath(packageFile)
+   *  }
+   * );
+   */
+  MANIFEST: {
+    tag: "item",
+    closer: " /",
+    attributes: {
+      id: "",
+      href: "",
+      "media-overlay": null,
+      "media-type": "",
+      properties: null,
+      fallback: null,
+    },
+  },
+};
+
+class ePubDoc {
+  /**
+   *
+   * @param  {...object} objs
+   * @property {ePubFile[]} files
+   */
+  constructor(...objs) {
+    this.files = [
+      new ePubFile(FILE_FORMATS.MIMETYPE),
+      new ePubFile(FILE_FORMATS.CONTAINER),
+      new ePubFile(FILE_FORMATS.PACKAGE).updateNode(
+        {
+          tag: "dc:identifier",
+        },
+        {
+          $set: {
+            children: [
+              {
+                // Generate BookID
+                content: "urn:uuid:" + generateUUID(),
+              },
+            ],
+          },
+        }
+      ),
+    ];
+
+    // Import data
+    if (isObjectArray(objs)) {
+      Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
+    }
+
+    this.init();
+  }
+}
+
 /**
  *
  * @returns
@@ -8814,6 +8869,7 @@ ePubDoc.prototype.toFiles = function () {
 /**
  * ePubFile method links
  */
+ePubFile.DEFAULTS = FILE_FORMATS;
 ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
 ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
 
@@ -8822,6 +8878,7 @@ ePubFile.prototype.update = ePubDoc.prototype.update;
 /**
  * ePubNode method links
  */
+ePubNode.DEFAULTS = NODE_FORMATS;
 ePubNode.prototype.getFile = ePubNode.prototype.getRootNode;
 ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
 ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
