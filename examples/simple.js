@@ -369,6 +369,26 @@ export function createDoc() {
     return p;
   }
 
+  doc.createSmil = function(dstPath) {
+    const newPath = path.join("EPUB", "overlays", path.basename(dstPath));
+
+    let p = this.findFile({ 
+      path: newPath
+    });
+
+    if (!p) {
+      p = new ePubFile(
+        doc.defaults.smil,
+        { path: newPath }
+      );
+
+      this.append(p);
+      this.addToManifest(p);
+    }
+
+    return p;
+  }
+
   doc.export = function(outputPath) {
     const files = doc.toFiles();
     for (const file of files) {

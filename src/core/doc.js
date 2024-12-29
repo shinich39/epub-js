@@ -112,6 +112,32 @@ ePubDoc.prototype.defaults = {
       },
     ],
   },
+  smil: {
+    encoding: "utf8",
+    children: [
+      {
+        tag: "smil",
+        attributes: {
+          xmlns: "http://www.w3.org/ns/SMIL",
+          "xmlns:epub": "http://www.idpf.org/2007/ops",
+          version: "3.0",
+        },
+        children: [
+          {
+            tag: "body",
+            // smil <seq> => page <...>
+            // children: [{
+            //   tag: "seq",
+            //   attributes: {
+            //     id: "?",
+            //     "epub:textref": "chapter1.xhtml#figure",
+            //   }
+            // }]
+          },
+        ],
+      },
+    ],
+  },
   image: {
     encoding: "base64",
   },
