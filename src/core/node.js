@@ -3,7 +3,6 @@
 import { ePubDoc } from "./doc.js";
 import {
   domToStr,
-  generateUUID,
   getRelativePath,
   isArray,
   isNumber,
@@ -13,7 +12,13 @@ import {
   parsePath,
   strToDom,
 } from "utils-js";
-import { beautifyHTML, deepcopy, isFile, isNode } from "../libs/utilities.js";
+import {
+  beautifyHTML,
+  deepcopy,
+  generateId,
+  isFile,
+  isNode,
+} from "../libs/utilities.js";
 
 export class ePubNode {
   /**
@@ -33,7 +38,7 @@ export class ePubNode {
     this.parentNode = null;
 
     // Common properties
-    this._id = generateUUID();
+    this._id = generateId();
     this.tag = null;
     this.closer = null;
     this.content = null;

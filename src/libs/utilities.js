@@ -1,54 +1,61 @@
 "use strict";
 
-import beautify from "js-beautify";
+import { js_beautify, css_beautify, html_beautify } from "js-beautify";
 import mime from 'mime';
 import { parseTemplate, isNumber, isObject, isNull } from "utils-js";
 import { ePubDoc } from "../core/doc.js";
 import { ePubFile } from "../core/file.js";
 import { ePubNode } from "../core/node.js";
+import { customAlphabet } from "nanoid/non-secure";
+const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 2);
+const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 8);
 
-function isDOM(str) {
+export function generateId() {
+  return randAlpha() + randHex();
+}
+
+export function isDOM(str) {
   return /[/+](xml|html)$/.test(str);
 }
 
-function isInstance(obj) {
+export function isInstance(obj) {
   return obj instanceof ePubDoc || 
     obj instanceof ePubFile ||
     obj instanceof ePubNode;
 }
 
-function isDoc(obj) {
+export function isDoc(obj) {
   return obj instanceof ePubDoc;
 }
 
-function isFile(obj) {
+export function isFile(obj) {
   return obj instanceof ePubFile;
 }
 
-function isNode(obj) {
+export function isNode(obj) {
   return obj instanceof ePubNode;
 }
 
-function dateToISOString(v) {
+export function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
 }
 
-function normalizeBase64(str) {
+export function normalizeBase64(str) {
   return str.replace(/^data\:.*?\,/, "");
 }
 
-function normalizePath(str) {
+export function normalizePath(str) {
   return str.replace(/[\\\/]+/g, "/")
     .replace(/^\.?\//, "");
 }
 
-function toKebabCase(str) {
+export function toKebabCase(str) {
   return str.replace(/[A-Z]/g, function(ch) {
     return `-${ch.toLowerCase()}`;
   });
 }
 
-function parsePropertyValues(obj, target) {
+export function parsePropertyValues(obj, target) {
   if (Array.isArray(obj)) {
     for (const _obj of obj) {
       parsePropertyValues(_obj, target);
@@ -65,7 +72,7 @@ function parsePropertyValues(obj, target) {
   return obj;
 }
 
-function updatePropertyValues(obj, targetKey, newValue) {
+export function updatePropertyValues(obj, targetKey, newValue) {
   if (Array.isArray(obj)) {
     for (const _obj of obj) {
       updatePropertyValues(_obj, targetKey, newValue);
@@ -82,7 +89,7 @@ function updatePropertyValues(obj, targetKey, newValue) {
   return obj;
 }
 
-function objToAttr(obj = {}) {
+export function objToAttr(obj = {}) {
   let result = "";
   for (const [k, v] of Object.entries(obj)) {
     if (typeof v === "string") {
@@ -92,7 +99,7 @@ function objToAttr(obj = {}) {
   return result;
 }
 
-function objToStyle(obj = {}) {
+export function objToStyle(obj = {}) {
   let result = "";
   for (const [k, v] of Object.entries(obj)) {
     if (typeof v === "string") {
@@ -102,33 +109,33 @@ function objToStyle(obj = {}) {
   return result;
 }
 
-function mimeToExt(type) {
+export function mimeToExt(type) {
   return mime.getExtension(type);
 }
 
-function extToMime(ext) {
+export function extToMime(ext) {
   return mime.getType(ext);
 }
 
-function beautifyHTML(str) {
-  return beautify.html(str, {
+export function beautifyHTML(str) {
+  return html_beautify(str, {
     indent_size: 2,
   });
 }
 
 function beautifyCSS(str) {
-  return beautify.css(str, {
+  return css_beautify(str, {
     indent_size: 2,
   });
 }
 
-function beautifyJS(str) {
-  return beautify.js(str, {
+export function beautifyJS(str) {
+  return js_beautify(str, {
     indent_size: 2,
   });
 }
 
-function updateObject(obj, updates) {
+export function updateObject(obj, updates) {
   for (const operator of Object.keys(updates)) {
     for (let [keys, value] of Object.entries(updates[operator])) {
       keys = keys.split(".");
@@ -188,7 +195,7 @@ function updateObject(obj, updates) {
   }
 }
 
-function deepcopy(obj, keepInstances) {
+export function deepcopy(obj, keepInstances) {
   let result;
   if (Array.isArray(obj)) {
     result = [];
@@ -209,27 +216,4 @@ function deepcopy(obj, keepInstances) {
     }
   }
   return result;
-}
-
-export {
-  isDOM,
-  isInstance,
-  isDoc,
-  isFile,
-  isNode,
-  dateToISOString,
-  normalizeBase64,
-  normalizePath,
-  toKebabCase,
-  objToAttr,
-  objToStyle,
-  parsePropertyValues,
-  updatePropertyValues,
-  mimeToExt,
-  extToMime,
-  beautifyHTML,
-  beautifyCSS,
-  beautifyJS,
-  updateObject,
-  deepcopy,
 }

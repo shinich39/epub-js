@@ -142,8 +142,8 @@
     <script src="./dist/epub.js"></script>
     <script src="./test/libs/jszip.min.js"></script>
     <script src="./test/libs/jszip-utils.min.js"></script>
-    <script src="./src/libs/utils.js"></script>
     <script>
+      const sorter = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }).compare;
       const { ePubDoc, ePubFile, ePubNode } = epub;
 
       let inProgress = false,
@@ -297,7 +297,7 @@ video{
         // Sort files
         if (sort) {
           files = files.sort(function(a, b) {
-            return utils.compareObject(
+            return sorter(
               a.path, 
               b.path
             );
@@ -374,19 +374,19 @@ video{
           titleNode = metadataNode.findNode({ tag: "dc:title" });
           languageNode = metadataNode.findNode({ tag: "dc:language" });
           authorNode = new ePubNode({ tag: "dc:creator" });
-          metadataNode.appendNode(authorNode);
+          metadataNode.append(authorNode);
 
           titleNode?.setContent("epub-js");
           languageNode?.setContent("en");
           authorNode?.setContent("Anonymous");
 
-          navFile = doc.createNav();
+          navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
           navFile.isNav = true;
-          doc.appendChild(navFile);
+          doc.append(navFile);
           addToManifest(navFile, "nav");
 
           if (coverFile) {
-            doc.appendChild(coverFile);
+            doc.append(coverFile);
             addToManifest(coverFile, "cover-image");
           }
         } // Import JSON file
@@ -421,7 +421,7 @@ video{
 
           let files = await uncompressZip(importedFile);
           for (const file of files) {
-            doc.appendFile(
+            doc.append(
               new ePubFile({
                 path: file.path,
                 data: file.data,
@@ -466,23 +466,23 @@ video{
           languageNode = metadataNode.findNode({ tag: "dc:language" });
           authorNode = metadataNode.findNode({ tag: "dc:creator" });
 
-          navFile = doc.createNav();
+          navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
           navFile.isNav = true;
-          doc.appendChild(navFile);
+          doc.append(navFile);
           addToManifest(navFile, "nav");
 
           let files = await uncompressZip(importedFile, true);
           for (const file of files) {
             try {
               file.path = addRootDirectory(file.path);
-              appendFile(file.path, file.data);
+              append(file.path, file.data);
             } catch(err) {
               console.error(err);
             }
           }
 
           if (coverFile) {
-            doc.appendChild(coverFile);
+            doc.append(coverFile);
             addToManifest(coverFile, "cover-image");
           }
         } // Not supported
@@ -508,7 +508,7 @@ video{
         // <meta name="viewport" content="width=512, height=768"/>
         page.findNode({
           tag: "head",
-        })?.appendNode(
+        })?.append(
           {
             tag: "meta",
             closer: "/",
@@ -517,7 +517,7 @@ video{
               content: viewportData,
             }
           },
-        )?.appendNode(
+        )?.append(
           {
             tag: "style",
             attributes: {
@@ -621,15 +621,17 @@ video{
 
         const file = document.getElementById("set-cover").files[0];
         if (!file) {
+          renderFileList();
           return;
         }
 
-        coverFile = doc.createImage({
+        coverFile = new ePubFile({
+          encoding: "base64",
           path: "EPUB/cover."+file.type.split("/").pop(),
           data: await toBase64(file),
         });
 
-        doc.appendChild(coverFile);
+        doc.append(coverFile);
         addToManifest(coverFile, "cover-image");
         
         renderFileList();
@@ -642,7 +644,7 @@ video{
         }
 
         files = files.sort(function(a, b) {
-          return utils.compareObject(a.name, b.name);
+          return sorter(a.name, b.name);
         });
 
         let newFile, 
@@ -683,7 +685,7 @@ video{
           }
           
           try {
-            appendFile(filePath, fileData);
+            appendToDoc(filePath, fileData);
           } catch(err) {
             console.error(err);
           }
@@ -716,7 +718,7 @@ video{
         })?.remove();
 
         if (metadata.rendition.layout) {
-          metadataNode.appendChild({
+          metadataNode.append({
             tag: "meta",
             attributes: {
               property: "rendition:layout"
@@ -726,7 +728,7 @@ video{
         }
 
         if (metadata.rendition.orientation) {
-          metadataNode.appendChild({
+          metadataNode.append({
             tag: "meta",
             attributes: {
               property: "rendition:orientation"
@@ -736,7 +738,7 @@ video{
         }
 
         if (metadata.rendition.spread) {
-          metadataNode.appendChild({
+          metadataNode.append({
             tag: "meta",
             attributes: {
               property: "rendition:spread"
@@ -830,19 +832,21 @@ video{
           });
       }
 
-      function appendFile(path, data) {
+      function appendToDoc(path, data) {
         let ext = "." + path.split(".").pop(),
             newFile, 
             newPage;
         switch(ext) {
           // case ".mimetype":
-          //   newFile = doc.createText({
+          //   newFile = new ePubFile({
+          //     encoding: "utf8",
           //     path: path,
           //     data: data,
           //   });
           //   break;
           case ".css":
-            newFile = doc.createStyle({
+            newFile = new ePubFile({
+              encoding: "utf8",
               path: path,
               data: data,
             });
@@ -850,7 +854,7 @@ video{
             for (const p of doc.findFiles({ extname: ".xhtml" })) {
               p
                 .findNode({ tag: "head" })
-                .appendChild({
+                .append({
                   tag: "link",
                   closer: "/",
                   attributes: {
@@ -861,7 +865,8 @@ video{
             }
             break;
           case ".js":
-            newFile = doc.createScript({
+            newFile = new ePubFile({
+              encoding: "utf8",
               path: path,
               data: data,
             });
@@ -869,7 +874,7 @@ video{
             for (const p of doc.findFiles({ extname: ".xhtml" })) {
               p
                 .findNode({ tag: "head" })
-                .appendChild({
+                .append({
                   tag: "script",
                   attributes: {
                     type: "text/javascript",
@@ -882,37 +887,40 @@ video{
           case ".opf":
           case ".xhtml":
           case ".html":
-            newFile = doc.createText({
+            newFile = new ePubFile({
+              encoding: "utf8",
               path: path,
               data: data,
             });
             break;
           case ".txt":
-            newPage = doc.createPage({
+            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
+              encoding: "utf8",
               path: path.replace(ext, ".xhtml"),
             });
 
             newPage
               .findNode({ tag: "body" })
-              .appendChildren(textToNode(data))
+              .append(...textToNode(data))
             break;
           case ".jpg":
           case ".jpeg":
           case ".png":
           case ".webp":
           case ".gif":
-            newFile = doc.createImage({
+            newFile = new ePubFile({
+              encoding: "base64",
               path: path,
               data: data,
             });
 
-            newPage = doc.createPage({
+            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
               path: path.replace(ext, ".xhtml"),
             });
 
             newPage
               .findNode({ tag: "body" })
-              .appendChild({
+              .append({
                 tag: "img",
                 closer: " /",
                 attributes: {
@@ -923,18 +931,19 @@ video{
               });
             break;
           case ".mp3":
-            newFile = doc.createAudio({
+            newFile = new ePubFile({
+              encoding: "base64",
               path: path,
               data: data,
             });
 
-            newPage = doc.createPage({
+            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
               path: path.replace(ext, ".xhtml"),
             });
 
             newPage
               .findNode({ tag: "body" })
-              .appendChild({
+              .append({
                 tag: "audio",
                 attributes: {
                   controls: "",
@@ -950,18 +959,19 @@ video{
               });
             break;
           case ".mp4":
-            newFile = doc.createVideo({
+            newFile = new ePubFile({
+              encoding: "base64",
               path: path,
               data: data,
             });
 
-            newPage = doc.createPage({
+            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
               path: path.replace(ext, ".xhtml"),
             });
 
             newPage
               .findNode({ tag: "body" })
-              .appendChild({
+              .append({
                 tag: "video",
                 attributes: {
                   controls: "",
@@ -980,12 +990,12 @@ video{
             console.error(`${path} not supported type`);
         }
         if (newFile) {
-          doc.appendFile(newFile);
+          doc.append(newFile);
           addToManifest(newFile);
         }
         if (newPage) {
           initPage(newPage);
-          doc.appendFile(newPage);
+          doc.append(newPage);
           addToManifest(newPage);
           addToSpine(newPage);
         }
@@ -1021,10 +1031,10 @@ video{
             file.toc = e.target.checked;
           });
 
-          label.appendChild(tocBox);
-          label.appendChild(span);
-          item.appendChild(label);
-          target.appendChild(item);
+          label.append(tocBox);
+          label.append(span);
+          item.append(label);
+          target.append(item);
         }
       }
 
@@ -1062,7 +1072,7 @@ video{
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = "epub-js.epub";
-            document.body.appendChild(a);
+            document.body.append(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(a.href);
@@ -1078,7 +1088,7 @@ video{
         const a = document.createElement('a');
         a.href = data;
         a.download = "epub-js.json";
-        document.body.appendChild(a);
+        document.body.append(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
@@ -1096,7 +1106,7 @@ video{
       function findNavFile() {
         return doc.findFile({
           path: {
-            $regex: new RegExp(
+            $re: new RegExp(
               manifestNode.findNode({
                 "attributes.properties": "nav"
               }).getAttribute("href") + "$"
@@ -1119,7 +1129,7 @@ video{
           },
         });
 
-        manifestNode.appendChild(n);
+        manifestNode.append(n);
 
         return n;
       }
@@ -1136,7 +1146,7 @@ video{
           },
         });
 
-        spineNode.appendChild(n);
+        spineNode.append(n);
 
         return n;
       }

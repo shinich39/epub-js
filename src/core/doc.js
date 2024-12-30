@@ -2,7 +2,6 @@
 
 import { ePubFile } from "./file.js";
 import {
-  generateUUID,
   getContainedNumber,
   isArray,
   isObject,
@@ -10,6 +9,7 @@ import {
   queryObject,
 } from "utils-js";
 import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
+import { v4 as uuidv4 } from "uuid";
 
 export const FILE_FORMATS = {
   TEXT: {
@@ -201,7 +201,7 @@ export const FILE_FORMATS = {
                 },
                 // Update after create a package file
                 // children: [{
-                //   content: "urn:uuid:"+generateUUID(),
+                //   content: "urn:uuid:"+uuidv4(),
                 // }],
               },
               {
@@ -541,7 +541,7 @@ export class ePubDoc {
             children: [
               {
                 // Generate BookID
-                content: "urn:uuid:" + generateUUID(),
+                content: "urn:uuid:" + uuidv4(),
               },
             ],
           },

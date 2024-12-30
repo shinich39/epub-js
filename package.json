@@ -30,6 +30,8 @@
   "dependencies": {
     "js-beautify": "^1.15.1",
     "mime": "^4.0.6",
-    "utils-js": "github:shinich39/utils-js"
+    "nanoid": "^5.0.9",
+    "utils-js": "github:shinich39/utils-js",
+    "uuid": "^11.0.3"
   }
 }

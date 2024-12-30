@@ -199,22 +199,6 @@
     return num + min;
   }
   /**
-   * Generate uuid v4
-   * @returns {string}
-   */
-  function generateUUID() {
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-      let r = (Math.random() * 16) | 0,
-        v;
-      if (c == "x") {
-        v = r;
-      } else {
-        v = (r & 0x3) | 0x8;
-      }
-      return v.toString(16);
-    });
-  }
-  /**
    *
    * @param {string} from
    * @param {string} to
@@ -564,10 +548,6 @@
     }
 
     return result;
-  }
-
-  function getDefaultExportFromCjs (x) {
-  	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
   }
 
   var js = {exports: {}};
@@ -6169,7 +6149,6 @@
   }
 
   var jsExports = requireJs();
-  var beautify = /*@__PURE__*/getDefaultExportFromCjs(jsExports);
 
   const types$1 = {
       'application/prs.cww': ['cww'],
@@ -7312,6 +7291,24 @@
 
   var mime = new Mime(types, types$1)._freeze();
 
+  let customAlphabet = (alphabet, defaultSize = 21) => {
+    return (size = defaultSize) => {
+      let id = '';
+      let i = size | 0;
+      while (i--) {
+        id += alphabet[(Math.random() * alphabet.length) | 0];
+      }
+      return id
+    }
+  };
+
+  const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 2);
+  const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 8);
+
+  function generateId() {
+    return randAlpha() + randHex();
+  }
+
   function isDOM(str) {
     return /[/+](xml|html)$/.test(str);
   }
@@ -7340,7 +7337,7 @@
   }
 
   function beautifyHTML(str) {
-    return beautify.html(str, {
+    return jsExports.html_beautify(str, {
       indent_size: 2,
     });
   }
@@ -7446,7 +7443,7 @@
       this.parentNode = null;
 
       // Common properties
-      this._id = generateUUID();
+      this._id = generateId();
       this.tag = null;
       this.closer = null;
       this.content = null;
@@ -7654,7 +7651,7 @@
      *
      * @param {...object} objs
      * @property {ePubDoc} document
-     * @property {string} _id - Default value is UUID
+     * @property {string} _id - Default value is random string
      * @property {string} path - Required
      * @property {string} data
      * @property {string} encoding - "base64", "utf8" or any encoding
@@ -7667,7 +7664,7 @@
       this.document = null;
 
       // Common properties
-      this._id = generateUUID();
+      this._id = generateId();
       this.path = null; // Required
       this.basename = null;
       this.filename = null;
@@ -8052,6 +8049,59 @@
     return obj;
   };
 
+  const byteToHex = [];
+  for (let i = 0; i < 256; ++i) {
+      byteToHex.push((i + 0x100).toString(16).slice(1));
+  }
+  function unsafeStringify(arr, offset = 0) {
+      return (byteToHex[arr[offset + 0]] +
+          byteToHex[arr[offset + 1]] +
+          byteToHex[arr[offset + 2]] +
+          byteToHex[arr[offset + 3]] +
+          '-' +
+          byteToHex[arr[offset + 4]] +
+          byteToHex[arr[offset + 5]] +
+          '-' +
+          byteToHex[arr[offset + 6]] +
+          byteToHex[arr[offset + 7]] +
+          '-' +
+          byteToHex[arr[offset + 8]] +
+          byteToHex[arr[offset + 9]] +
+          '-' +
+          byteToHex[arr[offset + 10]] +
+          byteToHex[arr[offset + 11]] +
+          byteToHex[arr[offset + 12]] +
+          byteToHex[arr[offset + 13]] +
+          byteToHex[arr[offset + 14]] +
+          byteToHex[arr[offset + 15]]).toLowerCase();
+  }
+
+  let getRandomValues;
+  const rnds8 = new Uint8Array(16);
+  function rng() {
+      if (!getRandomValues) {
+          if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+              throw new Error('crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported');
+          }
+          getRandomValues = crypto.getRandomValues.bind(crypto);
+      }
+      return getRandomValues(rnds8);
+  }
+
+  const randomUUID = typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID.bind(crypto);
+  var native = { randomUUID };
+
+  function v4(options, buf, offset) {
+      if (native.randomUUID && !buf && !options) {
+          return native.randomUUID();
+      }
+      options = options || {};
+      const rnds = options.random || (options.rng || rng)();
+      rnds[6] = (rnds[6] & 0x0f) | 0x40;
+      rnds[8] = (rnds[8] & 0x3f) | 0x80;
+      return unsafeStringify(rnds);
+  }
+
   const FILE_FORMATS = {
     TEXT: {
       encoding: "utf8",
@@ -8242,7 +8292,7 @@
                   },
                   // Update after create a package file
                   // children: [{
-                  //   content: "urn:uuid:"+generateUUID(),
+                  //   content: "urn:uuid:"+uuidv4(),
                   // }],
                 },
                 {
@@ -8582,7 +8632,7 @@
               children: [
                 {
                   // Generate BookID
-                  content: "urn:uuid:" + generateUUID(),
+                  content: "urn:uuid:" + v4(),
                 },
               ],
             },

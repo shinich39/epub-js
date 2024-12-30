@@ -10,10 +10,10 @@ import {
   isFile,
   isNode,
   isDoc,
+  generateId,
 } from "../libs/utilities.js";
 import {
   domToStr,
-  generateUUID,
   getContainedNumber,
   getRelativePath,
   isArray,
@@ -31,7 +31,7 @@ export class ePubFile {
    *
    * @param {...object} objs
    * @property {ePubDoc} document
-   * @property {string} _id - Default value is UUID
+   * @property {string} _id - Default value is random string
    * @property {string} path - Required
    * @property {string} data
    * @property {string} encoding - "base64", "utf8" or any encoding
@@ -44,7 +44,7 @@ export class ePubFile {
     this.document = null;
 
     // Common properties
-    this._id = generateUUID();
+    this._id = generateId();
     this.path = null; // Required
     this.basename = null;
     this.filename = null;
