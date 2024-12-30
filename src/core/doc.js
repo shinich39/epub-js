@@ -812,15 +812,22 @@ ePubDoc.prototype.removeNodes = function (query) {
  * @returns
  */
 ePubDoc.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.files = this.files.map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.files = this.files.map((item) => item.toObject());
+  return clone;
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubDoc.prototype.toFiles = function () {
-  const files = this.files.map((item) => item.toFile());
+ePubDoc.prototype.toFiles = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  const files = this.files.map((item) => item.toFile(options));
   return files;
 };

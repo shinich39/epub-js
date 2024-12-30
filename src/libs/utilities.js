@@ -1,17 +1,37 @@
 "use strict";
 
 import { js_beautify, css_beautify, html_beautify } from "js-beautify";
-import mime from 'mime';
-import { parseTemplate, isNumber, isObject, isNull } from "utils-js";
+import mime from "mime";
+import {
+  parseTemplate,
+  isNumber,
+  isObject,
+  isNull,
+  isArray,
+  isFunction,
+  isString,
+} from "utils-js";
 import { ePubDoc } from "../core/doc.js";
 import { ePubFile } from "../core/file.js";
 import { ePubNode } from "../core/node.js";
 import { customAlphabet } from "nanoid/non-secure";
-const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 2);
-const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 8);
+import escapeHTML from "escape-html";
+const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 6);
+const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
 
+export function dateToHex(date) {
+  return Math.floor(new Date(date).valueOf() / 1000).toString(16);
+}
+
+/**
+ * abcvvef51bb4362e00000020
+ * 6 lower case latin: alphabets
+ * 10 lower case hex: f51bb4362e
+ * 8 timestamp hex: 00000020
+ * @returns {string} - 24 characters
+ */
 export function generateId() {
-  return randAlpha() + randHex();
+  return randAlpha() + randHex() + dateToHex();
 }
 
 export function isDOM(str) {
@@ -19,9 +39,9 @@ export function isDOM(str) {
 }
 
 export function isInstance(obj) {
-  return obj instanceof ePubDoc || 
-    obj instanceof ePubFile ||
-    obj instanceof ePubNode;
+  return (
+    obj instanceof ePubDoc || obj instanceof ePubFile || obj instanceof ePubNode
+  );
 }
 
 export function isDoc(obj) {
@@ -45,18 +65,17 @@ export function normalizeBase64(str) {
 }
 
 export function normalizePath(str) {
-  return str.replace(/[\\\/]+/g, "/")
-    .replace(/^\.?\//, "");
+  return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
 }
 
 export function toKebabCase(str) {
-  return str.replace(/[A-Z]/g, function(ch) {
+  return str.replace(/[A-Z]/g, function (ch) {
     return `-${ch.toLowerCase()}`;
   });
 }
 
 export function parsePropertyValues(obj, target) {
-  if (Array.isArray(obj)) {
+  if (isArray(obj)) {
     for (const _obj of obj) {
       parsePropertyValues(_obj, target);
     }
@@ -73,7 +92,7 @@ export function parsePropertyValues(obj, target) {
 }
 
 export function updatePropertyValues(obj, targetKey, newValue) {
-  if (Array.isArray(obj)) {
+  if (isArray(obj)) {
     for (const _obj of obj) {
       updatePropertyValues(_obj, targetKey, newValue);
     }
@@ -123,7 +142,7 @@ export function beautifyHTML(str) {
   });
 }
 
-function beautifyCSS(str) {
+export function beautifyCSS(str) {
   return css_beautify(str, {
     indent_size: 2,
   });
@@ -141,9 +160,9 @@ export function updateObject(obj, updates) {
       keys = keys.split(".");
 
       let target = obj,
-          key = keys.pop();
+        key = keys.pop();
 
-      while(isObject(target) && keys.length > 0) {
+      while (isObject(target) && keys.length > 0) {
         target = target[keys.shift()];
       }
 
@@ -190,14 +209,14 @@ export function updateObject(obj, updates) {
             target[key].push(v);
           }
         }
-      } 
+      }
     }
   }
 }
 
 export function deepcopy(obj, keepInstances) {
   let result;
-  if (Array.isArray(obj)) {
+  if (isArray(obj)) {
     result = [];
   } else {
     result = {};
@@ -207,8 +226,10 @@ export function deepcopy(obj, keepInstances) {
       if (keepInstances) {
         result[key] = value;
       } else {
-        delete result[key]
+        delete result[key];
       }
+    } else if (isFunction(value)) {
+      delete result[key];
     } else if (isObject(value) && !isNull(value)) {
       result[key] = deepcopy(value, keepInstances);
     } else {
@@ -216,4 +237,23 @@ export function deepcopy(obj, keepInstances) {
     }
   }
   return result;
+}
+
+export function deepescape(obj) {
+  if (isArray(obj)) {
+    for (const item of obj) {
+      if (isObject(item)) {
+        deepescape(item);
+      }
+    }
+  } else if (isObject(obj)) {
+    if (isString(obj.content)) {
+      obj.content = escapeHTML(obj.content);
+    }
+    if (isArray(obj.children)) {
+      deepescape(obj.children);
+    }
+  }
+
+  return obj;
 }

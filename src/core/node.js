@@ -15,6 +15,7 @@ import {
 import {
   beautifyHTML,
   deepcopy,
+  deepescape,
   generateId,
   isFile,
   isNode,
@@ -226,17 +227,34 @@ ePubNode.prototype.remove = function () {
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubNode.prototype.toString = function () {
-  return beautifyHTML(domToStr(this));
+ePubNode.prototype.toString = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  let clone = this.toObject();
+  if (options.escape) {
+    clone = deepescape(clone);
+  }
+
+  let str = domToStr(clone);
+  if (options.beautify) {
+    str = beautifyHTML(str);
+  }
+
+  return str;
 };
 /**
  *
  * @returns
  */
 ePubNode.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.children = (this.children || []).map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.children = (this.children || []).map((item) => item.toObject());
+  return clone;
 };

@@ -17,6 +17,7 @@ import {
   getContainedNumber,
   getRelativePath,
   isArray,
+  isEmpty,
   isNumber,
   isObject,
   isObjectArray,
@@ -81,19 +82,20 @@ ePubFile.prototype.init = function () {
 
   // Parse path
   if (isString(this.path)) {
-    const fullPath = normalizePath(this.path);
-    const parsedPath = parsePath(fullPath);
+    const normalizedPath = normalizePath(this.path);
+    const parsedPath = parsePath(normalizedPath);
     this.basename = parsedPath.basename;
     this.extname = parsedPath.extname;
     this.filename = parsedPath.filename;
     this.dirname = parsedPath.dirname;
     this.mimetype = extToMime(parsedPath.extname);
   } else {
-    this.basename = null;
-    this.extname = null;
-    this.filename = null;
-    this.dirname = null;
-    this.mimetype = null;
+    throw new Error(`ePubFile must have a path parameter`);
+    // this.basename = null;
+    // this.extname = null;
+    // this.filename = null;
+    // this.dirname = null;
+    // this.mimetype = null;
   }
 
   // Parse imported by string DOM
@@ -399,32 +401,53 @@ ePubFile.prototype.removeNodes = function (query) {
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubFile.prototype.toString = function () {
-  if (isDOM(this.mimetype)) {
-    // Beautify DOM
-    return beautifyHTML(domToStr(this));
-  } else {
-    return this.data;
+ePubFile.prototype.toString = function (options) {
+  if (!options) {
+    options = {};
   }
+
+  let str;
+  if (isDOM(this.mimetype)) {
+    str = this.children
+      .map((item) => item.toString({ escape: options.escape }))
+      .join("");
+
+    if (options.beautify) {
+      str = beautifyHTML(str);
+    }
+  } else {
+    str = this.data;
+  }
+  return str;
 };
 /**
  *
  * @returns
  */
 ePubFile.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.children = (this.children || []).map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.children = (this.children || []).map((item) => item.toObject());
+  return clone;
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubFile.prototype.toFile = function () {
-  const obj = deepcopy(this);
-  obj.data = this.toString();
-  delete obj.children;
-  return obj;
+ePubFile.prototype.toFile = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  const clone = deepcopy(this);
+  clone.data = this.toString(options);
+  delete clone.children;
+  return clone;
 };

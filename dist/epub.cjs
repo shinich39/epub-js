@@ -64,6 +64,14 @@ function isObjectArray(obj) {
   return true;
 }
 /**
+ *
+ * @param {*} obj
+ * @returns {boolean}
+ */
+function isFunction(obj) {
+  return typeof obj === "function";
+}
+/**
  * Query operator list:
  * $and, $nand, $or, $nor, $in, $nin, $gt, $gte, $lt, $lte, $eq, $ne, $exists, $fn, $re
  * https://www.mongodb.com/docs/manual/tutorial/query-documents/
@@ -544,6 +552,10 @@ function domToStr(obj) {
   }
 
   return result;
+}
+
+function getDefaultExportFromCjs (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
 }
 
 var js = {exports: {}};
@@ -7298,11 +7310,110 @@ let customAlphabet = (alphabet, defaultSize = 21) => {
   }
 };
 
-const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 2);
-const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 8);
+/*!
+ * escape-html
+ * Copyright(c) 2012-2013 TJ Holowaychuk
+ * Copyright(c) 2015 Andreas Lubbe
+ * Copyright(c) 2015 Tiancheng "Timothy" Gu
+ * MIT Licensed
+ */
+
+var escapeHtml_1;
+var hasRequiredEscapeHtml;
+
+function requireEscapeHtml () {
+	if (hasRequiredEscapeHtml) return escapeHtml_1;
+	hasRequiredEscapeHtml = 1;
+
+	/**
+	 * Module variables.
+	 * @private
+	 */
+
+	var matchHtmlRegExp = /["'&<>]/;
+
+	/**
+	 * Module exports.
+	 * @public
+	 */
+
+	escapeHtml_1 = escapeHtml;
+
+	/**
+	 * Escape special characters in the given string of html.
+	 *
+	 * @param  {string} string The string to escape for inserting into HTML
+	 * @return {string}
+	 * @public
+	 */
+
+	function escapeHtml(string) {
+	  var str = '' + string;
+	  var match = matchHtmlRegExp.exec(str);
+
+	  if (!match) {
+	    return str;
+	  }
+
+	  var escape;
+	  var html = '';
+	  var index = 0;
+	  var lastIndex = 0;
+
+	  for (index = match.index; index < str.length; index++) {
+	    switch (str.charCodeAt(index)) {
+	      case 34: // "
+	        escape = '&quot;';
+	        break;
+	      case 38: // &
+	        escape = '&amp;';
+	        break;
+	      case 39: // '
+	        escape = '&#39;';
+	        break;
+	      case 60: // <
+	        escape = '&lt;';
+	        break;
+	      case 62: // >
+	        escape = '&gt;';
+	        break;
+	      default:
+	        continue;
+	    }
+
+	    if (lastIndex !== index) {
+	      html += str.substring(lastIndex, index);
+	    }
+
+	    lastIndex = index + 1;
+	    html += escape;
+	  }
+
+	  return lastIndex !== index
+	    ? html + str.substring(lastIndex, index)
+	    : html;
+	}
+	return escapeHtml_1;
+}
+
+var escapeHtmlExports = requireEscapeHtml();
+var escapeHTML = /*@__PURE__*/getDefaultExportFromCjs(escapeHtmlExports);
+
+const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 6);
+const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
+
+// Max: 2106-02-07
+function dateToHex(date) {
+  return Math.floor(new Date(date).valueOf() / 1000).toString(16);
+}
+
+// abcvve f51bb4362e 00000020
+// RnadomAlpha abcvve
+// RandomBytes f51bb4362e
+// Timestamp 00000020
 
 function generateId() {
-  return randAlpha() + randHex();
+  return randAlpha() + randHex() + dateToHex();
 }
 
 function isDOM(str) {
@@ -7310,9 +7421,9 @@ function isDOM(str) {
 }
 
 function isInstance(obj) {
-  return obj instanceof ePubDoc || 
-    obj instanceof ePubFile ||
-    obj instanceof ePubNode;
+  return (
+    obj instanceof ePubDoc || obj instanceof ePubFile || obj instanceof ePubNode
+  );
 }
 
 function isFile(obj) {
@@ -7324,8 +7435,7 @@ function isNode(obj) {
 }
 
 function normalizePath(str) {
-  return str.replace(/[\\\/]+/g, "/")
-    .replace(/^\.?\//, "");
+  return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
 }
 
 function extToMime(ext) {
@@ -7344,9 +7454,9 @@ function updateObject(obj, updates) {
       keys = keys.split(".");
 
       let target = obj,
-          key = keys.pop();
+        key = keys.pop();
 
-      while(isObject(target) && keys.length > 0) {
+      while (isObject(target) && keys.length > 0) {
         target = target[keys.shift()];
       }
 
@@ -7393,14 +7503,14 @@ function updateObject(obj, updates) {
             target[key].push(v);
           }
         }
-      } 
+      }
     }
   }
 }
 
 function deepcopy(obj, keepInstances) {
   let result;
-  if (Array.isArray(obj)) {
+  if (isArray(obj)) {
     result = [];
   } else {
     result = {};
@@ -7412,6 +7522,8 @@ function deepcopy(obj, keepInstances) {
       } else {
         delete result[key];
       }
+    } else if (isFunction(value)) {
+      delete result[key];
     } else if (isObject(value) && !isNull(value)) {
       result[key] = deepcopy(value, keepInstances);
     } else {
@@ -7419,6 +7531,25 @@ function deepcopy(obj, keepInstances) {
     }
   }
   return result;
+}
+
+function deepescape(obj) {
+  if (isArray(obj)) {
+    for (const item of obj) {
+      if (isObject(item)) {
+        deepescape(item);
+      }
+    }
+  } else if (isObject(obj)) {
+    if (isString(obj.content)) {
+      obj.content = escapeHTML(obj.content);
+    }
+    if (isArray(obj.children)) {
+      deepescape(obj.children);
+    }
+  }
+
+  return obj;
 }
 
 class ePubNode {
@@ -7627,19 +7758,36 @@ ePubNode.prototype.remove = function () {
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubNode.prototype.toString = function () {
-  return beautifyHTML(domToStr(this));
+ePubNode.prototype.toString = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  let clone = this.toObject();
+  if (options.escape) {
+    clone = deepescape(clone);
+  }
+
+  let str = domToStr(clone);
+  if (options.beautify) {
+    str = beautifyHTML(str);
+  }
+
+  return str;
 };
 /**
  *
  * @returns
  */
 ePubNode.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.children = (this.children || []).map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.children = (this.children || []).map((item) => item.toObject());
+  return clone;
 };
 
 class ePubFile {
@@ -7697,19 +7845,20 @@ ePubFile.prototype.init = function () {
 
   // Parse path
   if (isString(this.path)) {
-    const fullPath = normalizePath(this.path);
-    const parsedPath = parsePath(fullPath);
+    const normalizedPath = normalizePath(this.path);
+    const parsedPath = parsePath(normalizedPath);
     this.basename = parsedPath.basename;
     this.extname = parsedPath.extname;
     this.filename = parsedPath.filename;
     this.dirname = parsedPath.dirname;
     this.mimetype = extToMime(parsedPath.extname);
   } else {
-    this.basename = null;
-    this.extname = null;
-    this.filename = null;
-    this.dirname = null;
-    this.mimetype = null;
+    throw new Error(`ePubFile must have a path parameter`);
+    // this.basename = null;
+    // this.extname = null;
+    // this.filename = null;
+    // this.dirname = null;
+    // this.mimetype = null;
   }
 
   // Parse imported by string DOM
@@ -8015,34 +8164,55 @@ ePubFile.prototype.removeNodes = function (query) {
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubFile.prototype.toString = function () {
-  if (isDOM(this.mimetype)) {
-    // Beautify DOM
-    return beautifyHTML(domToStr(this));
-  } else {
-    return this.data;
+ePubFile.prototype.toString = function (options) {
+  if (!options) {
+    options = {};
   }
+
+  let str;
+  if (isDOM(this.mimetype)) {
+    str = this.children
+      .map((item) => item.toString({ escape: options.escape }))
+      .join("");
+
+    if (options.beautify) {
+      str = beautifyHTML(str);
+    }
+  } else {
+    str = this.data;
+  }
+  return str;
 };
 /**
  *
  * @returns
  */
 ePubFile.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.children = (this.children || []).map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.children = (this.children || []).map((item) => item.toObject());
+  return clone;
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubFile.prototype.toFile = function () {
-  const obj = deepcopy(this);
-  obj.data = this.toString();
-  delete obj.children;
-  return obj;
+ePubFile.prototype.toFile = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  const clone = deepcopy(this);
+  clone.data = this.toString(options);
+  delete clone.children;
+  return clone;
 };
 
 const byteToHex = [];
@@ -8899,16 +9069,23 @@ ePubDoc.prototype.removeNodes = function (query) {
  * @returns
  */
 ePubDoc.prototype.toObject = function () {
-  const obj = deepcopy(this);
-  obj.files = this.files.map((item) => item.toObject());
-  return obj;
+  const clone = deepcopy(this);
+  clone.files = this.files.map((item) => item.toObject());
+  return clone;
 };
 /**
  *
+ * @param {object} options
+ * @property {boolean} beautify - Defalut value is false
+ * @property {boolean} escape - Defalut value is false
  * @returns
  */
-ePubDoc.prototype.toFiles = function () {
-  const files = this.files.map((item) => item.toFile());
+ePubDoc.prototype.toFiles = function (options) {
+  if (!options) {
+    options = {};
+  }
+
+  const files = this.files.map((item) => item.toFile(options));
   return files;
 };
 

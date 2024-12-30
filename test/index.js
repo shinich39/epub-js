@@ -26,7 +26,31 @@ const {
 
 doc.setTitle(TITLE);
 doc.setAuthors(...AUTHORS);
-doc.setCover(COVER_PATH)
+doc.setCover(COVER_PATH);
+
+doc.append(new ePubFile(ePubFile.DEFAULTS.PAGE, { path: "EPUB/1.xhtml" }).updateNode({
+  tag: "body"
+}, {
+  $set: {
+    children: [{
+      "tag": "div",
+      content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
+    }],
+  }
+}));
+
+doc.append(new ePubFile(ePubFile.DEFAULTS.PAGE, { path: "EPUB/2.xhtml" }).updateNode({
+  tag: "body"
+}, {
+  $push: {
+    children: {
+      "tag": "div",
+      content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
+    },
+  }
+}));
+
+// console.log(doc.toObject());
 
 fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
 doc.export(OUTPUT_PATH);
