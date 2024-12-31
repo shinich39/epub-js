@@ -372,7 +372,7 @@ export function createDoc() {
   }
 
   doc.append(navFile);
-  self.addManifest(navFile, "nav");
+  self.addManifest(navFile, { properties: "nav" });
 
   return self
 }
