@@ -7521,7 +7521,10 @@
       result = {};
     }
     for (const [key, value] of Object.entries(obj)) {
-      if (isInstance(value)) {
+      if (key == "data") {
+        // Prevent copy buffer
+        result[key] = value;
+      } else if (isInstance(value)) {
         if (keepInstances) {
           result[key] = value;
         } else {

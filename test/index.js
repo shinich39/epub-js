@@ -54,6 +54,13 @@ doc.append(new ePubFile(ePubFile.types.xhtml, {
   }
 }));
 
+// Buffer test
+doc.append(new ePubFile({
+  encoding: "binary",
+  path: "EPUB/images/buffer.png",
+  data: fs.readFileSync(COVER_PATH),
+}));
+
 // console.log(doc.toObject());
 
 fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });

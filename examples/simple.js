@@ -403,7 +403,7 @@ export function createDoc() {
       const filePath = path.join(outputPath, file.path);
       const dirPath = path.dirname(filePath);
       fs.mkdirSync(dirPath, { recursive: true });
-      fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding } : undefined);
+      fs.writeFileSync(filePath, file.data, file.encoding || "utf8");
     }
   }
 

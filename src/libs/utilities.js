@@ -56,6 +56,18 @@ export function isNode(obj) {
   return obj instanceof ePubNode;
 }
 
+export function isNativeBuffer(obj) {
+  return Buffer && Buffer.isBuffer && Buffer.isBuffer(obj);
+}
+
+export function isArrayBuffer(obj) {
+  return ArrayBuffer && ArrayBuffer.isView && ArrayBuffer.isView(obj);
+}
+
+export function isBuffer(obj) {
+  return isNativeBuffer(obj) || isArrayBuffer(obj);
+}
+
 export function dateToISOString(v) {
   return new Date(v).toISOString().replace(/\.[0-9]+Z$/, "Z");
 }
@@ -222,7 +234,10 @@ export function deepcopy(obj, keepInstances) {
     result = {};
   }
   for (const [key, value] of Object.entries(obj)) {
-    if (isInstance(value)) {
+    if (key == "data") {
+      // Prevent copy buffer
+      result[key] = value;
+    } else if (isInstance(value)) {
       if (keepInstances) {
         result[key] = value;
       } else {
