@@ -18,20 +18,29 @@ doc.setTitle(TITLE);
 doc.setAuthor(...AUTHORS);
 doc.setCover(COVER_PATH);
 
-doc.addPage(null, "Page 1", null, [{
-  "tag": "div",
-  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
-}]);
+doc.addPage(null, {
+  title: "page 1",
+  body: [{
+    "tag": "div",
+    content: "Test 1: $$!@#!%^#&^*&%(^*&)()<>"
+  }]
+});
 
-doc.addPage(null, "Page 2", null, [{
-  "tag": "div",
-  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
-}]);
+doc.addPage(null, {
+  title: "page 2",
+  body: [{
+    "tag": "div",
+    content: "Test 2: $$!@#!%^#&^*&%(^*&)()<>"
+  }]
+});
 
-doc.addPage(null, "Page 3", null, [{
-  "tag": "div",
-  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
-}]);
+doc.addPage(null, {
+  title: "page 3",
+  body: [{
+    "tag": "div",
+    content: "Test 3: $$!@#!%^#&^*&%(^*&)()<>"
+  }]
+});
 
 // Buffer test
 doc.addFile(COVER_PATH, "EPUB/images/buffer.png");
