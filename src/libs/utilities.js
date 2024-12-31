@@ -31,7 +31,7 @@ export function dateToHex(date) {
  * @returns {string} - 24 characters
  */
 export function generateId() {
-  return randAlpha() + randHex() + dateToHex();
+  return randAlpha() + randHex() + dateToHex(new Date());
 }
 
 export function isDOM(str) {

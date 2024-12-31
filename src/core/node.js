@@ -226,14 +226,18 @@ ePubNode.prototype.remove = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubNode.prototype.toString = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   let clone = this.toObject();
   if (options.escape) {
@@ -245,7 +249,7 @@ ePubNode.prototype.toString = function (options) {
     str = beautifyHTML(str);
   }
 
-  return str;
+  return str || "";
 };
 /**
  *

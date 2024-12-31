@@ -400,14 +400,18 @@ ePubFile.prototype.removeNodes = function (query) {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubFile.prototype.toString = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   let str;
   if (isDOM(this.mimetype)) {
@@ -421,7 +425,7 @@ ePubFile.prototype.toString = function (options) {
   } else {
     str = this.data;
   }
-  return str;
+  return str || "";
 };
 /**
  *
@@ -435,14 +439,18 @@ ePubFile.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubFile.prototype.toFile = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   const clone = deepcopy(this);
   clone.data = this.toString(options);

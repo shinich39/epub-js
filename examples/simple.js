@@ -398,7 +398,7 @@ export function createDoc() {
   }
 
   doc.export = function(outputPath) {
-    const files = doc.toFiles({ beautify: true, escape: true, });
+    const files = doc.toFiles();
     for (const file of files) {
       const filePath = path.join(outputPath, file.path);
       const dirPath = path.dirname(filePath);

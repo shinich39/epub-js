@@ -11,6 +11,9 @@ import {
 import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
 import { v4 as uuidv4 } from "uuid";
 
+// Apple Books Asset Guide
+const MAX_IMAGE_PIXELS = 5600000; // <= 2366.43191324 x 2366.43191324
+
 export const FILE_TYPES = {
   /**
    * @example
@@ -555,6 +558,26 @@ export const NODE_TYPES = {
   },
 };
 
+export const UTILS = {
+  isValidImageSize: function (width, height) {
+    return width * height <= MAX_IMAGE_PIXELS;
+  },
+  calcMaxValidImageSize: function (width, height) {
+    const aspectRatio = width / height;
+    const h = Math.floor(Math.sqrt(MAX_IMAGE_PIXELS * aspectRatio));
+    const w = h * aspectRatio;
+    return [w, h];
+  },
+  calcValidImageSize: function (width, height) {
+    const [w, h] = this.calcMaxValidImageSize(width, height);
+    if (width > w || height > h) {
+      return [w, h];
+    } else {
+      return [width, height];
+    }
+  },
+};
+
 export class ePubDoc {
   /**
    *
@@ -852,14 +875,18 @@ ePubDoc.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubDoc.prototype.toFiles = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   const files = this.files.map((item) => item.toFile(options));
   return files;

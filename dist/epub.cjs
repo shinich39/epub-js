@@ -7414,7 +7414,7 @@ function dateToHex(date) {
  * @returns {string} - 24 characters
  */
 function generateId() {
-  return randAlpha() + randHex() + dateToHex();
+  return randAlpha() + randHex() + dateToHex(new Date());
 }
 
 function isDOM(str) {
@@ -7761,14 +7761,18 @@ ePubNode.prototype.remove = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubNode.prototype.toString = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   let clone = this.toObject();
   if (options.escape) {
@@ -7780,7 +7784,7 @@ ePubNode.prototype.toString = function (options) {
     str = beautifyHTML(str);
   }
 
-  return str;
+  return str || "";
 };
 /**
  *
@@ -8165,14 +8169,18 @@ ePubFile.prototype.removeNodes = function (query) {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubFile.prototype.toString = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   let str;
   if (isDOM(this.mimetype)) {
@@ -8186,7 +8194,7 @@ ePubFile.prototype.toString = function (options) {
   } else {
     str = this.data;
   }
-  return str;
+  return str || "";
 };
 /**
  *
@@ -8200,14 +8208,18 @@ ePubFile.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubFile.prototype.toFile = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   const clone = deepcopy(this);
   clone.data = this.toString(options);
@@ -8267,6 +8279,9 @@ function v4(options, buf, offset) {
     rnds[8] = (rnds[8] & 0x3f) | 0x80;
     return unsafeStringify(rnds);
 }
+
+// Apple Books Asset Guide
+const MAX_IMAGE_PIXELS = 5600000; // <= 2366.43191324 x 2366.43191324
 
 const FILE_TYPES = {
   /**
@@ -8812,6 +8827,26 @@ const NODE_TYPES = {
   },
 };
 
+const UTILS = {
+  isValidImageSize: function (width, height) {
+    return width * height <= MAX_IMAGE_PIXELS;
+  },
+  calcMaxValidImageSize: function (width, height) {
+    const aspectRatio = width / height;
+    const h = Math.floor(Math.sqrt(MAX_IMAGE_PIXELS * aspectRatio));
+    const w = h * aspectRatio;
+    return [w, h];
+  },
+  calcValidImageSize: function (width, height) {
+    const [w, h] = this.calcMaxValidImageSize(width, height);
+    if (width > w || height > h) {
+      return [w, h];
+    } else {
+      return [width, height];
+    }
+  },
+};
+
 class ePubDoc {
   /**
    *
@@ -9109,14 +9144,18 @@ ePubDoc.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is false
- * @property {boolean} escape - Defalut value is false
+ * @property {boolean} beautify - Defalut value is true
+ * @property {boolean} escape - Defalut value is true
  * @returns
  */
 ePubDoc.prototype.toFiles = function (options) {
-  if (!options) {
-    options = {};
-  }
+  options = Object.assign(
+    {
+      beautify: true,
+      escape: true,
+    },
+    options || {}
+  );
 
   const files = this.files.map((item) => item.toFile(options));
   return files;
@@ -9125,6 +9164,7 @@ ePubDoc.prototype.toFiles = function (options) {
 /**
  * ePubDoc method links
  */
+ePubDoc.utils = UTILS;
 
 /**
  * ePubFile method links

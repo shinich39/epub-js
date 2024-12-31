@@ -568,7 +568,7 @@ const exportedObject = doc.toObject();
 const newDoc = new ePubDoc(exportedObject);
 
 // Export to file
-const exportedFiles = newDoc.toFiles({ beautify: true, escape: true });
+const exportedFiles = newDoc.toFiles();
 
 // Write each file to directory
 console.log();
