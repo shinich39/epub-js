@@ -7406,16 +7406,17 @@
   const randAlpha = customAlphabet("abcdefghijklmnopqrstuvwxyz", 6);
   const randHex = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
 
-  // Max: 2106-02-07
   function dateToHex(date) {
     return Math.floor(new Date(date).valueOf() / 1000).toString(16);
   }
 
-  // abcvve f51bb4362e 00000020
-  // RnadomAlpha abcvve
-  // RandomBytes f51bb4362e
-  // Timestamp 00000020
-
+  /**
+   * abcvvef51bb4362e00000020
+   * 6 lower case latin: alphabets
+   * 10 lower case hex: f51bb4362e
+   * 8 timestamp hex: 00000020
+   * @returns {string} - 24 characters
+   */
   function generateId() {
     return randAlpha() + randHex() + dateToHex();
   }
