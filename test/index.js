@@ -28,7 +28,7 @@ doc.setTitle(TITLE);
 doc.setAuthors(...AUTHORS);
 doc.setCover(COVER_PATH);
 
-doc.append(new ePubFile(ePubFile.DEFAULTS.PAGE, { path: "EPUB/1.xhtml" }).updateNode({
+doc.append(new ePubFile(ePubFile.types.xhtml, { path: "EPUB/1.xhtml" }).updateNode({
   tag: "body"
 }, {
   $set: {
@@ -39,7 +39,7 @@ doc.append(new ePubFile(ePubFile.DEFAULTS.PAGE, { path: "EPUB/1.xhtml" }).update
   }
 }));
 
-doc.append(new ePubFile(ePubFile.DEFAULTS.PAGE, { path: "EPUB/2.xhtml" }).updateNode({
+doc.append(new ePubFile(ePubFile.types.xhtml, { path: "EPUB/2.xhtml" }).updateNode({
   tag: "body"
 }, {
   $push: {

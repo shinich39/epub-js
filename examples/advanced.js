@@ -231,7 +231,7 @@ metadataNode.append({
  */
 
 // Create a navigation file
-const navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
+const navFile = new ePubFile(ePubFile.types.nav);
 
 // Append nav file to document
 doc.append(navFile);
@@ -249,7 +249,7 @@ navSpine.setAttribute("linear", "no");
  */
 
 // Create a NCX file
-const ncxPage = new ePubFile(ePubFile.DEFAULTS.NCX);
+const ncxPage = new ePubFile(ePubFile.types.ncx);
 
 // Append ncx file to document
 doc.append(ncxPage);
@@ -335,7 +335,7 @@ ncxPage.findNode({
 
 // Create a text page
 const textPage = new ePubFile(
-  ePubFile.DEFAULTS.PAGE, 
+  ePubFile.types.PAGE, 
   { path: "EPUB/texts/page-01.xhtml", }
 );
 
@@ -400,8 +400,9 @@ textPage
  */
 
 // Create an image page
-const imagePage = new ePubFile(ePubFile.DEFAULTS.PAGE);
-imagePage.path = "EPUB/texts/page-02.xhtml";
+const imagePage = new ePubFile(ePubFile.types.xhtml, {
+  path: "EPUB/texts/page-02.xhtml"
+});
 
 // Append image page to document
 doc.append(imagePage);

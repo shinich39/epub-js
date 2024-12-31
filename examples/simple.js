@@ -11,7 +11,7 @@ export function createDoc() {
   const metadataNode = packageFile.findNode({ tag: "metadata" });
   const manifestNode = packageFile.findNode({ tag: "manifest" });
   const spineNode = packageFile.findNode({ tag: "spine" });
-  const navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
+  const navFile = new ePubFile(ePubFile.types.nav);
   const tocNode = navFile
     .findNode({
       tag: "nav",
@@ -367,7 +367,7 @@ export function createDoc() {
 
     if (!p) {
       p = new ePubFile(
-        ePubFile.DEFAULTS.PAGE,
+        ePubFile.types.xhtml,
         { path: newPath }
       );
 
@@ -389,7 +389,7 @@ export function createDoc() {
 
     if (!p) {
       p = new ePubFile(
-        ePubFile.DEFAULTS.SMIL,
+        ePubFile.types.smil,
         { path: newPath }
       );
 

@@ -4,7 +4,7 @@
  * ePub Version: 3.0
  * https://www.w3.org/TR/epub-33/
  */
-import { ePubDoc, FILE_FORMATS, NODE_FORMATS } from "./src/core/doc.js";
+import { ePubDoc, FILE_TYPES, NODE_TYPES } from "./src/core/doc.js";
 import { ePubFile } from "./src/core/file.js";
 import { ePubNode } from "./src/core/node.js";
 
@@ -15,7 +15,7 @@ import { ePubNode } from "./src/core/node.js";
 /**
  * ePubFile method links
  */
-ePubFile.DEFAULTS = FILE_FORMATS;
+ePubFile.types = FILE_TYPES;
 ePubFile.prototype.getAbsPath = ePubFile.prototype.getAbsolutePath;
 ePubFile.prototype.getRelPath = ePubFile.prototype.getRelativePath;
 
@@ -24,7 +24,7 @@ ePubFile.prototype.update = ePubDoc.prototype.update;
 /**
  * ePubNode method links
  */
-ePubNode.DEFAULTS = NODE_FORMATS;
+ePubNode.types = NODE_TYPES;
 ePubNode.prototype.getFile = ePubNode.prototype.getRootNode;
 ePubNode.prototype.getAbsPath = ePubNode.prototype.getAbsolutePath;
 ePubNode.prototype.getRelPath = ePubNode.prototype.getRelativePath;
