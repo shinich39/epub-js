@@ -272,7 +272,8 @@ export function createDoc() {
     return "misc";
   }
 
-  self.addFile = function(srcPath, dstPath) {
+  self.addFile = function(srcPath, dstPath, options) {
+    const { manifestProps } = options || {};
     const newPath = dstPath || path.join(`EPUB`, self.getFileDir(srcPath), path.basename(srcPath));
 
     const file = doc.findFile({ 
@@ -289,10 +290,11 @@ export function createDoc() {
     });
 
     doc.append(newFile);
-    self.addManifest(newFile);
+    self.addManifest(newFile, { properties: manifestProps || null });
   }
 
-  self.addPage = function(dstPath, navLabel, head, body) {
+  self.addPage = function(dstPath, options) {
+    const { title, head, body, manifestProps, spineProps } = options || {};
     if (!head) {
       head = [];
     }
@@ -326,17 +328,18 @@ export function createDoc() {
     newFile.findNode({ tag: "body" }).append(...body);
 
     doc.append(newFile);
-    self.addManifest(newFile);
-    self.addSpine(newFile);
+    self.addManifest(newFile, { properties: manifestProps || null });
+    self.addSpine(newFile, { properties: spineProps || null });
 
-    if (navLabel) {
-      self.addNav(newFile, navLabel);
+    if (title) {
+      self.addNav(newFile, title);
     }
 
     return newFile;
   }
 
-  self.addSmil = function(dstPath) {
+  self.addSmil = function(dstPath, options) {
+    const { manifestProps } = options || {};
     const newPath = path.join("EPUB", "overlays", path.basename(dstPath));
 
     const file = doc.findFile({ 
@@ -353,7 +356,7 @@ export function createDoc() {
     );
 
     doc.append(newFile);
-    self.addManifest(newFile);
+    self.addManifest(newFile, { properties: manifestProps || null });
 
     return newFile;
   }
