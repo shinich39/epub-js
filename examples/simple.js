@@ -304,7 +304,6 @@ export function createDoc() {
 
     if (!f) {
       f = new ePubFile({
-        encoding: "utf8",
         path: newPath,
         data: fs.readFileSync(srcPath, "utf8"),
       });
@@ -325,7 +324,6 @@ export function createDoc() {
 
     if (!f) {
       f = new ePubFile({
-        encoding: "utf8",
         path: newPath,
         data: fs.readFileSync(srcPath, "utf8"),
       });
@@ -346,7 +344,6 @@ export function createDoc() {
 
     if (!f) {
       f = new ePubFile({
-        encoding: "utf8",
         path: newPath,
         data: fs.readFileSync(srcPath, "utf8"),
       });

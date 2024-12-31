@@ -25,13 +25,11 @@ export class ePubNode {
   /**
    *
    * @param {...object} objs
-   * @property {ePubFile|ePubNode} parentNode
-   * @property {string} _id - Default value is UUID
-   * @property {string|null} tag - Required
-   * @property {string|null} closer - "/"
-   * @property {string} content - You must set the tag to null
-   * @property {object} attributes
-   * @property {ePubNode[]} children
+   * @property {string|null} objs[].tag - Required
+   * @property {string|null} objs[].closer - "/"
+   * @property {string} objs[].content - You must set the tag to null
+   * @property {object} objs[].attributes
+   * @property {(ePubNode[]|object[])} objs[].children
    * @returns {ePubNode}
    */
   constructor(...objs) {

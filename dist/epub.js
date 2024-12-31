@@ -7561,13 +7561,11 @@
     /**
      *
      * @param {...object} objs
-     * @property {ePubFile|ePubNode} parentNode
-     * @property {string} _id - Default value is UUID
-     * @property {string|null} tag - Required
-     * @property {string|null} closer - "/"
-     * @property {string} content - You must set the tag to null
-     * @property {object} attributes
-     * @property {ePubNode[]} children
+     * @property {string|null} objs[].tag - Required
+     * @property {string|null} objs[].closer - "/"
+     * @property {string} objs[].content - You must set the tag to null
+     * @property {object} objs[].attributes
+     * @property {(ePubNode[]|object[])} objs[].children
      * @returns {ePubNode}
      */
     constructor(...objs) {
@@ -7799,13 +7797,10 @@
     /**
      *
      * @param {...object} objs
-     * @property {ePubDoc} document
-     * @property {string} _id - Default value is random string
-     * @property {string} path - Required
-     * @property {string} data
-     * @property {string} encoding - "base64", "utf8" or any encoding
-     * @property {ePubNode[]} children
-     * @property {object} attributes
+     * @property {string} objs[].path - Required
+     * @property {string} objs[].data
+     * @property {object} objs[].attributes
+     * @property {(ePubNode[]|object[])} objs[].children
      * @returns {ePubFile}
      */
     constructor(...objs) {
@@ -7815,13 +7810,14 @@
       // Common properties
       this._id = generateId();
       this.path = null; // Required
+      this.data = null;
+
+      // Read only properties
       this.basename = null;
       this.filename = null;
       this.dirname = null;
       this.extension = null;
       this.mimetype = null;
-      this.data = null;
-      this.encoding = null;
 
       // DOM properties
       this.tag = null;
@@ -8287,7 +8283,6 @@
      *   })
      */
     xhtml: {
-      encoding: "utf8",
       children: [
         {
           tag: "?xml",
@@ -8342,7 +8337,6 @@
       ],
     },
     smil: {
-      encoding: "utf8",
       children: [
         {
           tag: "?xml",
@@ -8376,12 +8370,10 @@
       ],
     },
     mimetype: {
-      encoding: "utf8",
       path: "mimetype",
       data: "application/epub+zip",
     },
     container: {
-      encoding: "utf8",
       path: "META-INF/container.xml",
       children: [
         {
@@ -8417,7 +8409,6 @@
       ],
     },
     package: {
-      encoding: "utf8",
       path: "EPUB/package.opf",
       children: [
         {
@@ -8533,7 +8524,6 @@
       ],
     },
     nav: {
-      encoding: "utf8",
       path: "EPUB/nav.xhtml",
       children: [
         {
@@ -8652,7 +8642,6 @@
       ],
     },
     ncx: {
-      encoding: "utf8",
       path: "EPUB/toc.ncx",
       children: [
         {
@@ -8735,6 +8724,10 @@
   const NODE_TYPES = {
     /**
      * Append to manifest node
+     * @property {object} attribtues
+     * @property {string} attribtues.id - Required
+     * @property {string} attribtues.href - Required
+     * @property {string} attribtues.media-type - Required file.mimetype
      * @example
      * const manifestNode = new ePubNode(ePubNode.types.item)
      *   .setAttirbute("id", file._id)
@@ -8755,6 +8748,9 @@
     },
     /**
      * Append to spine node
+     * @property {object} attribtues
+     * @property {string} attribtues.id - Required
+     * @property {string} attribtues.linear - Optional "yes"|"no"
      * @example
      * const spineNode = new ePubNode(ePubNode.types.itemref)
      *   .setAttribute("idref", file._id);
@@ -8772,6 +8768,8 @@
     },
     /**
      * Append to body node of smil file
+     * @property {object} attribtues
+     * @property {string} attribtues.epub:textref - Required
      * @example
      * const seqNode = new ePubNode(ePubNode.types.seq)
      *   .setAttribute("epub:textref", file.getRelPath(smilFile));
@@ -8784,6 +8782,10 @@
     },
     /**
      * Append to seq node of smil file
+     * @property {object} attribtues
+     * @property {string} attribtues.children.[0].attributes.src - Required Text node path
+     * @property {string} attribtues.children.[1].attributes.src - Required Audio file path
+     * @example
      * const parNode = new ePubNode(ePubNode.types.par)
      *   .updateNode({ tag: "text" }, { $set: { "attribtues.src": textNode.getRelPath(smilFile) } });
      *   .updateNode({ tag: "audio" }, { $set: { "attribtues.src": audioFile.getRelPath(smilFile) } });

@@ -31,13 +31,10 @@ export class ePubFile {
   /**
    *
    * @param {...object} objs
-   * @property {ePubDoc} document
-   * @property {string} _id - Default value is random string
-   * @property {string} path - Required
-   * @property {string} data
-   * @property {string} encoding - "base64", "utf8" or any encoding
-   * @property {ePubNode[]} children
-   * @property {object} attributes
+   * @property {string} objs[].path - Required
+   * @property {string} objs[].data
+   * @property {object} objs[].attributes
+   * @property {(ePubNode[]|object[])} objs[].children
    * @returns {ePubFile}
    */
   constructor(...objs) {
@@ -47,13 +44,14 @@ export class ePubFile {
     // Common properties
     this._id = generateId();
     this.path = null; // Required
+    this.data = null;
+
+    // Read only properties
     this.basename = null;
     this.filename = null;
     this.dirname = null;
     this.extension = null;
     this.mimetype = null;
-    this.data = null;
-    this.encoding = null;
 
     // DOM properties
     this.tag = null;

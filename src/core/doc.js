@@ -25,7 +25,6 @@ export const FILE_TYPES = {
    *   })
    */
   xhtml: {
-    encoding: "utf8",
     children: [
       {
         tag: "?xml",
@@ -80,7 +79,6 @@ export const FILE_TYPES = {
     ],
   },
   smil: {
-    encoding: "utf8",
     children: [
       {
         tag: "?xml",
@@ -114,12 +112,10 @@ export const FILE_TYPES = {
     ],
   },
   mimetype: {
-    encoding: "utf8",
     path: "mimetype",
     data: "application/epub+zip",
   },
   container: {
-    encoding: "utf8",
     path: "META-INF/container.xml",
     children: [
       {
@@ -155,7 +151,6 @@ export const FILE_TYPES = {
     ],
   },
   package: {
-    encoding: "utf8",
     path: "EPUB/package.opf",
     children: [
       {
@@ -271,7 +266,6 @@ export const FILE_TYPES = {
     ],
   },
   nav: {
-    encoding: "utf8",
     path: "EPUB/nav.xhtml",
     children: [
       {
@@ -390,7 +384,6 @@ export const FILE_TYPES = {
     ],
   },
   ncx: {
-    encoding: "utf8",
     path: "EPUB/toc.ncx",
     children: [
       {
@@ -473,6 +466,10 @@ export const FILE_TYPES = {
 export const NODE_TYPES = {
   /**
    * Append to manifest node
+   * @property {object} attribtues
+   * @property {string} attribtues.id - Required
+   * @property {string} attribtues.href - Required
+   * @property {string} attribtues.media-type - Required file.mimetype
    * @example
    * const manifestNode = new ePubNode(ePubNode.types.item)
    *   .setAttirbute("id", file._id)
@@ -493,6 +490,9 @@ export const NODE_TYPES = {
   },
   /**
    * Append to spine node
+   * @property {object} attribtues
+   * @property {string} attribtues.id - Required
+   * @property {string} attribtues.linear - Optional "yes"|"no"
    * @example
    * const spineNode = new ePubNode(ePubNode.types.itemref)
    *   .setAttribute("idref", file._id);
@@ -510,6 +510,8 @@ export const NODE_TYPES = {
   },
   /**
    * Append to body node of smil file
+   * @property {object} attribtues
+   * @property {string} attribtues.epub:textref - Required
    * @example
    * const seqNode = new ePubNode(ePubNode.types.seq)
    *   .setAttribute("epub:textref", file.getRelPath(smilFile));
@@ -522,6 +524,10 @@ export const NODE_TYPES = {
   },
   /**
    * Append to seq node of smil file
+   * @property {object} attribtues
+   * @property {string} attribtues.children.[0].attributes.src - Required Text node path
+   * @property {string} attribtues.children.[1].attributes.src - Required Audio file path
+   * @example
    * const parNode = new ePubNode(ePubNode.types.par)
    *   .updateNode({ tag: "text" }, { $set: { "attribtues.src": textNode.getRelPath(smilFile) } });
    *   .updateNode({ tag: "audio" }, { $set: { "attribtues.src": audioFile.getRelPath(smilFile) } });

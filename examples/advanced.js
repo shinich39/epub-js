@@ -580,13 +580,15 @@ for (const file of exportedFiles) {
   console.log(`> Write ${filePath}`);
 
   fs.mkdirSync(dirPath, { recursive: true });
-  fs.writeFileSync(filePath, file.data, { encoding: file.encoding });
+  fs.writeFileSync(filePath, file.data, { encoding: file.encoding || "utf8" });
 }
 
 // Write a json file
 console.log();
 console.log(`> Start writing JSON: ${title}.json`);
-fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.json`), JSON.stringify(exportedObject, null, 2), {encoding: "utf8"})
+fs.writeFileSync(path.join(OUTPUT_PATH, `${title}.json`), JSON.stringify(exportedObject, null, 2), {
+  encoding: "utf8"
+});
 
 // Create zip object with JSZip
 console.log();

@@ -28,7 +28,9 @@ doc.setTitle(TITLE);
 doc.setAuthors(...AUTHORS);
 doc.setCover(COVER_PATH);
 
-doc.append(new ePubFile(ePubFile.types.xhtml, { path: "EPUB/1.xhtml" }).updateNode({
+doc.append(new ePubFile(ePubFile.types.xhtml, {
+  path: "EPUB/1.xhtml",
+}).updateNode({
   tag: "body"
 }, {
   $set: {
@@ -39,7 +41,9 @@ doc.append(new ePubFile(ePubFile.types.xhtml, { path: "EPUB/1.xhtml" }).updateNo
   }
 }));
 
-doc.append(new ePubFile(ePubFile.types.xhtml, { path: "EPUB/2.xhtml" }).updateNode({
+doc.append(new ePubFile(ePubFile.types.xhtml, {
+  path: "EPUB/2.xhtml",
+}).updateNode({
   tag: "body"
 }, {
   $push: {
@@ -101,7 +105,7 @@ doc.export(OUTPUT_PATH);
 //   console.log(`> Write ${filePath}`);
 
 //   fs.mkdirSync(dirPath, { recursive: true });
-//   fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding } : undefined);
+//   fs.writeFileSync(filePath, file.data, file.encoding ? { encoding: file.encoding || "utf8" } : undefined);
 // }
 
 // // Write a epub file
