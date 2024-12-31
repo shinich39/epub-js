@@ -7,6 +7,9 @@
     ".": {
       "import": "./dist/epub.mjs",
       "require": "./dist/epub.cjs"
+    },
+    "./quick": {
+      "import": "./examples/quick.js"
     }
   },
   "type": "module",

@@ -1,5 +1,5 @@
 import { ePubDoc, ePubFile, ePubNode } from "../dist/epub.mjs";
-import { createDoc } from "../examples/simple.js";
+import { createDoc } from "../examples/quick.js";
 import path from "node:path";
 import fs from "node:fs";
 import JSZip from "./libs/jszip.min.mjs";
@@ -12,66 +12,40 @@ const AUTHORS = ["shinich39", "epub-js"];
 
 
 // Create a ePub document
-const {
-  doc,
-  mimetypeFile,
-  containerFile,
-  packageFile,
-  packageNode,
-  metadataNode,
-  manifestNode,
-  spineNode,
-  navFile,
-  tocNode,
-} = createDoc();
+const doc = createDoc();
 
 doc.setTitle(TITLE);
-doc.setAuthors(...AUTHORS);
+doc.setAuthor(...AUTHORS);
 doc.setCover(COVER_PATH);
 
-doc.append(new ePubFile(ePubFile.types.xhtml, {
-  path: "EPUB/1.xhtml",
-}).updateNode({
-  tag: "body"
-}, {
-  $set: {
-    children: [{
-      "tag": "div",
-      content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
-    }],
-  }
-}));
+doc.addPage(null, "Page 1", null, [{
+  "tag": "div",
+  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
+}]);
 
-doc.append(new ePubFile(ePubFile.types.xhtml, {
-  path: "EPUB/2.xhtml",
-}).updateNode({
-  tag: "body"
-}, {
-  $push: {
-    children: {
-      "tag": "div",
-      content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
-    },
-  }
-}));
+doc.addPage(null, "Page 2", null, [{
+  "tag": "div",
+  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
+}]);
+
+doc.addPage(null, "Page 3", null, [{
+  "tag": "div",
+  content: "Test escape: $$!@#!%^#&^*&%(^*&)()<>"
+}]);
 
 // Buffer test
-doc.append(new ePubFile({
-  encoding: "binary",
-  path: "EPUB/images/buffer.png",
-  data: fs.readFileSync(COVER_PATH),
-}));
+doc.addFile(COVER_PATH, "EPUB/images/buffer.png");
 
 // console.log(doc.toObject());
 
 fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
 doc.export(OUTPUT_PATH);
 
-console.log(ePubDoc.utils.calcMaxValidImageSize(100, 100))
-console.log(ePubDoc.utils.calcValidImageSize(5000, 5000))
-console.log(ePubDoc.utils.calcValidImageSize(1000, 1000))
-console.log(ePubDoc.utils.isValidImageSize(2500, 2500))
-console.log(ePubDoc.utils.isValidImageSize(1000, 1000))
+// console.log(ePubDoc.utils.calcMaxValidImageSize(100, 100))
+// console.log(ePubDoc.utils.calcValidImageSize(5000, 5000))
+// console.log(ePubDoc.utils.calcValidImageSize(1000, 1000))
+// console.log(ePubDoc.utils.isValidImageSize(2500, 2500))
+// console.log(ePubDoc.utils.isValidImageSize(1000, 1000))
 
 // Export to object
 // const exportedObj = doc.toObject();
