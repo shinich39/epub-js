@@ -380,7 +380,7 @@ video{
           languageNode?.setContent("en");
           authorNode?.setContent("Anonymous");
 
-          navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
+          navFile = new ePubFile(ePubFile.types.nav);
           navFile.isNav = true;
           doc.append(navFile);
           addToManifest(navFile, "nav");
@@ -466,7 +466,7 @@ video{
           languageNode = metadataNode.findNode({ tag: "dc:language" });
           authorNode = metadataNode.findNode({ tag: "dc:creator" });
 
-          navFile = new ePubFile(ePubFile.DEFAULTS.NAV);
+          navFile = new ePubFile(ePubFile.types.nav);
           navFile.isNav = true;
           doc.append(navFile);
           addToManifest(navFile, "nav");
@@ -894,7 +894,7 @@ video{
             });
             break;
           case ".txt":
-            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
+            newPage = new ePubFile(ePubFile.types.xhtml, {
               encoding: "utf8",
               path: path.replace(ext, ".xhtml"),
             });
@@ -914,7 +914,7 @@ video{
               data: data,
             });
 
-            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
+            newPage = new ePubFile(ePubFile.types.xhtml, {
               path: path.replace(ext, ".xhtml"),
             });
 
@@ -937,7 +937,7 @@ video{
               data: data,
             });
 
-            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
+            newPage = new ePubFile(ePubFile.types.xhtml, {
               path: path.replace(ext, ".xhtml"),
             });
 
@@ -965,7 +965,7 @@ video{
               data: data,
             });
 
-            newPage = new ePubFile(ePubFile.DEFAULTS.PAGE, {
+            newPage = new ePubFile(ePubFile.types.xhtml, {
               path: path.replace(ext, ".xhtml"),
             });
 
