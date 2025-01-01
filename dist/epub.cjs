@@ -417,7 +417,7 @@ function strToDom(str) {
     obj;
 
   while ((match = re.exec(str))) {
-    // Read content
+    // Read text content
     let content = str.substring(offset, match.index).trim();
     if (content.length > 0) {
       obj = {
@@ -464,6 +464,21 @@ function strToDom(str) {
     }
 
     offset = re.lastIndex;
+  }
+
+  let lastContent = str.substring(offset).trim();
+  if (lastContent.length > 0) {
+    obj = {
+      // isClosed: true,
+      // isClosing: false,
+      tag: null,
+      closer: null,
+      content: unescapeStr(lastContent),
+      attributes: {},
+      children: [],
+    };
+
+    children.push(obj);
   }
 
   for (let node of nodes) {
