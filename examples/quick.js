@@ -291,6 +291,8 @@ export function createDoc() {
 
     doc.append(newFile);
     self.addManifest(newFile, manifest);
+
+    return newFile;
   }
 
   self.addPage = function(dstPath, options) {
