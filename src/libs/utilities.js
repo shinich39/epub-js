@@ -52,8 +52,26 @@ export function isFile(obj) {
   return obj instanceof ePubFile;
 }
 
+export function isFileType(obj) {
+  for (const t of Object.values(ePubFile.types)) {
+    if (obj == t) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function isNode(obj) {
   return obj instanceof ePubNode;
+}
+
+export function isNodeType(obj) {
+  for (const t of Object.values(ePubNode.types)) {
+    if (obj == t) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function isNativeBuffer(obj) {
@@ -185,7 +203,7 @@ export function deepcopy(obj, keepInstances) {
       }
     } else if (isFunction(value)) {
       delete result[key];
-    } else if (isObject(value) && !isNull(value)) {
+    } else if (isObject(value) || isArray(value)) {
       result[key] = deepcopy(value, keepInstances);
     } else {
       result[key] = value;

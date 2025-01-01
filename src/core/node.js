@@ -19,6 +19,7 @@ import {
   generateId,
   isFile,
   isNode,
+  isNodeType,
 } from "../libs/utilities.js";
 
 export class ePubNode {

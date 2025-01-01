@@ -23,21 +23,13 @@
    * @returns {boolean}
    */
   function isObject(obj) {
-    return typeof obj === "object" && obj !== null;
+    return typeof obj === "object" && obj !== null && !isArray(obj);
     // return (
     //   typeof obj === "object" &&
     //   obj !== null &&
     //   obj.constructor === Object &&
     //   Object.getPrototypeOf(obj) === Object.prototype
     // );
-  }
-  /**
-   *
-   * @param {*} obj
-   * @returns {boolean}
-   */
-  function isNull(obj) {
-    return typeof obj === "object" && obj === null;
   }
   /**
    *
@@ -7588,7 +7580,7 @@
         }
       } else if (isFunction(value)) {
         delete result[key];
-      } else if (isObject(value) && !isNull(value)) {
+      } else if (isObject(value) || isArray(value)) {
         result[key] = deepcopy(value, keepInstances);
       } else {
         result[key] = value;
@@ -7933,7 +7925,36 @@
             this.children[i].init();
           }
         } else if (isObject(this.children[i])) {
-          this.children[i] = new ePubNode(this.children[i], { parentNode: this });
+          this.children[i] = new ePubNode(this.children[i], {
+            parentNode: this,
+          });
+        } else if (isString(this.children[i])) {
+          this.children[i] = new ePubNode({
+            parentNode: this,
+            content: this.children[i],
+          });
+        } else {
+          this.children[i] = new ePubNode({
+            parentNode: this,
+            content: this.children[i].toString(),
+          });
+        }
+      }
+
+      for (let i = 0; i < this.children.length; i++) {
+        if (isNode(this.children[i])) {
+          if (!this.children[i].parentNode) {
+            this.children[i].parentNode = this;
+            this.children[i].init();
+          } else if (this.children[i].parentNode != this) {
+            this.children[i].remove();
+            this.children[i].parentNode = this;
+            this.children[i].init();
+          }
+        } else if (isObject(this.children[i])) {
+          this.children[i] = new ePubNode(this.children[i], {
+            parentNode: this,
+          });
         } else if (isString(this.children[i])) {
           this.children[i] = new ePubNode({
             parentNode: this,

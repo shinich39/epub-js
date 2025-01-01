@@ -11,6 +11,7 @@ import {
   isNode,
   isDoc,
   generateId,
+  isFileType,
 } from "../libs/utilities.js";
 import {
   domToStr,
@@ -117,7 +118,36 @@ ePubFile.prototype.init = function () {
           this.children[i].init();
         }
       } else if (isObject(this.children[i])) {
-        this.children[i] = new ePubNode(this.children[i], { parentNode: this });
+        this.children[i] = new ePubNode(this.children[i], {
+          parentNode: this,
+        });
+      } else if (isString(this.children[i])) {
+        this.children[i] = new ePubNode({
+          parentNode: this,
+          content: this.children[i],
+        });
+      } else {
+        this.children[i] = new ePubNode({
+          parentNode: this,
+          content: this.children[i].toString(),
+        });
+      }
+    }
+
+    for (let i = 0; i < this.children.length; i++) {
+      if (isNode(this.children[i])) {
+        if (!this.children[i].parentNode) {
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        } else if (this.children[i].parentNode != this) {
+          this.children[i].remove();
+          this.children[i].parentNode = this;
+          this.children[i].init();
+        }
+      } else if (isObject(this.children[i])) {
+        this.children[i] = new ePubNode(this.children[i], {
+          parentNode: this,
+        });
       } else if (isString(this.children[i])) {
         this.children[i] = new ePubNode({
           parentNode: this,
