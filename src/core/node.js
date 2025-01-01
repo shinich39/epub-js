@@ -34,7 +34,6 @@ export class ePubNode {
    * @returns {ePubNode}
    */
   constructor(...objs) {
-
     // reference properties
     this.parentNode = null;
 
@@ -71,7 +70,6 @@ export class ePubNode {
  * @returns
  */
 ePubNode.prototype.init = function () {
-
   // parse content
   if (isString(this.tag) && isString(this.content)) {
     this.data = this.content;

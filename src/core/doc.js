@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 // apple books asset guide
 // https://itunespartner.apple.com/books/support/4853-now-accepting-images-million-pixels
 // size <= 2366.43191324 x 2366.43191324
-const MAX_IMAGE_PIXELS = 5600000; 
+const MAX_IMAGE_PIXELS = 5600000;
 
 export const FILE_TYPES = {
   /**
@@ -599,7 +599,6 @@ export class ePubDoc {
    * @param {ePubFile[]} objs[].files
    */
   constructor(...objs) {
-
     // default 3 files
     // mimetype
     // META-INF/container.xml
@@ -637,7 +636,6 @@ export class ePubDoc {
  * @returns
  */
 ePubDoc.prototype.init = function () {
-
   // convert files to ePubFile
   if (isArray(this.files)) {
     for (let i = 0; i < this.files.length; i++) {

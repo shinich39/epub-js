@@ -38,7 +38,6 @@ export class ePubFile {
    * @returns {ePubFile}
    */
   constructor(...objs) {
-
     // reference properties
     this.document = null;
 
@@ -94,7 +93,6 @@ export class ePubFile {
  * @returns
  */
 ePubFile.prototype.init = function () {
-
   // parse path
   if (!isString(this.path)) {
     throw new Error(`ePubFile must have a path property as a string`);
