@@ -368,7 +368,9 @@ export function createDoc() {
     for (const file of files) {
       const filePath = path.join(outputPath, file.path);
       const dirPath = path.dirname(filePath);
-      fs.mkdirSync(dirPath, { recursive: true });
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
       fs.writeFileSync(filePath, file.data);
     }
   }
