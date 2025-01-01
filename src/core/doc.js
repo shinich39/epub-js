@@ -11,13 +11,17 @@ import {
 import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
 import { v4 as uuidv4 } from "uuid";
 
-// Apple Books Asset Guide
-const MAX_IMAGE_PIXELS = 5600000; // <= 2366.43191324 x 2366.43191324
+// apple books asset guide
+// https://itunespartner.apple.com/books/support/4853-now-accepting-images-million-pixels
+// size <= 2366.43191324 x 2366.43191324
+const MAX_IMAGE_PIXELS = 5600000; 
 
 export const FILE_TYPES = {
   /**
    * @example
-   * const pageFile = new ePubFile(ePubFile.types.xhtml, { path: "EPUB/pages/1.xhtml" })
+   * const pageFile = new ePubFile(ePubFile.types.xhtml, {
+   *     path: "EPUB/pages/1.xhtml"
+   *   })
    *   .updateNode(
    *     { tag: "head" },
    *     { $push: { children: [ YOUR_HEAD_NODE, ... ] }
@@ -191,7 +195,7 @@ export const FILE_TYPES = {
                 attributes: {
                   id: "bookid",
                 },
-                // Update after create a package file
+                // update after create a package file
                 // children: [{
                 //   content: "urn:uuid:"+uuidv4(),
                 // }],
@@ -226,7 +230,7 @@ export const FILE_TYPES = {
                   },
                 ],
               },
-              // Example
+              // <meta property="rendition:...">...</meta>
               // {
               //   tag: "meta",
               //   attributes: {
@@ -414,7 +418,17 @@ export const FILE_TYPES = {
                 closer: " /",
                 attributes: {
                   name: "dtb:uid",
-                  // Update after create a ncx page
+                  // update after create a ncx page
+                  // ncxFile.updateNode({
+                  //   "attributes.name": "dtb:uid"
+                  // }, {
+                  //   $set: {
+                  //     "content": doc.findNode({
+                  //         tag: "dc:identifier",
+                  //         "attributes.id": "bookid"
+                  //       }).getContent()
+                  //   }
+                  // });
                   content: "",
                 },
               },
@@ -468,11 +482,11 @@ export const FILE_TYPES = {
 
 export const NODE_TYPES = {
   /**
-   * Append to manifest node
+   * append to manifest node
    * @property {object} attribtues
-   * @property {string} attribtues.id - Required
-   * @property {string} attribtues.href - Required
-   * @property {string} attribtues.media-type - Required file.mimetype
+   * @property {string} attribtues.id - required
+   * @property {string} attribtues.href - required
+   * @property {string} attribtues.media-type - required
    * @example
    * const manifestNode = new ePubNode(ePubNode.types.item)
    *   .setAttirbute("id", file._id)
@@ -492,10 +506,10 @@ export const NODE_TYPES = {
     },
   },
   /**
-   * Append to spine node
+   * append to spine node
    * @property {object} attribtues
-   * @property {string} attribtues.id - Required
-   * @property {string} attribtues.linear - Optional "yes"|"no"
+   * @property {string} attribtues.id - required
+   * @property {"yes"|"no"|null} attribtues.linear
    * @example
    * const spineNode = new ePubNode(ePubNode.types.itemref)
    *   .setAttribute("idref", file._id);
@@ -514,7 +528,7 @@ export const NODE_TYPES = {
   /**
    * Append to body node of smil file
    * @property {object} attribtues
-   * @property {string} attribtues.epub:textref - Required
+   * @property {string} attribtues.epub:textref - required
    * @example
    * const seqNode = new ePubNode(ePubNode.types.seq)
    *   .setAttribute("epub:textref", file.getRelPath(smilFile));
@@ -526,10 +540,10 @@ export const NODE_TYPES = {
     },
   },
   /**
-   * Append to seq node of smil file
+   * append to seq node of smil file
    * @property {object} attribtues
-   * @property {string} attribtues.children.[0].attributes.src - Required Text node path
-   * @property {string} attribtues.children.[1].attributes.src - Required Audio file path
+   * @property {string} attribtues.children.[0].attributes.src - required text node path
+   * @property {string} attribtues.children.[1].attributes.src - required audio file path
    * @example
    * const parNode = new ePubNode(ePubNode.types.par)
    *   .updateNode({ tag: "text" }, { $set: { "attribtues.src": textNode.getRelPath(smilFile) } });
@@ -581,10 +595,15 @@ export const UTILS = {
 export class ePubDoc {
   /**
    *
-   * @param  {...object} objs
-   * @property {ePubFile[]} files
+   * @param {...object} objs
+   * @param {ePubFile[]} objs[].files
    */
   constructor(...objs) {
+
+    // default 3 files
+    // mimetype
+    // META-INF/container.xml
+    // package.opf
     this.files = [
       new ePubFile(FILE_TYPES.mimetype),
       new ePubFile(FILE_TYPES.container),
@@ -596,7 +615,7 @@ export class ePubDoc {
           $set: {
             children: [
               {
-                // Generate BookID
+                // generate book id
                 content: "urn:uuid:" + uuidv4(),
               },
             ],
@@ -605,7 +624,7 @@ export class ePubDoc {
       ),
     ];
 
-    // Import data
+    // import data
     if (isObjectArray(objs)) {
       Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
     }
@@ -613,13 +632,13 @@ export class ePubDoc {
     this.init();
   }
 }
-
 /**
  *
  * @returns
  */
 ePubDoc.prototype.init = function () {
-  // Convert files to ePubFile
+
+  // convert files to ePubFile
   if (isArray(this.files)) {
     for (let i = 0; i < this.files.length; i++) {
       if (isFile(this.files[i])) {
@@ -730,14 +749,14 @@ ePubDoc.prototype.updateFile = function (query, updates) {
  *
  * @param {object} query
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubDoc.prototype.updateFiles = function (query, updates) {
@@ -801,14 +820,14 @@ ePubDoc.prototype.findNodes = function (query) {
  *
  * @param {object} query
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubDoc.prototype.updateNode = function (query, updates) {
@@ -822,14 +841,14 @@ ePubDoc.prototype.updateNode = function (query, updates) {
  *
  * @param {object} query
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubDoc.prototype.updateNodes = function (query, updates) {
@@ -875,8 +894,8 @@ ePubDoc.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is true
- * @property {boolean} escape - Defalut value is true
+ * @param {boolean} options.beautify - defalut value is true
+ * @param {boolean} options.escape - defalut value is true
  * @returns
  */
 ePubDoc.prototype.toFiles = function (options) {

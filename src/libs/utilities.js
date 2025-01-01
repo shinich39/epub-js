@@ -28,7 +28,7 @@ export function dateToHex(date) {
  * 6 lower case latin: alphabets
  * 10 lower case hex: f51bb4362e
  * 8 timestamp hex: 00000020
- * @returns {string} - 24 characters
+ * @returns {string} 24 characters
  */
 export function generateId() {
   return randAlpha() + randHex() + dateToHex(new Date());

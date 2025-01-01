@@ -25,19 +25,20 @@ export class ePubNode {
   /**
    *
    * @param {...object} objs
-   * @property {string} objs[].tag - Required
-   * @property {string} objs[].closer - e.g. "/"
-   * @property {string} objs[].content - The property will changed to children after initialize
-   * @property {string} objs[].data - The property will changed to children after initialize
-   * @property {object} objs[].attributes
-   * @property {(ePubNode[]|object[])} objs[].children
+   * @param {string} objs[].tag - required
+   * @param {string} objs[].closer - e.g. "/"
+   * @param {string} objs[].content - the property will changed to children after initialize
+   * @param {string} objs[].data - the property will changed to children after initialize
+   * @param {object} objs[].attributes
+   * @param {(ePubNode[]|object[])} objs[].children
    * @returns {ePubNode}
    */
   constructor(...objs) {
-    // Reference properties
+
+    // reference properties
     this.parentNode = null;
 
-    // Common properties
+    // common properties
     this._id = generateId();
     this.tag = null;
     this.closer = null;
@@ -47,7 +48,7 @@ export class ePubNode {
     this.data = null;
     this.children = [];
 
-    // Import data
+    // import data
     if (isObjectArray(objs)) {
       Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
     }
@@ -70,19 +71,20 @@ export class ePubNode {
  * @returns
  */
 ePubNode.prototype.init = function () {
-  // Parse node properties
+
+  // parse content
   if (isString(this.tag) && isString(this.content)) {
     this.data = this.content;
     this.content = null;
   }
 
-  // Parse imported by string DOM
+  // prase data
   if (isString(this.data)) {
     this.children = strToDom(this.data).children;
     this.data = null;
   }
 
-  // Convert children to ePubNode
+  // convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
       if (isNode(this.children[i])) {
@@ -213,8 +215,8 @@ ePubNode.prototype.remove = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is true
- * @property {boolean} escape - Defalut value is true
+ * @param {boolean} options.beautify - defalut value is true
+ * @param {boolean} options.escape - defalut value is true
  * @returns
  */
 ePubNode.prototype.toString = function (options) {

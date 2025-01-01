@@ -31,25 +31,27 @@ export class ePubFile {
   /**
    *
    * @param {...object} objs
-   * @property {string} objs[].path - Required
-   * @property {any} objs[].data - If file is xhtml, data will changed to children after initialize
-   * @property {object} objs[].attributes
-   * @property {(ePubNode[]|object[])} objs[].children
+   * @param {string} objs[].path - required
+   * @param {any} objs[].data - if file is xhtml, data will changed to children after initialize
+   * @param {object} objs[].attributes
+   * @param {(ePubNode[]|object[])} objs[].children
    * @returns {ePubFile}
    */
   constructor(...objs) {
-    // Reference properties
+
+    // reference properties
     this.document = null;
 
-    // Common properties
+    // common properties
     this._id = generateId();
-    this.path = null; // Required
+    this.path = null;
     this.data = null;
 
-    // DOM properties
+    // dom properties
+    this.attributes = {};
     this.children = [];
 
-    // Import data
+    // import data
     if (isObjectArray(objs)) {
       Object.assign(this, ...objs.map((item) => deepcopy(item, true)));
     }
@@ -92,18 +94,19 @@ export class ePubFile {
  * @returns
  */
 ePubFile.prototype.init = function () {
-  // Parse path
+
+  // parse path
   if (!isString(this.path)) {
     throw new Error(`ePubFile must have a path property as a string`);
   }
 
-  // Parse imported by string DOM
+  // parse data
   if (isDOM(this.mimetype) && isString(this.data)) {
     this.children = strToDom(this.data).children;
     this.data = null;
   }
 
-  // Convert children to ePubNode
+  // convert children to ePubNode
   if (isArray(this.children)) {
     for (let i = 0; i < this.children.length; i++) {
       if (isNode(this.children[i])) {
@@ -336,14 +339,14 @@ ePubFile.prototype.findNodes = function (query) {
  *
  * @param {object} query
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubFile.prototype.updateNode = function (query, updates) {
@@ -357,14 +360,14 @@ ePubFile.prototype.updateNode = function (query, updates) {
  *
  * @param {object} query
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubFile.prototype.updateNodes = function (query, updates) {
@@ -401,8 +404,8 @@ ePubFile.prototype.removeNodes = function (query) {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is true
- * @property {boolean} escape - Defalut value is true
+ * @property {boolean} beautify - defalut value is true
+ * @property {boolean} escape - defalut value is true
  * @returns
  */
 ePubFile.prototype.toString = function (options) {
@@ -440,8 +443,8 @@ ePubFile.prototype.toObject = function () {
 /**
  *
  * @param {object} options
- * @property {boolean} beautify - Defalut value is true
- * @property {boolean} escape - Defalut value is true
+ * @property {boolean} beautify - defalut value is true
+ * @property {boolean} escape - defalut value is true
  * @returns
  */
 ePubFile.prototype.toFile = function (options) {
