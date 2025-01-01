@@ -7,8 +7,9 @@ import {
   isObject,
   isObjectArray,
   queryObject,
+  updateObject,
 } from "utils-js";
-import { deepcopy, isFile, updateObject } from "../libs/utilities.js";
+import { deepcopy, isFile } from "../libs/utilities.js";
 import { v4 as uuidv4 } from "uuid";
 
 // apple books asset guide
@@ -659,14 +660,14 @@ ePubDoc.prototype.init = function () {
 /**
  *
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubDoc.prototype.update = function (updates) {

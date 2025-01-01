@@ -82,7 +82,7 @@ export class ePubFile {
     throw new Error(`'extname' property is read only`);
   }
   get mimetype() {
-    return parsePath(this.path).mimetype;
+    return extToMime(this.extname);
   }
   set mimetype(v) {
     throw new Error(`'mimetype' property is read only`);

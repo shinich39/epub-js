@@ -10,7 +10,6 @@ const COVER_PATH = path.join(process.cwd(), "test/cover.png");
 const TITLE = "test";
 const AUTHORS = ["shinich39", "epub-js"];
 
-
 // Create a ePub document
 const doc = createDoc();
 
@@ -59,10 +58,12 @@ doc.addPage(null, {
 // Buffer test
 doc.addFile(COVER_PATH, "EPUB/images/buffer.png");
 
-// console.log(doc.toObject());
-
 fs.rmSync(OUTPUT_PATH, { recursive: true, force: true });
 doc.export(OUTPUT_PATH);
+
+// Debug
+const exportedObj = doc.doc.toObject();
+fs.writeFileSync(path.join(OUTPUT_PATH, "log.json"), JSON.stringify(exportedObj, null, 2), "utf8");
 
 // console.log(ePubDoc.utils.calcMaxValidImageSize(100, 100))
 // console.log(ePubDoc.utils.calcValidImageSize(5000, 5000))

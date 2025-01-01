@@ -72,11 +72,24 @@ function isFunction(obj) {
   return typeof obj === "function";
 }
 /**
- * Query operator list:
- * $and, $nand, $or, $nor, $in, $nin, $gt, $gte, $lt, $lte, $eq, $ne, $exists, $fn, $re
  * https://www.mongodb.com/docs/manual/tutorial/query-documents/
  * @param {object} obj
  * @param {object} qry
+ * @param {object[]} qry.$and
+ * @param {object[]} qry.$nand
+ * @param {object[]} qry.$or
+ * @param {object[]} qry.$nor
+ * @param {any[]} qry.$in
+ * @param {any[]} qry.$nin
+ * @param {number} qry.$gt
+ * @param {number} qry.$gte
+ * @param {number} qry.$lt
+ * @param {number} qry.$lte
+ * @param {any} qry.$eq
+ * @param {any} qry.$ne
+ * @param {any} qry.$exists
+ * @param {function} qry.$fn
+ * @param {RegExp} qry.$re
  * @returns {boolean}
  */
 function queryObject(obj, qry) {
@@ -182,6 +195,79 @@ function queryObject(obj, qry) {
   return A(obj, qry);
 }
 /**
+ * 
+ * @param {object} obj 
+ * @param {object} updt 
+ * @param {object} updt.$set
+ * @param {object} updt.$unset
+ * @param {object} updt.$push
+ * @param {object} updt.$pushAll
+ * @param {object} updt.$pull
+ * @param {object} updt.$pullAll
+ * @param {object} updt.$addToSet
+ * @param {object} updt.$addToSetAll
+ */
+function updateObject(obj, updt) {
+  for (const operator of Object.keys(updt)) {
+    for (let [keys, value] of Object.entries(updt[operator])) {
+      keys = keys.split(".");
+
+      let target = obj,
+        key = keys.pop();
+
+      while (isObject(target) && keys.length > 0) {
+        target = target[keys.shift()];
+      }
+
+      if (!isObject(target)) {
+        continue;
+      }
+
+      if (operator === "$set") {
+        if (target[key] !== value) {
+          target[key] = value;
+        }
+      } else if (operator === "$unset") {
+        if (!!value) {
+          delete target[key];
+        }
+      } else if (operator === "$push") {
+        target[key].push(value);
+      } else if (operator === "$pushAll") {
+        for (const v of value) {
+          target[key].push(v);
+        }
+      } else if (operator === "$pull") {
+        for (let i = target[key].length; i >= 0; i--) {
+          if (target[key][i] === value) {
+            target[key].splice(i, 1);
+            break;
+          }
+        }
+      } else if (operator === "$pullAll") {
+        const prev = target[key];
+        target[key] = [];
+        for (const v of prev) {
+          if (value.indexOf(v) === -1) {
+            target[key].push(v);
+          }
+        }
+      } else if (operator === "$addToSet") {
+        if (target[key].indexOf(value) === -1) {
+          target[key].push(value);
+        }
+      } else if (operator === "$addToSetAll") {
+        for (const v of value) {
+          if (target[key].indexOf(v) === -1) {
+            target[key].push(v);
+          }
+        }
+      }
+    }
+  }
+  return obj;
+}
+/**
  *
  * @param {number} num
  * @param {number} min
@@ -227,7 +313,11 @@ function getRelativePath(from, to) {
  * @returns {object}
  */
 function parsePath(str) {
-  // Normalize
+
+  // normalize path
+  // backslashes to slash
+  // remove last slash
+  // remove first dot
   str = str
     .replace(/[\\\/]+/g, "/")
     .replace(/\/$/, "")
@@ -260,7 +350,6 @@ function parsePath(str) {
   };
 }
 
-// HTML entities
 // https://www.w3schools.com/html/html_entities.asp
 const HTML_ENTITIES = [
   ["&", "&amp;"],
@@ -391,11 +480,12 @@ function parseTag(str) {
     let [key, value] = arr[i].split("=");
     if (key.length > 0) {
       if (typeof value === "string") {
-        // Escape quotation marks in attribute value
+        // escape quotation marks in attribute value
         result.attributes[key] = decodeStr(value);
       } else {
         // https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#boolean-attributes
-        // The values "true" and "false" are not allowed on boolean attributes. To represent a false value, the attribute has to be omitted altogether.
+        // the values "true" and "false" are not allowed on boolean attributes.
+        // to represent a false value, the attribute has to be omitted altogether.
         result.attributes[key] = true;
       }
     }
@@ -404,6 +494,11 @@ function parseTag(str) {
   return result;
 }
 
+/**
+ * 
+ * @param {string} str 
+ * @returns {object}
+ */
 function strToDom(str) {
   str = encodeAttributes(
     encodeContents(encodeScripts(convertComments(normalizeLineBreakers(str))))
@@ -417,7 +512,7 @@ function strToDom(str) {
     obj;
 
   while ((match = re.exec(str))) {
-    // Read text content
+    // read text content
     let content = str.substring(offset, match.index).trim();
     if (content.length > 0) {
       obj = {
@@ -433,15 +528,15 @@ function strToDom(str) {
       children.push(obj);
     }
 
-    // Read tag
+    // read tag
     obj = parseTag(match[0]);
     if (!obj.isClosing) {
-      // Tag is opening tag
+      // tag is opening tag
       children.push(obj);
       nodes.push(obj);
     } else {
-      // Tag is closing tag
-      // Add children to tag
+      // tag is closing tag
+      // add children to tag
       let i = findLastIndex(children, function (item) {
         return !item.isClosed && item.tag === obj.tag;
       });
@@ -450,7 +545,7 @@ function strToDom(str) {
         children[i].isClosed = true;
         children[i].children = children.splice(i + 1, children.length - i + 1);
 
-        // Decode contents of the scripts and comments
+        // decode contents of the scripts and comments
         if (["script", "!--"].indexOf(children[i].tag) > -1) {
           for (let j = 0; j < children[i].children.length; j++) {
             if (isText(children[i].children[j])) {
@@ -466,6 +561,7 @@ function strToDom(str) {
     offset = re.lastIndex;
   }
 
+  // read last content
   let lastContent = str.substring(offset).trim();
   if (lastContent.length > 0) {
     obj = {
@@ -483,25 +579,26 @@ function strToDom(str) {
 
   for (let node of nodes) {
     if (node.tag.toUpperCase() === "!DOCTYPE") {
-      // HTML doctype declaration
+      // html doctype declaration
       // https://www.w3schools.com/tags/tag_doctype.ASP
       node.closer = "";
     } else if (node.tag.toLowerCase() === "?xml") {
-      // XML Prolog
+      // xml Prolog
       // <?xml version="1.0" encoding="utf-8"?>
       // https://www.w3schools.com/xml/xml_syntax.asp
       node.closer = "?";
     } else if (node.tag === "!--") {
-      // Comment
+      // html comment
       // https://www.w3schools.com/tags/tag_comment.asp
       node.closer = "--";
     } else if (!node.isClosed) {
-      // Self-closing tag, Empty tag
-      // Requirements for XHTML
+      // self-closing tag, empty tag
+      // likes <img ... />
+      // required for xhtml
       node.closer = " /";
     }
 
-    // Remove unused attributes
+    // remove unused attributes
     delete node.isClosed;
     delete node.isClosing;
   }
@@ -526,12 +623,16 @@ function objToAttr(obj) {
   }
   return result;
 }
-
+/**
+ * 
+ * @param {object} obj 
+ * @returns {string}
+ */
 function domToStr(obj) {
   const { tag, closer, attributes, content, children } = obj;
   let result = "";
 
-  // Node
+  // node
   if (typeof tag === "string") {
     result += `<${tag}`;
 
@@ -554,10 +655,10 @@ function domToStr(obj) {
     } else {
       result += `</${tag}>`;
     }
-  } // TextContent
+  } // text content
   else if (typeof content === "string") {
     result = content;
-  } // Root Node
+  } // root Node
   else {
     if (Array.isArray(children)) {
       for (const child of children) {
@@ -7312,7 +7413,7 @@ class Mime {
 }
 _Mime_extensionToType = new WeakMap(), _Mime_typeToExtension = new WeakMap(), _Mime_typeToExtensions = new WeakMap();
 
-new Mime(types, types$1)._freeze();
+var mime = new Mime(types, types$1)._freeze();
 
 let customAlphabet = (alphabet, defaultSize = 21) => {
   return (size = defaultSize) => {
@@ -7454,70 +7555,14 @@ function normalizePath(str) {
   return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
 }
 
+function extToMime(ext) {
+  return mime.getType(ext);
+}
+
 function beautifyHTML(str) {
   return jsExports.html_beautify(str, {
     indent_size: 2,
   });
-}
-
-function updateObject(obj, updates) {
-  for (const operator of Object.keys(updates)) {
-    for (let [keys, value] of Object.entries(updates[operator])) {
-      keys = keys.split(".");
-
-      let target = obj,
-        key = keys.pop();
-
-      while (isObject(target) && keys.length > 0) {
-        target = target[keys.shift()];
-      }
-
-      if (!isObject(target)) {
-        continue;
-      }
-
-      if (operator === "$set") {
-        if (target[key] !== value) {
-          target[key] = value;
-        }
-      } else if (operator === "$unset") {
-        if (!!value) {
-          delete target[key];
-        }
-      } else if (operator === "$push") {
-        target[key].push(value);
-      } else if (operator === "$pushAll") {
-        for (const v of value) {
-          target[key].push(v);
-        }
-      } else if (operator === "$pull") {
-        for (let i = target[key].length; i >= 0; i--) {
-          if (target[key][i] === value) {
-            target[key].splice(i, 1);
-            break;
-          }
-        }
-      } else if (operator === "$pullAll") {
-        const prev = target[key];
-        target[key] = [];
-        for (const v of prev) {
-          if (value.indexOf(v) === -1) {
-            target[key].push(v);
-          }
-        }
-      } else if (operator === "$addToSet") {
-        if (target[key].indexOf(value) === -1) {
-          target[key].push(value);
-        }
-      } else if (operator === "$addToSetAll") {
-        for (const v of value) {
-          if (target[key].indexOf(v) === -1) {
-            target[key].push(v);
-          }
-        }
-      }
-    }
-  }
 }
 
 function deepcopy(obj, keepInstances) {
@@ -7849,7 +7894,7 @@ class ePubFile {
     throw new Error(`'extname' property is read only`);
   }
   get mimetype() {
-    return parsePath(this.path).mimetype;
+    return extToMime(this.extname);
   }
   set mimetype(v) {
     throw new Error(`'mimetype' property is read only`);
@@ -8928,14 +8973,14 @@ ePubDoc.prototype.init = function () {
 /**
  *
  * @param {object} updates
- * @property {object} $set
- * @property {object} $unset
- * @property {object} $push
- * @property {object} $pushAll
- * @property {object} $pull
- * @property {object} $pullAll
- * @property {object} $addToSet
- * @property {object} $addToSetAll
+ * @param {object} updates.$set
+ * @param {object} updates.$unset
+ * @param {object} updates.$push
+ * @param {object} updates.$pushAll
+ * @param {object} updates.$pull
+ * @param {object} updates.$pullAll
+ * @param {object} updates.$addToSet
+ * @param {object} updates.$addToSetAll
  * @returns
  */
 ePubDoc.prototype.update = function (updates) {

@@ -166,66 +166,6 @@ export function beautifyJS(str) {
   });
 }
 
-export function updateObject(obj, updates) {
-  for (const operator of Object.keys(updates)) {
-    for (let [keys, value] of Object.entries(updates[operator])) {
-      keys = keys.split(".");
-
-      let target = obj,
-        key = keys.pop();
-
-      while (isObject(target) && keys.length > 0) {
-        target = target[keys.shift()];
-      }
-
-      if (!isObject(target)) {
-        continue;
-      }
-
-      if (operator === "$set") {
-        if (target[key] !== value) {
-          target[key] = value;
-        }
-      } else if (operator === "$unset") {
-        if (!!value) {
-          delete target[key];
-        }
-      } else if (operator === "$push") {
-        target[key].push(value);
-      } else if (operator === "$pushAll") {
-        for (const v of value) {
-          target[key].push(v);
-        }
-      } else if (operator === "$pull") {
-        for (let i = target[key].length; i >= 0; i--) {
-          if (target[key][i] === value) {
-            target[key].splice(i, 1);
-            break;
-          }
-        }
-      } else if (operator === "$pullAll") {
-        const prev = target[key];
-        target[key] = [];
-        for (const v of prev) {
-          if (value.indexOf(v) === -1) {
-            target[key].push(v);
-          }
-        }
-      } else if (operator === "$addToSet") {
-        if (target[key].indexOf(value) === -1) {
-          target[key].push(value);
-        }
-      } else if (operator === "$addToSetAll") {
-        for (const v of value) {
-          if (target[key].indexOf(v) === -1) {
-            target[key].push(v);
-          }
-        }
-      }
-    }
-  }
-}
-
 export function deepcopy(obj, keepInstances) {
   let result;
   if (isArray(obj)) {
