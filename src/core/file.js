@@ -32,7 +32,7 @@ export class ePubFile {
    *
    * @param {...object} objs
    * @property {string} objs[].path - Required
-   * @property {string} objs[].data
+   * @property {any} objs[].data - If file is xhtml, data will changed to children after initialize
    * @property {object} objs[].attributes
    * @property {(ePubNode[]|object[])} objs[].children
    * @returns {ePubFile}
@@ -46,18 +46,7 @@ export class ePubFile {
     this.path = null; // Required
     this.data = null;
 
-    // Read only properties
-    this.basename = null;
-    this.filename = null;
-    this.dirname = null;
-    this.extension = null;
-    this.mimetype = null;
-
     // DOM properties
-    this.tag = null;
-    this.closer = null;
-    this.content = null;
-    this.attributes = {};
     this.children = [];
 
     // Import data
@@ -67,33 +56,45 @@ export class ePubFile {
 
     this.init();
   }
+  get basename() {
+    return parsePath(this.path).basename;
+  }
+  set basename(v) {
+    throw new Error(`'basename' property is read only`);
+  }
+  get filename() {
+    return parsePath(this.path).filename;
+  }
+  set filename(v) {
+    throw new Error(`'filename' property is read only`);
+  }
+  get dirname() {
+    return parsePath(this.path).dirname;
+  }
+  set dirname(v) {
+    throw new Error(`'dirname' property is read only`);
+  }
+  get extname() {
+    return parsePath(this.path).extname;
+  }
+  set extname(v) {
+    throw new Error(`'extname' property is read only`);
+  }
+  get mimetype() {
+    return parsePath(this.path).mimetype;
+  }
+  set mimetype(v) {
+    throw new Error(`'mimetype' property is read only`);
+  }
 }
 /**
  *
  * @returns
  */
 ePubFile.prototype.init = function () {
-  // tag, closer, and content values must be null
-  this.tag = null;
-  this.closer = null;
-  this.content = null;
-
   // Parse path
-  if (isString(this.path)) {
-    const normalizedPath = normalizePath(this.path);
-    const parsedPath = parsePath(normalizedPath);
-    this.basename = parsedPath.basename;
-    this.extname = parsedPath.extname;
-    this.filename = parsedPath.filename;
-    this.dirname = parsedPath.dirname;
-    this.mimetype = extToMime(parsedPath.extname);
-  } else {
-    throw new Error(`ePubFile must have a path parameter`);
-    // this.basename = null;
-    // this.extname = null;
-    // this.filename = null;
-    // this.dirname = null;
-    // this.mimetype = null;
+  if (!isString(this.path)) {
+    throw new Error(`ePubFile must have a path property as a string`);
   }
 
   // Parse imported by string DOM

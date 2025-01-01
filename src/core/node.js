@@ -25,9 +25,10 @@ export class ePubNode {
   /**
    *
    * @param {...object} objs
-   * @property {string|null} objs[].tag - Required
-   * @property {string|null} objs[].closer - "/"
-   * @property {string} objs[].content - You must set the tag to null
+   * @property {string} objs[].tag - Required
+   * @property {string} objs[].closer - e.g. "/"
+   * @property {string} objs[].content - The property will changed to children after initialize
+   * @property {string} objs[].data - The property will changed to children after initialize
    * @property {object} objs[].attributes
    * @property {(ePubNode[]|object[])} objs[].children
    * @returns {ePubNode}
@@ -42,7 +43,8 @@ export class ePubNode {
     this.closer = null;
     this.content = null;
     this.attributes = {};
-    this.data = null; // Convert to DOM on intialization
+    this.content = null;
+    this.data = null;
     this.children = [];
 
     // Import data
@@ -52,7 +54,6 @@ export class ePubNode {
 
     this.init();
   }
-  // Deprecated
   // get id() { return this.attributes.id; }
   // set id(v) { this.attributes.id = v; }
   // get class() { return this.attributes.class; }
@@ -70,23 +71,9 @@ export class ePubNode {
  */
 ePubNode.prototype.init = function () {
   // Parse node properties
-  if (isString(this.tag)) {
-    if (isString(this.content)) {
-      this.children = [
-        {
-          content: this.content,
-        },
-      ];
-    }
-
+  if (isString(this.tag) && isString(this.content)) {
+    this.data = this.content;
     this.content = null;
-  } else {
-    if (!isString(this.content)) {
-      this.content = "";
-    }
-
-    this.tag = null;
-    this.closer = null;
   }
 
   // Parse imported by string DOM

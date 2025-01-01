@@ -7316,7 +7316,7 @@
   }
   _Mime_extensionToType = new WeakMap(), _Mime_typeToExtension = new WeakMap(), _Mime_typeToExtensions = new WeakMap();
 
-  var mime = new Mime(types, types$1)._freeze();
+  new Mime(types, types$1)._freeze();
 
   let customAlphabet = (alphabet, defaultSize = 21) => {
     return (size = defaultSize) => {
@@ -7458,10 +7458,6 @@
     return str.replace(/[\\\/]+/g, "/").replace(/^\.?\//, "");
   }
 
-  function extToMime(ext) {
-    return mime.getType(ext);
-  }
-
   function beautifyHTML(str) {
     return jsExports.html_beautify(str, {
       indent_size: 2,
@@ -7579,9 +7575,10 @@
     /**
      *
      * @param {...object} objs
-     * @property {string|null} objs[].tag - Required
-     * @property {string|null} objs[].closer - "/"
-     * @property {string} objs[].content - You must set the tag to null
+     * @property {string} objs[].tag - Required
+     * @property {string} objs[].closer - e.g. "/"
+     * @property {string} objs[].content - The property will changed to children after initialize
+     * @property {string} objs[].data - The property will changed to children after initialize
      * @property {object} objs[].attributes
      * @property {(ePubNode[]|object[])} objs[].children
      * @returns {ePubNode}
@@ -7596,7 +7593,8 @@
       this.closer = null;
       this.content = null;
       this.attributes = {};
-      this.data = null; // Convert to DOM on intialization
+      this.content = null;
+      this.data = null;
       this.children = [];
 
       // Import data
@@ -7606,7 +7604,6 @@
 
       this.init();
     }
-    // Deprecated
     // get id() { return this.attributes.id; }
     // set id(v) { this.attributes.id = v; }
     // get class() { return this.attributes.class; }
@@ -7624,23 +7621,9 @@
    */
   ePubNode.prototype.init = function () {
     // Parse node properties
-    if (isString(this.tag)) {
-      if (isString(this.content)) {
-        this.children = [
-          {
-            content: this.content,
-          },
-        ];
-      }
-
+    if (isString(this.tag) && isString(this.content)) {
+      this.data = this.content;
       this.content = null;
-    } else {
-      if (!isString(this.content)) {
-        this.content = "";
-      }
-
-      this.tag = null;
-      this.closer = null;
     }
 
     // Parse imported by string DOM
@@ -7820,7 +7803,7 @@
      *
      * @param {...object} objs
      * @property {string} objs[].path - Required
-     * @property {string} objs[].data
+     * @property {any} objs[].data - If file is xhtml, data will changed to children after initialize
      * @property {object} objs[].attributes
      * @property {(ePubNode[]|object[])} objs[].children
      * @returns {ePubFile}
@@ -7834,18 +7817,7 @@
       this.path = null; // Required
       this.data = null;
 
-      // Read only properties
-      this.basename = null;
-      this.filename = null;
-      this.dirname = null;
-      this.extension = null;
-      this.mimetype = null;
-
       // DOM properties
-      this.tag = null;
-      this.closer = null;
-      this.content = null;
-      this.attributes = {};
       this.children = [];
 
       // Import data
@@ -7855,33 +7827,45 @@
 
       this.init();
     }
+    get basename() {
+      return parsePath(this.path).basename;
+    }
+    set basename(v) {
+      throw new Error(`'basename' property is read only`);
+    }
+    get filename() {
+      return parsePath(this.path).filename;
+    }
+    set filename(v) {
+      throw new Error(`'filename' property is read only`);
+    }
+    get dirname() {
+      return parsePath(this.path).dirname;
+    }
+    set dirname(v) {
+      throw new Error(`'dirname' property is read only`);
+    }
+    get extname() {
+      return parsePath(this.path).extname;
+    }
+    set extname(v) {
+      throw new Error(`'extname' property is read only`);
+    }
+    get mimetype() {
+      return parsePath(this.path).mimetype;
+    }
+    set mimetype(v) {
+      throw new Error(`'mimetype' property is read only`);
+    }
   }
   /**
    *
    * @returns
    */
   ePubFile.prototype.init = function () {
-    // tag, closer, and content values must be null
-    this.tag = null;
-    this.closer = null;
-    this.content = null;
-
     // Parse path
-    if (isString(this.path)) {
-      const normalizedPath = normalizePath(this.path);
-      const parsedPath = parsePath(normalizedPath);
-      this.basename = parsedPath.basename;
-      this.extname = parsedPath.extname;
-      this.filename = parsedPath.filename;
-      this.dirname = parsedPath.dirname;
-      this.mimetype = extToMime(parsedPath.extname);
-    } else {
-      throw new Error(`ePubFile must have a path parameter`);
-      // this.basename = null;
-      // this.extname = null;
-      // this.filename = null;
-      // this.dirname = null;
-      // this.mimetype = null;
+    if (!isString(this.path)) {
+      throw new Error(`ePubFile must have a path property as a string`);
     }
 
     // Parse imported by string DOM

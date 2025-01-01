@@ -21,26 +21,40 @@ doc.setCover(COVER_PATH);
 doc.addPage(null, {
   title: "page 1",
   body: [{
+    content: "<div>TEST1</div>",
+  }, {
     "tag": "div",
-    content: "Test 1: $$!@#!%^#&^*&%(^*&)()<>"
+    content: "<div>TEST1</div>",
   }]
 });
 
 doc.addPage(null, {
   title: "page 2",
   body: [{
+    data: "<div><span>TEST2</span></div>",
+  },{
     "tag": "div",
-    content: "Test 2: $$!@#!%^#&^*&%(^*&)()<>"
+    data: "<div><span>TEST2</span></div>",
   }]
 });
 
 doc.addPage(null, {
   title: "page 3",
   body: [{
+    children: [{
+      data: "<div><span>TEST3</span></div>",
+    }]
+  },{
     "tag": "div",
-    content: "Test 3: $$!@#!%^#&^*&%(^*&)()<>"
+    children: [{
+      data: "<div><span>TEST3</span></div>",
+    }]
   }]
 });
+
+// doc.doc.findFile({
+//   filename: "1"
+// }).filename = 2
 
 // Buffer test
 doc.addFile(COVER_PATH, "EPUB/images/buffer.png");
