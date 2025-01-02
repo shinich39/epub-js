@@ -7608,8 +7608,8 @@ class ePubNode {
    * @param {...object} objs
    * @param {string} objs[].tag - required
    * @param {string} objs[].closer - e.g. "/"
-   * @param {string} objs[].content - the property will changed to children after initialize
-   * @param {string} objs[].data - the property will changed to children after initialize
+   * @param {string} objs[].content - the property will change as text node
+   * @param {string} objs[].data - the property will change as tag node or text node
    * @param {object} objs[].attributes
    * @param {(ePubNode[]|object[])} objs[].children
    * @returns {ePubNode}
@@ -7653,7 +7653,7 @@ class ePubNode {
 ePubNode.prototype.init = function () {
   // parse content
   if (isString(this.tag) && isString(this.content)) {
-    this.data = this.content;
+    this.children = [{ content: this.content }];
     this.content = null;
   }
 
